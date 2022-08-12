@@ -1,0 +1,31 @@
+/* Confirm Dialog */
+
+* {
+    background-color:       @background;
+    text-color:             @foreground;
+	  font:				 	"FantasqueSansMono Nerd Font 12";
+    background:                     #25344Bff;
+    background-alt:                 #2A3950ff;
+    foreground:                     #FEFFF1ff;
+    border:               			#A162F7ff;
+    border-alt:               		#45E3FFff;
+    selected:               		#6F88FE1a;
+    urgent:                         #DA4453FF;
+}
+
+window {
+    width:      			225px;
+    padding:    			25px;
+    border:					1px;
+    border-radius:          0px;
+    border-color:           @border;
+    location:               center;
+    y-offset:               -2em;
+}
+
+entry {
+    expand: 				true;
+    text-color:				@border;
+}
+
+
