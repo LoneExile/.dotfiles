@@ -1,0 +1,309 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Use powerline
+USE_POWERLINE="true"
+
+## tmux config file
+# tmux source-file $HOME/.tmux/.tmux.conf
+
+## Options section
+setopt correct                                                  # Auto correct mistakes
+setopt extendedglob                                             # Extended globbing. Allows using regular expressions with *
+setopt nocaseglob                                               # Case insensitive globbing
+setopt rcexpandparam                                            # Array expension with parameters
+setopt nocheckjobs                                              # Don't warn about running processes when exiting
+setopt numericglobsort                                          # Sort filenames numerically when it makes sense
+setopt nobeep                                                   # No beep
+setopt appendhistory                                            # Immediately append history instead of overwriting
+setopt histignorealldups                                        # If a new command is a duplicate, remove the older one
+setopt autocd                                                   # if only directory path is entered, cd there.
+setopt inc_append_history                                       # save commands are added to the history immediately, otherwise only when shell exits.
+setopt histignorespace                                          # Don't save commands that start with space
+
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'       # Case insensitive tab completion
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"         # Colored completion (different colors for dirs/files/etc)
+zstyle ':completion:*' rehash true                              # automatically find new executables in path 
+# Speed up completions
+zstyle ':completion:*' accept-exact '*(N)'
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path ~/.zsh/cache
+HISTFILE=~/.zhistory
+HISTSIZE=10000
+SAVEHIST=10000
+export EDITOR=$HOME/.local/bin/lvim
+export VISUAL=$HOME/.local/bin/lvim
+WORDCHARS=${WORDCHARS//\/[&.;]}                                 # Don't consider certain characters part of the word
+
+
+## Keybindings section
+bindkey -e
+bindkey '^[[7~' beginning-of-line                               # Home key
+bindkey '^[[H' beginning-of-line                                # Home key
+if [[ "${terminfo[khome]}" != "" ]]; then
+  bindkey "${terminfo[khome]}" beginning-of-line                # [Home] - Go to beginning of line
+fi
+bindkey '^[[8~' end-of-line                                     # End key
+bindkey '^[[F' end-of-line                                     # End key
+if [[ "${terminfo[kend]}" != "" ]]; then
+  bindkey "${terminfo[kend]}" end-of-line                       # [End] - Go to end of line
+fi
+bindkey '^[[2~' overwrite-mode                                  # Insert key
+bindkey '^[[3~' delete-char                                     # Delete key
+bindkey '^[[C'  forward-char                                    # Right key
+bindkey '^[[D'  backward-char                                   # Left key
+bindkey '^[[5~' history-beginning-search-backward               # Page up key
+bindkey '^[[6~' history-beginning-search-forward                # Page down key
+
+# Navigate words with ctrl+arrow keys
+bindkey '^[Oc' forward-word                                     #
+bindkey '^[Od' backward-word                                    #
+bindkey '^[[1;5D' backward-word                                 #
+bindkey '^[[1;5C' forward-word                                  #
+bindkey '^H' backward-kill-word                                 # delete previous word with ctrl+backspace
+bindkey '^[[Z' undo                                             # Shift+tab undo last action
+
+## Alias section 
+alias cp="cp -i"                                                # Confirm before overwriting something
+alias df='df -h'                                                # Human-readable sizes
+alias free='free -m'                                            # Show sizes in MB
+alias gitu='git add . && git commit && git push'
+alias :q="exit"
+alias c="clear"
+alias cm="chezmoi"
+
+# ls
+alias l='ls -lh'
+alias ll='ls -lah'
+alias la='ls -A'
+alias lm='ls -m'
+alias lr='ls -R'
+alias llg='ls -l --group-directories-first'
+
+# git
+alias gcl='git clone --depth 1'
+alias gi='git init'
+alias ga='git add'
+alias gc='git commit -m'
+alias gp='git push origin master'
+# alias lg='lazygit'
+
+# vim
+alias v='lvim'
+
+# Theming section  
+autoload -U compinit colors zcalc
+compinit -d
+colors
+
+# Color man pages
+export LESS_TERMCAP_mb=$'\E[01;32m'
+export LESS_TERMCAP_md=$'\E[01;32m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;47;34m'
+export LESS_TERMCAP_ue=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[01;36m'
+export LESS=-R
+
+
+## Plugins section: Enable fish style features
+# Use syntax highlighting
+source $HOME/.config/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source $HOME/.config/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source $HOME/.config/zsh/plugins/fzf-tab/fzf-tab.zsh
+source $HOME/.config/zsh/plugins/zsh-vim-mode/zsh-vim-mode.plugin.zsh
+# source $HOME/.config/zsh/plugins/zsh-vi-mode/zsh-vi-mode.zsh
+# Use history substring search
+source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
+# Fuzzy
+source /usr/share/fzf/key-bindings.zsh
+source /usr/share/fzf/completion.zsh
+# bind UP and DOWN arrow keys to history substring search
+zmodload zsh/terminfo
+bindkey "$terminfo[kcuu1]" history-substring-search-up
+bindkey "$terminfo[kcud1]" history-substring-search-down
+bindkey '^[[A' history-substring-search-up			
+bindkey '^[[B' history-substring-search-down
+
+## FZF
+export FZF_DEFAULT_OPTS='
+        --bind ctrl-d:preview-down,ctrl-u:preview-up,ctrl-p:toggle-preview
+        --border
+			  --preview "if [[ -n {} ]]; then if [ -d {} ]; then echo {}/ && exa -1 --color always --icons {} | head -500; else if [[ $(file --mime {}) =~ binary ]]; then echo {} is a binary file; else bat --style=numbers --color=always --line-range :500 {}; fi; fi; fi"
+			  --preview-window hidden
+			  --color=bg+:#3f3f3f,bg:#252525,border:#6b6b6b,spinner:#98c378,hl:#98c378,fg:#d9d9d9,header:#98c378,info:#e5c07b,pointer:#ff9999,marker:#e5c07b,fg+:#d9d9d9,preview-bg:#1e1e1e,prompt:#bb88e5,hl+:#98c378
+			'
+export FZF_CTRL_R_OPTS='--preview "echo {}"'
+# export FZF_COMPLETION_TRIGGER='\'
+
+# Offer to install missing package if command is not found
+if [[ -r /usr/share/zsh/functions/command-not-found.zsh ]]; then
+    source /usr/share/zsh/functions/command-not-found.zsh
+    export PKGFILE_PROMPT_INSTALL_MISSING=1
+fi
+
+# Set terminal window and tab/icon title
+#
+# usage: title short_tab_title [long_window_title]
+#
+# See: http://www.faqs.org/docs/Linux-mini/Xterm-Title.html#ss3.1
+# Fully supports screen and probably most modern xterm and rxvt
+# (In screen, only short_tab_title is used)
+function title {
+  emulate -L zsh
+  setopt prompt_subst
+
+  [[ "$EMACS" == *term* ]] && return
+
+  # if $2 is unset use $1 as default
+  # if it is set and empty, leave it as is
+  : ${2=$1}
+
+  case "$TERM" in
+    xterm*|putty*|rxvt*|konsole*|ansi|mlterm*|alacritty|st*)
+      print -Pn "\e]2;${2:q}\a" # set window name
+      print -Pn "\e]1;${1:q}\a" # set tab name
+      ;;
+    screen*|tmux*)
+      print -Pn "\ek${1:q}\e\\" # set screen hardstatus
+      ;;
+    *)
+    # Try to use terminfo to set the title
+    # If the feature is available set title
+    if [[ -n "$terminfo[fsl]" ]] && [[ -n "$terminfo[tsl]" ]]; then
+      echoti tsl
+      print -Pn "$1"
+      echoti fsl
+    fi
+      ;;
+  esac
+}
+
+ZSH_THEME_TERM_TAB_TITLE_IDLE="%15<..<%~%<<" #15 char left truncated PWD
+ZSH_THEME_TERM_TITLE_IDLE="%n@%m:%~"
+
+# Runs before showing the prompt
+function mzc_termsupport_precmd {
+  [[ "${DISABLE_AUTO_TITLE:-}" == true ]] && return
+  title $ZSH_THEME_TERM_TAB_TITLE_IDLE $ZSH_THEME_TERM_TITLE_IDLE
+}
+
+# Runs before executing the command
+function mzc_termsupport_preexec {
+  [[ "${DISABLE_AUTO_TITLE:-}" == true ]] && return
+
+  emulate -L zsh
+
+  # split command into array of arguments
+  local -a cmdargs
+  cmdargs=("${(z)2}")
+  # if running fg, extract the command from the job description
+  if [[ "${cmdargs[1]}" = fg ]]; then
+    # get the job id from the first argument passed to the fg command
+    local job_id jobspec="${cmdargs[2]#%}"
+    # logic based on jobs arguments:
+    # http://zsh.sourceforge.net/Doc/Release/Jobs-_0026-Signals.html#Jobs
+    # https://www.zsh.org/mla/users/2007/msg00704.html
+    case "$jobspec" in
+      <->) # %number argument:
+        # use the same <number> passed as an argument
+        job_id=${jobspec} ;;
+      ""|%|+) # empty, %% or %+ argument:
+        # use the current job, which appears with a + in $jobstates:
+        # suspended:+:5071=suspended (tty output)
+        job_id=${(k)jobstates[(r)*:+:*]} ;;
+      -) # %- argument:
+        # use the previous job, which appears with a - in $jobstates:
+        # suspended:-:6493=suspended (signal)
+        job_id=${(k)jobstates[(r)*:-:*]} ;;
+      [?]*) # %?string argument:
+        # use $jobtexts to match for a job whose command *contains* <string>
+        job_id=${(k)jobtexts[(r)*${(Q)jobspec}*]} ;;
+      *) # %string argument:
+        # use $jobtexts to match for a job whose command *starts with* <string>
+        job_id=${(k)jobtexts[(r)${(Q)jobspec}*]} ;;
+    esac
+
+    # override preexec function arguments with job command
+    if [[ -n "${jobtexts[$job_id]}" ]]; then
+      1="${jobtexts[$job_id]}"
+      2="${jobtexts[$job_id]}"
+    fi
+  fi
+
+  # cmd name only, or if this is sudo or ssh, the next cmd
+  local CMD=${1[(wr)^(*=*|sudo|ssh|mosh|rake|-*)]:gs/%/%%}
+  local LINE="${2:gs/%/%%}"
+
+  title '$CMD' '%100>...>$LINE%<<'
+}
+
+autoload -U add-zsh-hook
+add-zsh-hook precmd mzc_termsupport_precmd
+add-zsh-hook preexec mzc_termsupport_preexec
+
+# File and Dir colors for ls and other outputs
+export LS_OPTIONS='--color=auto'
+eval "$(dircolors -b)"
+alias ls='ls $LS_OPTIONS'
+ 
+## NVM
+export NVM_DIR="$HOME/.nvm"
+# [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use  # This loads nvm
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+## Still slow? use this (https://github.com/nvm-sh/nvm/issues/1978)
+# if [ -s "$HOME/.nvm/nvm.sh" ]; then
+#   export NVM_DIR="$HOME/.nvm"
+#   nvm_cmds=(nvm node npm yarn)
+#   for cmd in $nvm_cmds ; do
+#     alias $cmd="unalias $nvm_cmds && unset nvm_cmds && . $NVM_DIR/nvm.sh && $cmd"
+#   done
+# fi
+
+## Lazygit
+lg()
+{
+    export LAZYGIT_NEW_DIR_FILE=~/.lazygit/newdir
+
+    lazygit "$@"
+
+    if [ -f $LAZYGIT_NEW_DIR_FILE ]; then
+            cd "$(cat $LAZYGIT_NEW_DIR_FILE)"
+            rm -f $LAZYGIT_NEW_DIR_FILE > /dev/null
+    fi
+}
+
+## pyenv plugin pyenv-virtualenv
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+export PYENV_ROOT=~/.pyenv
+export PATH=$PYENV_ROOT/shims:$PATH
+export PATH=$HOME/.cargo/bin:$PATH
+
+# disabled Telemetry dotnet (https://wiki.archlinux.org/title/.NET#Telemetry)
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+## starship
+# eval "$(starship init zsh)"
+
+# nnn file manager
+export NNN_FCOLORS='0000E6310000000000000000'
+export NNN_PLUG='v:imgview;d:dragdrop;'
+export NNN_FIFO="/tmp/nnn.fifo"
+# alias nnn="$HOME/.config/nnn/nnn -e"
+alias nnn="nnn -e"
+
+## p10 theme
+source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
