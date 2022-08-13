@@ -300,7 +300,7 @@ export NNN_FCOLORS='0000E6310000000000000000'
 export NNN_PLUG='v:imgview;d:dragdrop;'
 export NNN_FIFO="/tmp/nnn.fifo"
 # alias nnn="$HOME/.config/nnn/nnn -e"
-alias nnn="nnn -e"
+alias nnn="nnn -er"
 
 ## p10 theme
 source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme

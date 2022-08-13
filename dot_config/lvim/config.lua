@@ -158,9 +158,50 @@ linters.setup {
   },
 }
 
+lvim.builtin.dap.on_config_done = function(dap)
+  dap.adapters.lldb = {
+    type = 'executable',
+    command = '/usr/bin/lldb-vscode',
+    name = "lldb"
+  }
+
+  dap.configurations.cpp = {
+    {
+      name = "Launch",
+      type = "lldb",
+      request = "launch",
+      program = "${workspaceFolder}/build/binary_name",
+      cwd = "${workspaceFolder}/build",
+      stopOnEntry = false,
+      args = {},
+      runInTerminal = false,
+    },
+  }
+  dap.configurations.c = dap.configurations.cpp
+end
+
+-- lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
+-- lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
+-- nnoremap <silent> <leader>dn :lua require('dap-python').test_method()<CR>
+-- nnoremap <silent> <leader>df :lua require('dap-python').test_class()<CR>
+-- vnoremap <silent> <leader>ds <ESC>:lua require('dap-python').debug_selection()<CR>
+lvim.builtin.dap.active = true
+require('dap-python').setup('~/.pyenv/shims/python')
+vim.api.nvim_set_keymap("n", "<leader>B", ":lua require('dap-python').debug_selection()<CR>",
+  { noremap = true, silent = true })
+
 -- Additional Plugins
 lvim.plugins = {
+  -- theme
   { "folke/tokyonight.nvim" },
+  -- debugger
+  { "rcarriga/nvim-dap-ui" },
+  { "Pocco81/dap-buddy.nvim" },
+  { "theHamsta/nvim-dap-virtual-text" },
+  { "leoluz/nvim-dap-go" },
+  { "nvim-telescope/telescope-dap.nvim" },
+  { "mfussenegger/nvim-dap-python" },
+  --
   { "kyoz/purify" },
   {
     "folke/trouble.nvim",
