@@ -8,10 +8,6 @@ an executable
 ]]
 -- THESE ARE EXAMPLE CONFIGS FEEL FREE TO CHANGE TO WHATEVER YOU WANT
 
--- require "bun.options"
--- require "user.keymaps"
--- require "user.plugins"
-
 
 -- general
 lvim.log.level = "warn"
@@ -180,15 +176,8 @@ lvim.builtin.dap.on_config_done = function(dap)
   dap.configurations.c = dap.configurations.cpp
 end
 
--- lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
--- lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
--- nnoremap <silent> <leader>dn :lua require('dap-python').test_method()<CR>
--- nnoremap <silent> <leader>df :lua require('dap-python').test_class()<CR>
--- vnoremap <silent> <leader>ds <ESC>:lua require('dap-python').debug_selection()<CR>
-lvim.builtin.dap.active = true
-require('dap-python').setup('~/.pyenv/shims/python')
-vim.api.nvim_set_keymap("n", "<leader>B", ":lua require('dap-python').debug_selection()<CR>",
-  { noremap = true, silent = true })
+
+
 
 -- Additional Plugins
 lvim.plugins = {
@@ -225,3 +214,52 @@ lvim.plugins = {
 --     require("nvim-treesitter.highlight").attach(0, "bash")
 --   end,
 -- })
+
+
+-- ############################ Dap #############################################
+lvim.builtin.dap.active = true
+require('dap-python').setup('~/.pyenv/shims/python')
+require('nvim-dap-virtual-text').setup()
+require("dapui").setup()
+
+local dap, dapui = require("dap"), require("dapui")
+dap.listeners.after.event_initialized["dapui_config"] = function()
+  dapui.open()
+end
+dap.listeners.before.event_terminated["dapui_config"] = function()
+  dapui.close()
+end
+dap.listeners.before.event_exited["dapui_config"] = function()
+  dapui.close()
+end
+
+lvim.builtin.which_key.mappings["d"] = {
+  name = "Debug",
+  t = { "<cmd>lua require'dap'.toggle_breakpoint()<cr>", "Toggle Breakpoint" },
+  b = { "<cmd>lua require'dap'.step_back()<cr>", "Step Back" },
+  c = { "<cmd>lua require'dap'.continue()<cr>", "Continue" },
+  C = { "<cmd>lua require'dap'.run_to_cursor()<cr>", "Run To Cursor" },
+  d = { "<cmd>lua require'dap'.disconnect()<cr>", "Disconnect" },
+  g = { "<cmd>lua require'dap'.session()<cr>", "Get Session" },
+  i = { "<cmd>lua require'dap'.step_into()<cr>", "Step Into" },
+  o = { "<cmd>lua require'dap'.step_over()<cr>", "Step Over" },
+  u = { "<cmd>lua require'dap'.step_out()<cr>", "Step Out" },
+  p = { "<cmd>lua require'dap'.pause()<cr>", "Pause" },
+  r = { "<cmd>lua require'dap'.repl.toggle()<cr>", "Toggle Repl" },
+  s = { "<cmd>lua require'dap'.continue()<cr>", "Start" },
+  q = { "<cmd>lua require'dap'.close()<cr>", "Quit" },
+  x = { "<cmd>lua require('dapui').open()<cr>", "Dap-UI" },
+}
+
+
+-- lvim.builtin.which_key.mappings["D"] = {
+--   name = "+Debbuger",
+--   b = { "<cmd>DapToggleBreakpoint<CR>", "Break" },
+--   s = { "<cmd>lua require('dap').continue()<cr>", "Start" },
+--   d = { "<cmd>lua require('dap-python').debug_selection()<cr>", "Py debug" },
+--   u = { "<cmd>:lua require('dapui').open()<cr>", "Dap-UI" },
+--   o = { "<cmd>DapStepOver<cr>", "Step over" },
+--   i = { "<cmd>DapStepInto<cr>", "Step into" },
+--   t = { "<cmd>DapTerminate<cr>", "Terminare" },
+--   -- i = { "<cmd>DapStepInto<cr>", "Step into" },
+-- }
