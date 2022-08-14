@@ -81,7 +81,7 @@ return function(s, widgets)
       if #s.selected_tag:clients() < 1 then
         top_center.visible = false
       else
-        top_center.visible = user_vars.hide_bar
+        top_center.visible = true
       end
     end
   )
@@ -92,7 +92,7 @@ return function(s, widgets)
       if #s.selected_tag:clients() < 1 then
         top_center.visible = false
       else
-        top_center.visible = user_vars.hide_bar
+        top_center.visible = true
       end
     end
   )
@@ -103,7 +103,7 @@ return function(s, widgets)
       if #s.selected_tag:clients() < 1 then
         top_center.visible = false
       else
-        top_center.visible = user_vars.hide_bar
+        top_center.visible = true
       end
     end
   )
@@ -115,6 +115,7 @@ return function(s, widgets)
         top_center.visible = false
       else
         top_center.visible = user_vars.hide_bar
+        -- top_center.visible = true
       end
     end
   )

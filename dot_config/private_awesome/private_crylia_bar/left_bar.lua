@@ -78,4 +78,13 @@ return function(s, widgets)
     nil,
     layout = wibox.layout.fixed.horizontal
   }
+
+
+  awesome.connect_signal(
+    "refresh",
+    function()
+      top_left.visible = user_vars.hide_bar
+    end
+  )
+
 end

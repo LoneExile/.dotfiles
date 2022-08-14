@@ -72,4 +72,12 @@ return function(s, widgets)
     prepare_widgets(widgets),
     layout = wibox.layout.align.horizontal
   }
+
+  awesome.connect_signal(
+    "refresh",
+    function()
+      top_right.visible = user_vars.hide_bar
+    end
+  )
+
 end

@@ -4,6 +4,7 @@
 -- Awesome Libs
 local awful = require("awful")
 
+
 awful.screen.connect_for_each_screen(
 -- For each screen this function is called once
 -- If you want to change the modules per screen use the indices

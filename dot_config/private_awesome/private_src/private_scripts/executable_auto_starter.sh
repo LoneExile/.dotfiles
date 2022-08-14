@@ -1,5 +1,6 @@
 #!/bin/bash
 
+## if not using autorandr
 # if [[ $(xrandr -q | grep "DP-2-1 connected") ]]; then
 #  xrandr --output eDP-1 --mode 1920x1080 --rate 60 --primary --output DP-2-3 --left-of eDP-1 --mode 1920x1080 --rate 60 --output DP-2-1 --left-of DP-2-3 --mode 1920x1080 --rate 60
 # else
