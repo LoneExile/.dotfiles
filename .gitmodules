@@ -1,0 +1,3 @@
+[submodule ".script/fallout-grub-theme"]
+	path = .script/fallout-grub-theme
+	url = https://github.com/shvchk/fallout-grub-theme.git
