@@ -42,8 +42,12 @@ packer.init({
 return packer.startup(function(use)
   -- My plugins here
 
+  -- base
   use({ "wbthomason/packer.nvim" }) -- Have packer manage itself
   use({ "nvim-lua/plenary.nvim" }) -- Useful lua functions used by lots of plugins
+  use({"nvim-lua/popup.nvim"})
+
+  -- utility
   use({ "xiyaowong/nvim-transparent" }) -- transparent :Transparent*
   use { 'iamcco/markdown-preview.nvim', run = 'cd app && yarn install', cmd = 'MarkdownPreview' }
   -- use({ "windwp/nvim-autopairs" }) -- Autopairs, integrates with both cmp and treesitter
@@ -59,7 +63,9 @@ return packer.startup(function(use)
   -- use({ "lewis6991/impatient.nvim", commit = "969f2c5c90457612c09cf2a13fee1adaa986d350" })
   -- use({ "lukas-reineke/indent-blankline.nvim", commit = "6177a59552e35dfb69e1493fd68194e673dc3ee2" })
   -- use({ "goolord/alpha-nvim", commit = "ef27a59e5b4d7b1c2fe1950da3fe5b1c5f3b4c94" })
-  -- use("folke/which-key.nvim")
+  use("folke/which-key.nvim")
+  use("justinmk/vim-sneak") -- jumpy
+  use("unblevable/quick-scope")
 
   -- Colorschemes
   -- use({ "folke/tokyonight.nvim", commit = "8223c970677e4d88c9b6b6d81bda23daf11062bb" })
@@ -84,13 +90,14 @@ return packer.startup(function(use)
   use({ "jose-elias-alvarez/null-ls.nvim" }) -- for formatters and linters
 
   -- Telescope
-  -- use({ "nvim-telescope/telescope.nvim", commit = "d96eaa914aab6cfc4adccb34af421bdd496468b0" })
+  use({ "nvim-telescope/telescope.nvim", commit = "" })
 
   -- Treesitter
-  -- use({
-  --   "nvim-treesitter/nvim-treesitter",
-  --   commit = "518e27589c0463af15463c9d675c65e464efc2fe",
-  -- })
+  use({
+    "nvim-treesitter/nvim-treesitter",
+    commit = "",
+  })
+  use({"p00f/nvim-ts-rainbow"})
 
   -- Git
   -- use({ "lewis6991/gitsigns.nvim", commit = "c18e016864c92ecf9775abea1baaa161c28082c3" })

@@ -1,3 +1,2 @@
 Steam;
 Virt-manager;
-Brave-browser;Brave-browser;obsidian;

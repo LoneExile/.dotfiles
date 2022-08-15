@@ -142,6 +142,16 @@ _G.packer_plugins = {
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-transparent",
     url = "https://github.com/xiyaowong/nvim-transparent"
   },
+  ["nvim-treesitter"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-treesitter",
+    url = "https://github.com/nvim-treesitter/nvim-treesitter"
+  },
+  ["nvim-ts-rainbow"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-ts-rainbow",
+    url = "https://github.com/p00f/nvim-ts-rainbow"
+  },
   ["packer.nvim"] = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/packer.nvim",
@@ -151,6 +161,31 @@ _G.packer_plugins = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/plenary.nvim",
     url = "https://github.com/nvim-lua/plenary.nvim"
+  },
+  ["popup.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/popup.nvim",
+    url = "https://github.com/nvim-lua/popup.nvim"
+  },
+  ["quick-scope"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/quick-scope",
+    url = "https://github.com/unblevable/quick-scope"
+  },
+  ["telescope.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/telescope.nvim",
+    url = "https://github.com/nvim-telescope/telescope.nvim"
+  },
+  ["vim-sneak"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/vim-sneak",
+    url = "https://github.com/justinmk/vim-sneak"
+  },
+  ["which-key.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/which-key.nvim",
+    url = "https://github.com/folke/which-key.nvim"
   }
 }
 

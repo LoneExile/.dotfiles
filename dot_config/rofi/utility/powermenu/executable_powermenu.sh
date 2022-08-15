@@ -8,11 +8,11 @@ rofi_command="rofi -theme ~/.config/rofi/utility/powermenu/config.rasi"
 dir="$HOME/.config/rofi/utility/powermenu/"
 
 # Options
-shutdown="   shutdown"
-reboot="   reboot"
-lock="   lock"
-suspend="   suspend"
-logout="   lockout"
+shutdown=" 🎑  shutdown"
+reboot=" 🤖  reboot"
+lock=" 🔒  lock"
+suspend=" 🛌  suspend"
+logout=" 🚪  lockout"
 
 # Confirmation
 confirm_exit() {
