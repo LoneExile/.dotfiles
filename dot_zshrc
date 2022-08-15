@@ -87,18 +87,31 @@ alias lr='ls -R'
 alias llg='ls -l --group-directories-first'
 
 # git
-alias gcl='git clone --depth 1'
+# alias gcl='git clone --depth 1'
+alias gcl='git clone'
 alias gi='git init'
 alias ga='git add'
 alias gc='git commit -m'
 alias gp='git push'
 alias gs='git status'
-alias glg='git log'
+alias gl='git log'
+alias grl='git reflog'
 # alias gp='git push origin master'
 # alias lg='lazygit'
 
+# pyenv
+alias py="python"
+alias pa="pyenv activate"
+alias pd="pyenv deactivate"
+alias pv="pyenv versions"
+alias pvir="pyenv virtualenv"
+alias pl="pyenv local"
+alias pg="pyenv global"
+
+
 # vim
-alias v='lvim'
+alias v="lvim"
+alias sv="sudo lvim"
 
 # Theming section  
 autoload -U compinit colors zcalc
