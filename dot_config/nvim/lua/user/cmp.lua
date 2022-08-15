@@ -1,10 +1,12 @@
 local cmp_status_ok, cmp = pcall(require, "cmp")
 if not cmp_status_ok then
+  vim.notify("cmp" .. " not found!")
   return
 end
 
 local snip_status_ok, luasnip = pcall(require, "luasnip")
 if not snip_status_ok then
+  vim.notify("luasnip" .. " not found!")
   return
 end
 
@@ -45,7 +47,7 @@ local kind_icons = {
 }
 -- find more here: https://www.nerdfonts.com/cheat-sheet
 
-cmp.setup {
+local config = {
   snippet = {
     expand = function(args)
       luasnip.lsp_expand(args.body) -- For `luasnip` users.
@@ -129,3 +131,5 @@ cmp.setup {
     native_menu = false,
   },
 }
+
+cmp.setup(config)

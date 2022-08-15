@@ -8,7 +8,7 @@ local formatting = null_ls.builtins.formatting
 -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/diagnostics
 local diagnostics = null_ls.builtins.diagnostics
 
-null_ls.setup({
+local config = {
   debug = false,
   sources = {
     formatting.prettier.with({ extra_args = { "--no-semi", "--single-quote", "--jsx-single-quote" },
@@ -18,4 +18,6 @@ null_ls.setup({
     diagnostics.flake8,
     formatting.isort.with({ filetypes = { "python" } })
   },
-})
+}
+
+null_ls.setup(config)
