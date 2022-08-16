@@ -309,9 +309,6 @@ export PATH=$HOME/.cargo/bin:$PATH
 # disabled Telemetry dotnet (https://wiki.archlinux.org/title/.NET#Telemetry)
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
-## starship
-# eval "$(starship init zsh)"
-
 # nnn file manager
 export NNN_FCOLORS='0000E6310000000000000000'
 export NNN_PLUG='v:imgview;d:dragdrop;'
