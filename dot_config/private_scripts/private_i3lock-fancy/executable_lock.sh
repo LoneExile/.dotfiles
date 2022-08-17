@@ -2,8 +2,11 @@
 
 # source - https://github.com/meskarune/i3lock-fancy
 
-# don't sceen the menu
+# don't screen the menu
 sleep 0.15
+
+# set default keyboard
+setxkbmap us
 
 # Dependencies: imagemagick, i3lock-color-git, scrot, wmctrl (optional)
 set -o errexit -o noclobber -o nounset

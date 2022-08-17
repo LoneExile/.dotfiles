@@ -56,11 +56,20 @@ local config = {
   }
 }
 
+-- local dap, dapui = require("dap"), require("dapui")
+
+local status_ok_ui, dapui = pcall(require, "dapui")
+local status_ok_dap, dap = pcall(require, "dap")
+if (not status_ok_ui or not status_ok_dap) then
+  vim.notify("dapui" .. " not found!")
+  return
+end
+
+
 lvim.builtin.dap.active = true
-require("dapui").setup(config)
+dapui.setup(config)
 require('dap-python').setup('~/.pyenv/shims/python')
 require('nvim-dap-virtual-text').setup()
--- <cmd>lua require('dapui').open()<cr>
 
 
 -- C++ --
@@ -89,7 +98,6 @@ end
 
 -- dap ui --
 
-local dap, dapui = require("dap"), require("dapui")
 dap.listeners.after.event_initialized["dapui_config"] = function()
   dapui.open()
 end

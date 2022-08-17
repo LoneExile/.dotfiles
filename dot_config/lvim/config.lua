@@ -1,12 +1,10 @@
-require "user.options"
-require "user.env"
-require "user.keymaps"
-require "user.plugins"
-require "user.telescope"
--- require "user.lsp"
--- require "user.autocmd"
-require "user.lspsaga"
-require "user.null-ls"
-require "user.treesitter"
-require "user.dap"
-require "user.which-key"
+require("user.env")
+require("user.autocmd")
+require("user.options")
+require("user.keymaps")
+require("user.plugins")
+require("user.telescope")
+require("user.lsp")
+require("user.treesitter")
+require("user.dap")
+require("user.which-key")

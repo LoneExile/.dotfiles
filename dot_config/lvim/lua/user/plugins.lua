@@ -1,35 +1,35 @@
 -- Additional Plugins
 lvim.plugins = {
-  -- theme
-  { "folke/tokyonight.nvim" },
+	-- theme
+	{ "folke/tokyonight.nvim" },
 
-  -- debugger
-  { "rcarriga/nvim-dap-ui" },
-  -- { "Pocco81/dap-buddy.nvim" },
-  { "theHamsta/nvim-dap-virtual-text" },
-  { "leoluz/nvim-dap-go" },
-  { "nvim-telescope/telescope-dap.nvim" },
-  { "mfussenegger/nvim-dap-python" },
+	-- debugger
+	{ "rcarriga/nvim-dap-ui" },
+	-- { "Pocco81/dap-buddy.nvim" },
+	{ "theHamsta/nvim-dap-virtual-text" },
+	{ "leoluz/nvim-dap-go" },
+	{ "nvim-telescope/telescope-dap.nvim" },
+	{ "mfussenegger/nvim-dap-python" },
 
-  -- LSP
-  { "glepnir/lspsaga.nvim",
-    branch = "main",
-    config = function()
-      -- local saga = require("lspsaga")
+	-- LSP
+	{ "glepnir/lspsaga.nvim", branch = "main" },
 
-      -- saga.init_lsp_saga({
-      --   -- your configuration
-      -- })
-    end, },
-
-  -- utility
-  { "unblevable/quick-scope" }, -- jumpy but in line
-  --
-  {
-    "folke/trouble.nvim",
-    cmd = "TroubleToggle",
-  },
-  {
-    "norcalli/nvim-colorizer.lua"
-  }
+	-- utility
+	{ "unblevable/quick-scope" }, -- jumpy but in line
+	--
+	{
+		"folke/trouble.nvim",
+		cmd = "TroubleToggle",
+		requires = "kyazdani42/nvim-web-devicons",
+		config = function()
+			require("trouble").setup({
+				-- your configuration comes here
+				-- or leave it empty to use the default settings
+				-- refer to the configuration section below
+			})
+		end,
+	},
+	{
+		"norcalli/nvim-colorizer.lua",
+	},
 }
