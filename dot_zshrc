@@ -78,6 +78,9 @@ alias :q="exit"
 alias c="clear"
 alias cm="chezmoi"
 
+#virtualmachine
+alias win11=".config/scripts/virtualmachine.sh"
+
 # ls
 alias l='ls -lh'
 alias ll='ls -lah'
@@ -96,6 +99,7 @@ alias gp='git push'
 alias gs='git status'
 alias gl='git log'
 alias grl='git reflog'
+alias gf='git fetch'
 # alias gp='git push origin master'
 # alias lg='lazygit'
 
