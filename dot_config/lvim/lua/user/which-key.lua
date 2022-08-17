@@ -1,5 +1,5 @@
 -- Use which-key to add extra bindings with the leader-key prefix
-lvim.builtin.which_key.mappings["P"] = { "<cmd>Telescope projects<CR>", "Projects" }
+-- lvim.builtin.which_key.mappings["P"] = { "<cmd>Telescope projects<CR>", "Projects" }
 lvim.builtin.which_key.mappings["t"] = {
   name = "+Trouble",
   r = { "<cmd>Trouble lsp_references<cr>", "References" },
@@ -9,6 +9,7 @@ lvim.builtin.which_key.mappings["t"] = {
   l = { "<cmd>Trouble loclist<cr>", "LocationList" },
   w = { "<cmd>Trouble workspace_diagnostics<cr>", "Wordspace Diagnostics" },
 }
+lvim.builtin.which_key.vmappings["z"] = { "<cmd><C-U>Lspsaga range_code_action<CR>", "Diagnostics" }
 
 lvim.builtin.which_key.mappings = {
   -- ["c"] = { "<cmd>BufferClose!<CR>", "Close Buffer" },
@@ -24,14 +25,15 @@ lvim.builtin.which_key.mappings = {
   --   u = { "<cmd>PackerUpdate<cr>", "Update" },
   -- },
   [";"] = { "<cmd>Alpha<CR>", "Dashboard" },
-  ["w"] = { "<cmd>w!<CR>", "Save" },
-  ["q"] = { "<cmd>lua require('lvim.utils.functions').smart_quit()<CR>", "Quit" },
+  -- ["w"] = { "<cmd>w!<CR>", "Save" },
+  -- ["q"] = { "<cmd>lua require('lvim.utils.functions').smart_quit()<CR>", "Quit" },
   ["/"] = { "<cmd>lua require('Comment.api').toggle_current_linewise()<CR>", "Comment" },
   ["c"] = { "<cmd>BufferKill<CR>", "Close Buffer" },
   ["f"] = { require("lvim.core.telescope.custom-finders").find_project_files, "Find File" },
   ["h"] = { "<cmd>nohlsearch<CR>", "No Highlight" },
   b = {
     name = "Buffers",
+    -- c = { "<cmd>BufferKill<CR>", "Close Buffer" },
     j = { "<cmd>BufferLinePick<cr>", "Jump" },
     f = { "<cmd>Telescope buffers<cr>", "Find" },
     b = { "<cmd>BufferLineCyclePrev<cr>", "Previous" },
@@ -96,37 +98,55 @@ lvim.builtin.which_key.mappings = {
       "Git Diff",
     },
   },
+  -- C = {
+  --   name = "Code",
+  --   c = { "<cmd>Lspsaga code_action<CR>", "Code Action" },
+  --   d = { "<cmd>Lspsaga show_line_diagnostics<CR>", "Diagnostics" },
+  --   o = { ":LSoutlineToggle", "Outline" },
+  --   f = { require("lvim.lsp.utils").format, "Format" },
+  --   r = { "<cmd>Lspsaga rename<CR>", "Rename" },
+  --   j = { "<cmd>Lspsaga diagnostic_jump_next<CR>", "Next Diagnostic" },
+  --   k = { "<cmd>Lspsaga diagnostic_jump_prev<CR>", "Prev Diagnostic" },
+  --   -- k = { "", "Sync" },
+  -- },
   l = {
     name = "LSP",
-    a = { "<cmd>lua vim.lsp.buf.code_action()<cr>", "Code Action" },
-    d = { "<cmd>Telescope diagnostics bufnr=0 theme=get_ivy<cr>", "Buffer Diagnostics" },
-    w = { "<cmd>Telescope diagnostics<cr>", "Diagnostics" },
+    c = { "<cmd>Lspsaga code_action<CR>", "Code Action" },
+    d = { "<cmd>Lspsaga show_line_diagnostics<CR>", "Diagnostics" },
+    o = { ":LSoutlineToggle", "Outline" },
     f = { require("lvim.lsp.utils").format, "Format" },
+    r = { "<cmd>Lspsaga rename<CR>", "Rename" },
+    j = { "<cmd>Lspsaga diagnostic_jump_next<CR>", "Next Diagnostic" },
+    k = { "<cmd>Lspsaga diagnostic_jump_prev<CR>", "Prev Diagnostic" },
+    -- a = { "<cmd>lua vim.lsp.buf.code_action()<cr>", "Code Action" },
+    -- d = { "<cmd>Telescope diagnostics bufnr=0 theme=get_ivy<cr>", "Buffer Diagnostics" },
+    -- w = { "<cmd>Telescope diagnostics<cr>", "Diagnostics" },
+    -- f = { require("lvim.lsp.utils").format, "Format" },
     i = { "<cmd>LspInfo<cr>", "Info" },
     I = { "<cmd>LspInstallInfo<cr>", "Installer Info" },
-    j = {
-      vim.diagnostic.goto_next,
-      "Next Diagnostic",
-    },
-    k = {
-      vim.diagnostic.goto_prev,
-      "Prev Diagnostic",
-    },
-    l = { vim.lsp.codelens.run, "CodeLens Action" },
+    -- j = {
+    --   vim.diagnostic.goto_next,
+    --   "Next Diagnostic",
+    -- },
+    -- k = {
+    --   vim.diagnostic.goto_prev,
+    --   "Prev Diagnostic",
+    -- },
+    -- l = { vim.lsp.codelens.run, "CodeLens Action" },
     p = {
       name = "Peek",
       d = { "<cmd>lua require('lvim.lsp.peek').Peek('definition')<cr>", "Definition" },
       t = { "<cmd>lua require('lvim.lsp.peek').Peek('typeDefinition')<cr>", "Type Definition" },
       i = { "<cmd>lua require('lvim.lsp.peek').Peek('implementation')<cr>", "Implementation" },
     },
-    q = { vim.diagnostic.setloclist, "Quickfix" },
-    r = { vim.lsp.buf.rename, "Rename" },
-    s = { "<cmd>Telescope lsp_document_symbols<cr>", "Document Symbols" },
-    S = {
-      "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>",
-      "Workspace Symbols",
-    },
-    e = { "<cmd>Telescope quickfix<cr>", "Telescope Quickfix" },
+    -- q = { vim.diagnostic.setloclist, "Quickfix" },
+    -- r = { vim.lsp.buf.rename, "Rename" },
+    -- s = { "<cmd>Telescope lsp_document_symbols<cr>", "Document Symbols" },
+    -- S = {
+    --   "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>",
+    --   "Workspace Symbols",
+    -- },
+    -- e = { "<cmd>Telescope quickfix<cr>", "Telescope Quickfix" },
   },
   L = {
     name = "+LunarVim",

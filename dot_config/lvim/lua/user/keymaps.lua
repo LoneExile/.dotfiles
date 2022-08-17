@@ -11,7 +11,6 @@ lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
 -- lvim.keys.normal_mode["<C-q>"] = ":q<cr>" -- or vim.keymap.set("n", "<C-q>", ":q<cr>" )
 
 vim.api.nvim_set_keymap("v", "p", '"_dP', { noremap = true, silent = true }) -- copy paste not copy value that changing
--- vim.keymap.set("n", "K", "<cmd>Lspsaga hover_doc<CR>", { silent = true })
 
 --------------------------------------------------------
 
@@ -21,12 +20,6 @@ vim.api.nvim_set_keymap("v", "p", '"_dP', { noremap = true, silent = true }) -- 
 
 -- -- Shorten function name
 -- local keymap = vim.api.nvim_set_keymap
-
--- lvim.keys.normal_mode["<S-k>"] = false
--- keymap('n', 'K', '<Cmd>Lspsaga hover_doc<CR>', opts)
--- lvim.keys.normal_mode["<S-K>"] = "<Cmd>Lspsaga hover_doc<CR>" -- or vim.keymap.set("n", "<C-q>", ":q<cr>" )
--- vim.keymap.set("n", "<S-k>", ":Lspsaga hover_doc<CR>")
--- keymap("n", "<S-k>", ":Lspsaga hover_doc<CR>", opts)
 
 -- --Remap space as leader key
 -- keymap("", "<Space>", "<Nop>", opts)

@@ -15,11 +15,11 @@ lvim.plugins = {
   { "glepnir/lspsaga.nvim",
     branch = "main",
     config = function()
-      local saga = require("lspsaga")
+      -- local saga = require("lspsaga")
 
-      saga.init_lsp_saga({
-        -- your configuration
-      })
+      -- saga.init_lsp_saga({
+      --   -- your configuration
+      -- })
     end, },
 
   -- utility
