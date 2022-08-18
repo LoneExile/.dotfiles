@@ -25,5 +25,4 @@
 --   buf_set_option("omnifunc", "v:lua.vim.lsp.omnifunc")
 -- end
 
-
 lvim.lsp.diagnostics.virtual_text = false
