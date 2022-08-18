@@ -8,6 +8,9 @@ fi
 # Use powerline
 USE_POWERLINE="true"
 
+# better time command
+TIMEFMT=$'\n================\nCPU\t%P\nuser\t%*U\nsystem\t%*S\ntotal\t%*E'
+
 ## tmux config file
 # tmux source-file $HOME/.tmux/.tmux.conf
 
