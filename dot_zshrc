@@ -337,7 +337,7 @@ alias n="nnn -er"
 codi() {
   local syntax="${1:-python}"
   shift
-  vim -c \
+  lvim -c \
     "let g:startify_disable_at_vimenter = 1 |\
     set bt=nofile ls=0 noru nonu nornu |\
     hi ColorColumn ctermbg=NONE |\

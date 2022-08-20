@@ -250,6 +250,21 @@ lvim.builtin.which_key.mappings = {
 		--   "Prev Diagnostic",
 		-- },
 		-- l = { vim.lsp.codelens.run, "CodeLens Action" },
+		C = {
+			name = "Codi",
+			c = {
+				"<cmd>Codi!!<cr>",
+				"Codi Toggle",
+			},
+			e = {
+				"<cmd>CodiExpand<cr>",
+				"Expand",
+			},
+			s = {
+				"<cmd>:CodiSelect<cr>",
+				"Select",
+			},
+		},
 		p = {
 			name = "Peek",
 			d = {
