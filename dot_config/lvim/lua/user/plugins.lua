@@ -16,6 +16,7 @@ lvim.plugins = {
 
 	-- utility
 	{ "unblevable/quick-scope" }, -- jumpy but in line
+	{ "norcalli/nvim-colorizer.lua" }, --color highlighter
 	--
 	{
 		"folke/trouble.nvim",
@@ -28,8 +29,5 @@ lvim.plugins = {
 				-- refer to the configuration section below
 			})
 		end,
-	},
-	{
-		"norcalli/nvim-colorizer.lua",
 	},
 }

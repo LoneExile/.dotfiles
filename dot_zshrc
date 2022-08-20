@@ -2,7 +2,7 @@
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+    source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
 # Use powerline
@@ -30,7 +30,7 @@ setopt histignorespace                                          # Don't save com
 
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'       # Case insensitive tab completion
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"         # Colored completion (different colors for dirs/files/etc)
-zstyle ':completion:*' rehash true                              # automatically find new executables in path 
+zstyle ':completion:*' rehash true                              # automatically find new executables in path
 # Speed up completions
 zstyle ':completion:*' accept-exact '*(N)'
 zstyle ':completion:*' use-cache on
@@ -48,12 +48,12 @@ bindkey -e
 bindkey '^[[7~' beginning-of-line                               # Home key
 bindkey '^[[H' beginning-of-line                                # Home key
 if [[ "${terminfo[khome]}" != "" ]]; then
-  bindkey "${terminfo[khome]}" beginning-of-line                # [Home] - Go to beginning of line
+    bindkey "${terminfo[khome]}" beginning-of-line                # [Home] - Go to beginning of line
 fi
 bindkey '^[[8~' end-of-line                                     # End key
 bindkey '^[[F' end-of-line                                     # End key
 if [[ "${terminfo[kend]}" != "" ]]; then
-  bindkey "${terminfo[kend]}" end-of-line                       # [End] - Go to end of line
+    bindkey "${terminfo[kend]}" end-of-line                       # [End] - Go to end of line
 fi
 bindkey '^[[2~' overwrite-mode                                  # Insert key
 bindkey '^[[3~' delete-char                                     # Delete key
@@ -70,7 +70,7 @@ bindkey '^[[1;5C' forward-word                                  #
 bindkey '^H' backward-kill-word                                 # delete previous word with ctrl+backspace
 bindkey '^[[Z' undo                                             # Shift+tab undo last action
 
-## Alias section 
+## Alias section
 # alias cp="cp -i"                                                # Confirm before overwriting something
 alias cp="advcp -gi"                                            # g show progress, i Confirm before overwriting
 alias mv="advmv -gi"
@@ -80,6 +80,7 @@ alias gitu='git add . && git commit && git push'
 alias :q="exit"
 alias c="clear"
 alias cm="chezmoi"
+alias blue="bluetoothctl"
 
 #virtualmachine
 alias win11=".config/scripts/virtualmachine.sh"
@@ -120,7 +121,7 @@ alias pg="pyenv global"
 alias v="lvim"
 alias sv="sudo lvim"
 
-# Theming section  
+# Theming section
 autoload -U compinit colors zcalc
 compinit -d
 colors
@@ -152,17 +153,17 @@ source /usr/share/fzf/completion.zsh
 zmodload zsh/terminfo
 bindkey "$terminfo[kcuu1]" history-substring-search-up
 bindkey "$terminfo[kcud1]" history-substring-search-down
-bindkey '^[[A' history-substring-search-up			
+bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down
 
 ## FZF
 export FZF_DEFAULT_OPTS='
-        --bind ctrl-d:preview-down,ctrl-u:preview-up,ctrl-p:toggle-preview
-        --border
-			  --preview "if [[ -n {} ]]; then if [ -d {} ]; then echo {}/ && exa -1 --color always --icons {} | head -500; else if [[ $(file --mime {}) =~ binary ]]; then echo {} is a binary file; else bat --style=numbers --color=always --line-range :500 {}; fi; fi; fi"
-			  --preview-window hidden
-			  --color=bg+:#3f3f3f,bg:#252525,border:#6b6b6b,spinner:#98c378,hl:#98c378,fg:#d9d9d9,header:#98c378,info:#e5c07b,pointer:#ff9999,marker:#e5c07b,fg+:#d9d9d9,preview-bg:#1e1e1e,prompt:#bb88e5,hl+:#98c378
-			'
+--bind ctrl-d:preview-down,ctrl-u:preview-up,ctrl-p:toggle-preview
+--border
+--preview "if [[ -n {} ]]; then if [ -d {} ]; then echo {}/ && exa -1 --color always --icons {} | head -500; else if [[ $(file --mime {}) =~ binary ]]; then echo {} is a binary file; else bat --style=numbers --color=always --line-range :500 {}; fi; fi; fi"
+--preview-window hidden
+--color=bg+:#3f3f3f,bg:#252525,border:#6b6b6b,spinner:#98c378,hl:#98c378,fg:#d9d9d9,header:#98c378,info:#e5c07b,pointer:#ff9999,marker:#e5c07b,fg+:#d9d9d9,preview-bg:#1e1e1e,prompt:#bb88e5,hl+:#98c378
+'
 export FZF_CTRL_R_OPTS='--preview "echo {}"'
 # export FZF_COMPLETION_TRIGGER='\'
 
@@ -276,7 +277,11 @@ add-zsh-hook preexec mzc_termsupport_preexec
 export LS_OPTIONS='--color=auto'
 eval "$(dircolors -b)"
 alias ls='ls $LS_OPTIONS'
- 
+
+# pnpm
+export PNPM_HOME="~/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
+
 ## NVM
 export NVM_DIR="$HOME/.nvm"
 # [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use  # shell slow use this line
@@ -308,6 +313,10 @@ lg()
 ## pyenv plugin pyenv-virtualenv
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
+# alias pip='noglob pip'
+
+## Haskell GHCup
+[ -f "/home/bunlaikun/.ghcup/env" ] && source "/home/bunlaikun/.ghcup/env" # ghcup-env
 
 export PYENV_ROOT=~/.pyenv
 export PATH=$PYENV_ROOT/shims:$PATH
@@ -328,4 +337,3 @@ source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-

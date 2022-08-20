@@ -224,14 +224,14 @@ lvim.builtin.which_key.mappings = {
 			"<cmd>Lspsaga rename<CR>",
 			"Rename",
 		},
-		j = {
-			"<cmd>Lspsaga diagnostic_jump_next<CR>",
-			"Next Diagnostic",
-		},
-		k = {
-			"<cmd>Lspsaga diagnostic_jump_prev<CR>",
-			"Prev Diagnostic",
-		},
+		-- j = {
+		-- 	"<cmd>Lspsaga diagnostic_jump_next<CR>",
+		-- 	"Next Diagnostic",
+		-- },
+		-- k = {
+		-- 	"<cmd>Lspsaga diagnostic_jump_prev<CR>",
+		-- 	"Prev Diagnostic",
+		-- },
 		-- a = { "<cmd>lua vim.lsp.buf.code_action()<cr>", "Code Action" },
 		-- d = { "<cmd>Telescope diagnostics bufnr=0 theme=get_ivy<cr>", "Buffer Diagnostics" },
 		-- w = { "<cmd>Telescope diagnostics<cr>", "Diagnostics" },

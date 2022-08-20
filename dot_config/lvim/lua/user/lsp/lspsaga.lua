@@ -20,6 +20,9 @@ vim.keymap.set("n", "gr", "<cmd>Lspsaga lsp_finder<CR>", opts)
 vim.keymap.set("n", "gs", "<Cmd>Lspsaga signature_help<CR>", opts)
 vim.keymap.set("n", "gd", "<cmd>Lspsaga preview_definition<CR>", opts)
 vim.keymap.set("n", "gR", "<cmd>Lspsaga rename<CR>", opts)
+vim.keymap.set("n", "gq", "<cmd>Lspsaga code_action<CR>", opts)
+vim.keymap.set("n", "gj", "<cmd>Lspsaga diagnostic_jump_next<CR>", opts)
+vim.keymap.set("n", "gk", "<cmd>Lspsaga diagnostic_jump_prev<CR>", opts)
 -- vim.keymap.set("n", "gr", "<cmd>Trouble lsp_references<cr>", opts)
 -- vim.keymap.set("n", "]e", "<cmd>Lspsaga diagnostic_jump_next<CR>", opts)
 -- vim.keymap.set("n", "[e", "<cmd>Lspsaga diagnostic_jump_prev<CR>", opts)
@@ -106,8 +109,8 @@ local config = {
 	definition_preview_icon = "  ",
 	-- show symbols in winbar must nightly
 	symbol_in_winbar = {
-		in_custom = false,
-		enable = false,
+		in_custom = true,
+		enable = true,
 		separator = " ",
 		show_file = true,
 		click_support = false,

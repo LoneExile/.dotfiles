@@ -10,6 +10,12 @@ formatters.setup({
 			"--no-semi",
 			"--single-quote",
 			"--jsx-single-quote",
+			"--print-width",
+			"80",
+			"--use-tabs",
+			"--no-bracket-spacing",
+			-- "--config",
+			-- "./Path"
 		},
 		---@usage specify which filetypes to enable. By default a providers will attach to all the filetypes it supports.
 		-- filetypes = { "typescript", "typescriptreact", "json" },
@@ -20,10 +26,22 @@ formatters.setup({
 		command = "stylua",
 		extra_args = { "--column-width", "80" },
 	},
-	-- { command = "black", extra_args = { "--fast" } },
 	{
-		command = "isort",
-		filetypes = { "python" },
+		command = "black",
+		extra_args = { "--fast", "--line-length", "79" },
+	},
+	-- {
+	-- 	command = "",
+	-- },
+	-- {
+	-- 	command = "isort",
+	-- 	filetypes = { "python" },
+	-- 	extra_args = { "--line-length", "30" },
+	-- },
+	{
+		command = "beautysh",
+		filetypes = { "bash", "csh", "ksh", "sh", "zsh" },
+		extra_args = { "$FILENAME" },
 	},
 })
 
@@ -33,6 +51,7 @@ linters.setup({
 	{
 		command = "flake8",
 		filetypes = { "python" },
+		extra_args = { "--max-line-length", "90" },
 	},
 	{
 		-- each linter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration
@@ -45,5 +64,72 @@ linters.setup({
 		command = "codespell",
 		---@usage specify which filetypes to enable. By default a providers will attach to all the filetypes it supports.
 		-- filetypes = { "javascript", "python", "typescript", "typescriptreact" },
+	},
+	{
+		command = "eslint",
+		filetypes = {
+			"javascript",
+			"javascriptreact",
+			"typescript",
+			"typescriptreact",
+			"vue",
+		},
+		extra_args = {
+			"-f",
+			"json",
+			"--stdin",
+			"--stdin-filename",
+			"$FILENAME",
+		},
+	},
+	-- {
+	-- 	command = "proselint",
+	-- 	filetypes = { "markdown", "tex" },
+	-- },
+	{
+		command = "alex",
+		filetypes = { "markdown" },
+		extra_args = { "--stdin", "--quiet" },
+	},
+	{
+		command = "hadolint",
+		filetype = { "dockerfile" },
+		extra_args = { "--no-fail", "--format=json", "-" },
+	},
+	{
+		command = "zsh",
+		filetypes = { "zsh" },
+		extra_args = { "-n", "$FILENAME" },
+	},
+	{
+		command = "actionlint",
+		filetype = { "yaml" },
+		extra_args = { "-no-color", "-format", "{{json .}}", "-" },
+	},
+})
+
+-- set additional codeaction
+local codeaction = require("lvim.lsp.null-ls.code_actions")
+codeaction.setup({
+	{
+		command = "eslint",
+		filetypes = {
+			"javascript",
+			"javascriptreact",
+			"typescript",
+			"typescriptreact",
+			"vue",
+		},
+		extra_args = {
+			"-f",
+			"json",
+			"--stdin",
+			"--stdin-filename",
+			"$FILENAME",
+		},
+	},
+	{
+		command = "proselint",
+		filetypes = { "markdown", "tex" },
 	},
 })

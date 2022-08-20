@@ -48,13 +48,13 @@ return gears.table.join(
 		description = "Swap with previous client by index",
 		group = "Client",
 	}),
-	awful.key({ modkey }, "#43", function()
+	awful.key({ modkey }, "#46", function()
 		awful.screen.focus_relative(1)
 	end, {
 		description = "Focus the next screen",
 		group = "Screen",
 	}),
-	awful.key({ modkey }, "#46", function()
+	awful.key({ modkey }, "#43", function()
 		awful.screen.focus_relative(-1)
 	end, {
 		description = "Focus the previous screen",
@@ -64,10 +64,21 @@ return gears.table.join(
 		local c = client.focus
 		if c then
 			c:move_to_screen()
-			awful.screen.focus_relative(1)
+			c:raise()
 		end
 	end, {
 		description = "Move focused window to next screen",
+		group = "Screen",
+	}),
+	awful.key({ modkey }, "#33", function()
+		local c = client.focus
+		local s = c.screen.index - 1
+		if c then
+			c:move_to_screen(s)
+			c:raise()
+		end
+	end, {
+		description = "Move focused window to previous screen",
 		group = "Screen",
 	}),
 	awful.key({ modkey }, "#30", awful.client.urgent.jumpto, {
