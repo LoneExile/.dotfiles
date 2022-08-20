@@ -13,21 +13,28 @@ lvim.plugins = {
 
 	-- LSP
 	{ "glepnir/lspsaga.nvim", branch = "main" },
-
-	-- utility
-	{ "unblevable/quick-scope" }, -- jumpy but in line
-	{ "norcalli/nvim-colorizer.lua" }, --color highlighter
-	--
 	{
 		"folke/trouble.nvim",
 		cmd = "TroubleToggle",
 		requires = "kyazdani42/nvim-web-devicons",
-		config = function()
-			require("trouble").setup({
-				-- your configuration comes here
-				-- or leave it empty to use the default settings
-				-- refer to the configuration section below
-			})
-		end,
 	},
+	{ "windwp/nvim-ts-autotag" },
+
+	-- utility
+	{ "unblevable/quick-scope" }, -- jumpy but in line
+	{ "norcalli/nvim-colorizer.lua" }, --color highlighter
+	{ "phaazon/hop.nvim" }, -- EasyMotion
+	{ "nacro90/numb.nvim" }, -- Peek lines just when you intend
+	-- { "andymass/vim-matchup" }, -- highlight, navigate, and operate on sets of matching text
+	{
+		"windwp/nvim-spectre",
+		requires = "nvim-lua/plenary.nvim",
+	},
+	{
+		"metakirby5/codi.vim",
+		cmd = "Codi",
+	},
+	{ "lukas-reineke/indent-blankline.nvim" },
+	-- { "nvim-telescope/telescope-project.nvim" },
+	--
 }

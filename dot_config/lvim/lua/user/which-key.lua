@@ -394,10 +394,10 @@ lvim.builtin.which_key.mappings = {
 			"<cmd>Telescope commands<cr>",
 			"Commands",
 		},
-		p = {
-			"<cmd>lua require('telescope.builtin.internal').colorscheme({enable_preview = true})<cr>",
-			"Colorscheme with Preview",
-		},
+		-- p = {
+		-- 	"<cmd>lua require('telescope.builtin.internal').colorscheme({enable_preview = true})<cr>",
+		-- 	"Colorscheme with Preview",
+		-- },
 	},
 	-- d = {
 	--   name = "Debug",
