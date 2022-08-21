@@ -29,12 +29,16 @@ lvim.plugins = {
 	{
 		"windwp/nvim-spectre",
 		requires = "nvim-lua/plenary.nvim",
-	},
+	}, -- search and replace
 	{
 		"metakirby5/codi.vim",
 		cmd = "Codi",
-	},
+	}, -- interactive scratchpad
 	{ "lukas-reineke/indent-blankline.nvim" },
 	-- { "nvim-telescope/telescope-project.nvim" },
+	{ "tpope/vim-repeat" }, -- enable repeating supported plugin maps with "."
+	{ "tpope/vim-surround" }, -- Delete/change/add parentheses/quotes,
+	{ "svermeulen/vim-yoink" }, -- maintains a yank history to cycle between
+	{ "svermeulen/vim-subversive" }, -- operator motions to quickly replace text
 	--
 }

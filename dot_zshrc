@@ -143,7 +143,7 @@ source $HOME/.config/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source $HOME/.config/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $HOME/.config/zsh/plugins/fzf-tab/fzf-tab.zsh
 source $HOME/.config/zsh/plugins/zsh-vim-mode/zsh-vim-mode.plugin.zsh
-# source $HOME/.config/zsh/plugins/zsh-vi-mode/zsh-vi-mode.zsh
+# source $HOME/.config/zsh/plugins/zsh-vi-mode/zsh-vi-mode.zsh # bug
 # Use history substring search
 source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
 # Fuzzy

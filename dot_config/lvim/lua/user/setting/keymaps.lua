@@ -2,7 +2,7 @@
 lvim.leader = "space"
 
 -- add your own keymapping
-lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
+-- lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
 
 -- unmap a default keymapping
 -- vim.keymap.del("n", "<C-Up>")
@@ -33,7 +33,6 @@ vim.api.nvim_set_keymap("v", "p", '"_dP', { noremap = true, silent = true }) -- 
 -- --   visual_block_mode = "x",
 -- --   term_mode = "t",
 -- --   command_mode = "c",
-
 
 -- -- Normal --
 -- -- Better window navigation

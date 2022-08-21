@@ -1,7 +1,5 @@
-require("user.env")
 require("user.autocmd")
-require("user.options")
-require("user.keymaps")
+require("user.setting")
 require("user.plugins")
 require("user.telescope")
 require("user.lsp")
