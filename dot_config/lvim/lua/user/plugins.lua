@@ -26,8 +26,8 @@ lvim.plugins = {
 	{ "glepnir/lspsaga.nvim", branch = "main" },
 	{
 		"folke/trouble.nvim",
-		cmd = "TroubleToggle",
-		requires = "kyazdani42/nvim-web-devicons",
+		-- cmd = "TroubleToggle",
+		-- requires = "kyazdani42/nvim-web-devicons",
 	},
 	{ "windwp/nvim-ts-autotag" },
 
