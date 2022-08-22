@@ -1,7 +1,18 @@
 -- Additional Plugins
 lvim.plugins = {
 	-- theme
-	{ "folke/tokyonight.nvim" },
+	-- { "folke/tokyonight.nvim" },
+	-- { "lunarvim/synthwave84.nvim" },
+	-- { "lunarvim/horizon.nvim" },
+	-- { "joshdick/onedark.vim" },
+	-- { "cocopon/iceberg.vim" },
+	-- { "rebelot/kanagawa.nvim" },
+	-- { "EdenEast/nightfox.nvim" },
+	-- { "catppuccin/nvim" },
+	-- { "projekt0n/github-nvim-theme" },
+	-- { "marko-cerovac/material.nvim" },
+	-- { "ellisonleao/gruvbox.nvim" },
+	-- { "haishanh/night-owl.vim" },
 
 	-- debugger
 	{ "rcarriga/nvim-dap-ui" },
@@ -38,7 +49,7 @@ lvim.plugins = {
 	-- { "nvim-telescope/telescope-project.nvim" },
 	{ "tpope/vim-repeat" }, -- enable repeating supported plugin maps with "."
 	{ "tpope/vim-surround" }, -- Delete/change/add parentheses/quotes,
-	{ "svermeulen/vim-yoink" }, -- maintains a yank history to cycle between
+	-- { "svermeulen/vim-yoink" }, -- maintains a yank history to cycle between
 	{ "svermeulen/vim-subversive" }, -- operator motions to quickly replace text
 	--
 }

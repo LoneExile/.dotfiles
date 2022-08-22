@@ -16,16 +16,6 @@ lvim.builtin.notify.active = true
 lvim.builtin.terminal.active = true
 lvim.builtin.nvimtree.setup.view.side = "left"
 lvim.builtin.nvimtree.setup.renderer.icons.show.git = false
--- lvim.builtin.lualine.style = "none"
-
--- local components = require("lvim.core.lualine.components")
-lvim.builtin.lualine.sections.lualine_a = { "mode" }
-lvim.builtin.lualine.sections.lualine_z = { "progress" }
--- lvim.builtin.lualine.options.theme = "gruvbox"
--- lvim.builtin.lualine.sections.lualine_a = {
--- 	components.spaces,
--- 	components.location,
--- }
 
 ---------------------
 
