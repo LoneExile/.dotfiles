@@ -1,7 +1,7 @@
 -- Additional Plugins
 lvim.plugins = {
 	-- theme
-	-- { "folke/tokyonight.nvim" },
+	{ "folke/tokyonight.nvim" },
 	-- { "lunarvim/synthwave84.nvim" },
 	-- { "lunarvim/horizon.nvim" },
 	-- { "joshdick/onedark.vim" },

@@ -10,11 +10,11 @@ vim.keymap.set("n", "te", "<cmd>NnnPicker<CR>", opts)
 
 local cfg = {
 	explorer = {
-		cmd = "nnn", -- command overrride (-F1 flag is implied, -a flag is invalid!)
+		cmd = "nnn", -- command override (-F1 flag is implied, -a flag is invalid!)
 		width = 24, -- width of the vertical split
 		side = "topleft", -- or "botright", location of the explorer window
 		session = "", -- or "global" / "local" / "shared"
-		tabs = true, -- seperate nnn instance per tab
+		tabs = true, -- separate nnn instance per tab
 	},
 	picker = {
 		cmd = "nnn", -- command override (-p flag is implied)
@@ -23,7 +23,8 @@ local cfg = {
 			height = 0.8, -- ^
 			xoffset = 0.5, -- ^
 			yoffset = 0.5, -- ^
-			border = "single", -- border decoration for example "rounded"(:h nvim_open_win)
+			-- border = "single", -- border decoration for example "rounded"(:h nvim_open_win)
+			border = "rounded",
 		},
 		session = "", -- or "global" / "local" / "shared"
 	},
