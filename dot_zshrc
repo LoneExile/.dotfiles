@@ -80,7 +80,7 @@ alias gitu='git add . && git commit && git push'
 alias :q="exit"
 alias c="clear"
 alias cm="chezmoi"
-alias blue="bluetoothctl"
+alias blt="bluetoothctl"
 
 #virtualmachine
 alias win11=".config/scripts/virtualmachine.sh"

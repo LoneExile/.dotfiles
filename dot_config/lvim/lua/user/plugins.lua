@@ -26,8 +26,11 @@ lvim.plugins = {
 	{ "glepnir/lspsaga.nvim", branch = "main" },
 	{
 		"folke/trouble.nvim",
-		-- cmd = "TroubleToggle",
-		-- requires = "kyazdani42/nvim-web-devicons",
+		cmd = "TroubleToggle",
+		requires = "kyazdani42/nvim-web-devicons",
+		config = function()
+			require("trouble").setup()
+		end,
 	},
 	{ "windwp/nvim-ts-autotag" },
 
@@ -45,6 +48,7 @@ lvim.plugins = {
 		"metakirby5/codi.vim",
 		cmd = "Codi",
 	}, -- interactive scratchpad
+	{ "luukvbaal/nnn.nvim" },
 	{ "lukas-reineke/indent-blankline.nvim" },
 	-- { "nvim-telescope/telescope-project.nvim" },
 	{ "tpope/vim-repeat" }, -- enable repeating supported plugin maps with "."

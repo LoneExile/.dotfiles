@@ -16,7 +16,7 @@ lvim.builtin.which_key.vmappings["z"] = {
 
 lvim.builtin.which_key.mappings = {
 	-- ["c"] = { "<cmd>BufferClose!<CR>", "Close Buffer" },
-	-- ["e"] = { "<cmd>lua require'core.nvimtree'.toggle_tree()<CR>", "Explorer" },
+	["e"] = { "<cmd>lua require'core.nvimtree'.toggle_tree()<CR>", "Explorer" },
 	-- ["h"] = { '<cmd>let @/=""<CR>', "No Highlight" },
 
 	-- p = {
