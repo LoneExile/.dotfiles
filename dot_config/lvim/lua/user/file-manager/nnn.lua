@@ -17,7 +17,7 @@ local cfg = {
 		tabs = true, -- separate nnn instance per tab
 	},
 	picker = {
-		cmd = "nnn", -- command override (-p flag is implied)
+		cmd = "tmux new-session nnn -erPp", -- command override (-p flag is implied)
 		style = {
 			width = 0.9, -- percentage relative to terminal size when < 1, absolute otherwise
 			height = 0.8, -- ^
@@ -47,7 +47,7 @@ local cfg = {
 	},
 	buflisted = false, -- whether or not nnn buffers show up in the bufferlist
 	quitcd = "tcd", -- or "cd" / "lcd", command to run if quitcd file is found
-	offset = false, -- whether or not to write position offset to tmpfile(for use in preview-tui)
+	offset = true, -- whether or not to write position offset to tmpfile(for use in preview-tui)
 }
 
 nnn.setup(cfg)
