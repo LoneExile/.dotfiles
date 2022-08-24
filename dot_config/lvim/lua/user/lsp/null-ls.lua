@@ -28,7 +28,7 @@ formatters.setup({
 	},
 	{
 		command = "black",
-		extra_args = { "--fast", "--line-length", "79" },
+		extra_args = { "--fast", "--line-length", "90" },
 	},
 	-- {
 	-- 	command = "",

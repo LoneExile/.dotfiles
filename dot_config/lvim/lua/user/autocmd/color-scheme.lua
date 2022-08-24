@@ -19,6 +19,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 			"WhichKeyFloat",
 			"FloatBorder",
 			"NormalFloat",
+			"VertSplit",
 			-- "StatusLine",
 			-- "StatusLineNC",
 		}
