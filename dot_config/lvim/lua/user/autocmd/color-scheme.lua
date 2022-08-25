@@ -26,6 +26,13 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 		for _, name in ipairs(hl_groups) do
 			vim.cmd(string.format("highlight %s ctermbg=none guibg=none", name))
 
+			vim.cmd(
+				[[highlight QuickScopePrimary guifg='#ffffff' gui=underline ctermfg=155 cterm=underline]]
+			)
+			vim.cmd(
+				[[highlight QuickScopeSecondary guifg='#999999' gui=underline ctermfg=81 cterm=underline]]
+			)
+
 			vim.cmd([[highlight IndentBlanklineIndent1 guifg=#E06C75 gui=nocombine]])
 			-- vim.cmd([[highlight IndentBlanklineIndent1 guifg=#E06C75 gui=nocombine]])
 			-- vim.cmd([[highlight IndentBlanklineIndent2 guifg=#E5C07B gui=nocombine]])
