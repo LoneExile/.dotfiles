@@ -213,7 +213,7 @@ lvim.builtin.which_key.mappings = {
 			"Code Action",
 		},
 		o = {
-			":LSoutlineToggle<cr>",
+			"<cmd>LSoutlineToggle<cr>",
 			"Outline",
 		},
 		f = {
