@@ -33,6 +33,11 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 				[[highlight QuickScopeSecondary guifg='#999999' gui=underline ctermfg=81 cterm=underline]]
 			)
 
+			-- WinBar         xxx cterm=bold gui=bold
+			-- vim.cmd([[highlight WinBar guifg='#000099' ]])
+			-- CmpItemKind    xxx guifg=#61afef
+			-- vim.cmd([[highlight CmpItemKind guifg='#000099' ]])
+
 			vim.cmd([[highlight IndentBlanklineIndent1 guifg=#E06C75 gui=nocombine]])
 			-- vim.cmd([[highlight IndentBlanklineIndent1 guifg=#E06C75 gui=nocombine]])
 			-- vim.cmd([[highlight IndentBlanklineIndent2 guifg=#E5C07B gui=nocombine]])
