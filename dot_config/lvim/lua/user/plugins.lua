@@ -55,5 +55,6 @@ lvim.plugins = {
 	{ "tpope/vim-surround" }, -- Delete/change/add parentheses/quotes,
 	-- { "svermeulen/vim-yoink" }, -- maintains a yank history to cycle between
 	{ "svermeulen/vim-subversive" }, -- operator motions to quickly replace text
+	{ "github/copilot.vim" },
 	--
 }
