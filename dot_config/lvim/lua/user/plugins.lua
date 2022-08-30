@@ -2,8 +2,7 @@
 lvim.plugins = {
 	-- theme
 	{ "folke/tokyonight.nvim" },
-	-- { "lunarvim/synthwave84.nvim" },
-	-- { "lunarvim/horizon.nvim" },
+	-- { "lunarvim/synthwave84.nvim" }, { "lunarvim/horizon.nvim" },
 	-- { "joshdick/onedark.vim" },
 	-- { "cocopon/iceberg.vim" },
 	-- { "rebelot/kanagawa.nvim" },
@@ -42,6 +41,7 @@ lvim.plugins = {
 	-- { "andymass/vim-matchup" }, -- highlight, navigate, and operate on sets of matching text
 	{
 		"windwp/nvim-spectre",
+		-- ~/.local/share/lunarvim/site/pack/packer/start/nvim-spectre/build.sh
 		requires = "nvim-lua/plenary.nvim",
 	}, -- search and replace
 	{
@@ -56,5 +56,28 @@ lvim.plugins = {
 	-- { "svermeulen/vim-yoink" }, -- maintains a yank history to cycle between
 	{ "svermeulen/vim-subversive" }, -- operator motions to quickly replace text
 	{ "github/copilot.vim" },
-	--
+	-- {
+	-- 	"zbirenbaum/copilot.lua",
+	-- 	event = { "VimEnter" },
+	-- 	config = function()
+	-- 		vim.schedule(function()
+	-- 			require("copilot").setup({
+	-- 				cmp = {
+	-- 					enabled = true,
+	-- 					method = "getCompletionsCycling",
+	-- 				},
+	-- 				panel = { -- no config options yet
+	-- 					enabled = true,
+	-- 				},
+	-- 				ft_disable = { "markdown" },
+	-- 				plugin_manager_path = vim.fn.expand("$HOME")
+	-- 					.. "/.local/share/lunarvim/site/pack/packer",
+	-- 			})
+	-- 		end)
+	-- 	end,
+	-- },
+	-- {
+	-- 	"zbirenbaum/copilot-cmp",
+	-- 	module = "copilot_cmp",
+	-- },
 }

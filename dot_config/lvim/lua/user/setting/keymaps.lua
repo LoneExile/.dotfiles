@@ -15,12 +15,12 @@ vim.api.nvim_set_keymap("t", "<ESC>", "<C-\\><C-n>", { silent = true }) -- exit 
 
 --------------------------------------------------------
 
--- local opts = { noremap = true, silent = true }
+local opts = { noremap = true, silent = true }
 
 -- local term_opts = { silent = true }
 
 -- -- Shorten function name
--- local keymap = vim.api.nvim_set_keymap
+local keymap = vim.api.nvim_set_keymap
 
 -- --Remap space as leader key
 -- keymap("", "<Space>", "<Nop>", opts)
@@ -51,8 +51,8 @@ vim.api.nvim_set_keymap("t", "<ESC>", "<C-\\><C-n>", { silent = true }) -- exit 
 -- keymap("n", "<C-Right>", ":vertical resize -2<CR>", opts)
 
 -- -- Navigate buffers
--- keymap("n", "<S-l>", ":bnext<CR>", opts)
--- keymap("n", "<S-h>", ":bprevious<CR>", opts)
+keymap("n", "<S-l>", ":bnext<CR>", opts)
+keymap("n", "<S-h>", ":bprevious<CR>", opts)
 
 -- -- Insert --
 -- -- Press jk fast to enter

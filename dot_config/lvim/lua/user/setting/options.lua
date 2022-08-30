@@ -10,12 +10,16 @@ vim.opt.relativenumber = true -- set relative numbered lines
 -- to disable icons and use a minimalist setup, uncomment the following
 -- lvim.use_icons = false
 
-lvim.builtin.alpha.active = true
-lvim.builtin.alpha.mode = "dashboard"
 lvim.builtin.notify.active = true
 lvim.builtin.terminal.active = true
 lvim.builtin.nvimtree.setup.view.side = "left"
 lvim.builtin.nvimtree.setup.renderer.icons.show.git = false
+lvim.builtin.cmp.experimental.ghost_text = false
+
+-- lvim.builtin.alpha.active = true
+-- lvim.builtin.alpha.mode = "dashboard"
+-- local vim_dashboard = require("user.setting.alpha")
+-- lvim.builtin.alpha.dashboard = { config = {}, section = vim_dashboard.get_sections() }
 
 ---------------------
 

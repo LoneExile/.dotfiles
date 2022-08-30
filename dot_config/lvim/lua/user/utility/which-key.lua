@@ -31,7 +31,9 @@ lvim.builtin.which_key.mappings = {
 	-- ["w"] = { "<cmd>w!<CR>", "Save" },
 	-- ["q"] = { "<cmd>lua require('lvim.utils.functions').smart_quit()<CR>", "Quit" },
 	["/"] = {
-		"<cmd>lua require('Comment.api').toggle_current_linewise()<CR>",
+		-- "<cmd>lua require('Comment.api').toggle_current_linewise()<CR>",
+		"<cmd>lua require('Comment.api').toggle.linewise.current()<CR>",
+		-- require('Comment.api').toggle_current_linewise({cfg}) is deprecated, use require('Comment.api').toggle.linewise.current(nil, {cfg}) instead. See :h deprecated
 		"Comment",
 	},
 	["c"] = {
