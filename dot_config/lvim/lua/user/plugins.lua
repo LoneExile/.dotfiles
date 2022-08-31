@@ -59,22 +59,6 @@ lvim.plugins = {
 	{
 		"zbirenbaum/copilot.lua",
 		event = { "VimEnter" },
-		config = function()
-			vim.schedule(function()
-				require("copilot").setup({
-					cmp = {
-						enabled = true,
-						method = "getCompletionsCycling",
-					},
-					panel = { -- no config options yet
-						enabled = true,
-					},
-					ft_disable = { "markdown" },
-					plugin_manager_path = vim.fn.expand("$HOME")
-						.. "/.local/share/lunarvim/site/pack/packer",
-				})
-			end)
-		end,
 	},
 	{
 		"zbirenbaum/copilot-cmp",

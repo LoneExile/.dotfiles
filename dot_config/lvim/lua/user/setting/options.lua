@@ -14,7 +14,7 @@ lvim.builtin.notify.active = true
 lvim.builtin.terminal.active = true
 lvim.builtin.nvimtree.setup.view.side = "left"
 lvim.builtin.nvimtree.setup.renderer.icons.show.git = false
-lvim.builtin.cmp.experimental.ghost_text = true
+lvim.builtin.cmp.experimental.ghost_text = false
 lvim.lsp.diagnostics.virtual_text = false
 
 -- lvim.builtin.alpha.active = true

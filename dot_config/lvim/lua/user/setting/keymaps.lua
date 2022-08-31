@@ -11,7 +11,8 @@ lvim.leader = "space"
 -- lvim.keys.normal_mode["<C-q>"] = ":q<cr>" -- or vim.keymap.set("n", "<C-q>", ":q<cr>" )
 
 vim.api.nvim_set_keymap("v", "p", '"_dP', { noremap = true, silent = true }) -- copy paste not copy value that changing
-vim.api.nvim_set_keymap("t", "<ESC>", "<C-\\><C-n>", { silent = true }) -- exit insert_mode in terminal
+-- vim.api.nvim_set_keymap("t", "<ESC>", "<C-\\><C-n>", { silent = true }) -- exit insert_mode in terminal
+vim.api.nvim_set_keymap("t", "<C-e>", "<C-\\><C-n>", { silent = true }) -- exit insert_mode in terminal
 
 --------------------------------------------------------
 

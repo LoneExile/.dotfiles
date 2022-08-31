@@ -1,11 +1,10 @@
 -- ~/.local/share/lunarvim/lvim/lua/lvim/lsp/config.lua
 
--- local action = require("lspsaga.codeaction")s
-local status_ok_code, action = pcall(require, "lspsaga.codeaction")
-if not status_ok_code then
-	vim.notify("lspsaga action" .. " not found!")
-	return
-end
+-- local status_ok_code, action = pcall(require, "lspsaga.codeaction")
+-- if not status_ok_code then
+-- 	vim.notify("lspsaga action" .. " not found!")
+-- 	return
+-- end
 
 local status_ok, lspsagaM = pcall(require, "lspsaga")
 if not status_ok then
@@ -46,23 +45,23 @@ vim.keymap.set("n", "gk", "<cmd>Lspsaga diagnostic_jump_prev<CR>", opts)
 local config = {
 	border_style = "rounded",
 	finder_request_timeout = 15000,
-	finder_action_keys = {
-		open = "o",
-		vsplit = "s",
-		split = "i",
-		tabe = "t",
-		quit = "q",
-		scroll_down = "<C-f>",
-		scroll_up = "<C-b>", -- quit can be a table
-	},
-	code_action_keys = {
-		quit = "q",
-		exec = "<CR>",
-	},
-	rename_action_quit = "<C-c>",
-	code_action_icon = "💡",
+	-- finder_action_keys = {
+	-- 	open = "o",
+	-- 	vsplit = "s",
+	-- 	split = "i",
+	-- 	tabe = "t",
+	-- 	quit = "q",
+	-- 	scroll_down = "<C-f>",
+	-- 	scroll_up = "<C-b>", -- quit can be a table
+	-- },
+	-- code_action_keys = {
+	-- 	quit = "q",
+	-- 	exec = "<CR>",
+	-- },
+	-- rename_action_quit = "<C-c>",
+	-- code_action_icon = "💡",
 	code_action_lightbulb = {
-		enable = false,
+		enable = true,
 		sign = true,
 		enable_in_insert = true,
 		sign_priority = 20,
@@ -74,10 +73,10 @@ local config = {
 		separator = " ",
 		click_support = false,
 	},
-	custom_kind = {
-		-- Field = "#000099",
-		Field = { "", "#009999" },
-	},
+	-- custom_kind = {
+	-- 	Field = "#000099",
+	-- 	-- Field = { "Variable", "#009999" },
+	-- },
 }
 
 -- local saga = require("lspsaga")
@@ -87,9 +86,14 @@ lspsagaM.init_lsp_saga(config)
 
 ---------------------------------
 -- -------------- winbar
--- Example:
+local status, symbolwinbar = pcall(require, "lspsaga.symbolwinbar")
+if not status then
+	vim.notify("lspsaga" .. " not found!")
+	return
+end
+
 local function get_file_name(include_path)
-	local file_name = require("lspsaga.symbolwinbar").get_file_name()
+	local file_name = symbolwinbar.get_file_name()
 	if vim.fn.bufname("%") == "" then
 		return ""
 	end

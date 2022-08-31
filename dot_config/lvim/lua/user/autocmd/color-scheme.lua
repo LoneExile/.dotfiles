@@ -25,6 +25,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 		}
 		for _, name in ipairs(hl_groups) do
 			vim.cmd(string.format("highlight %s ctermbg=none guibg=none", name))
+			vim.api.nvim_set_hl(0, "CmpItemKindCopilot", { fg = "#6CC644" })
 
 			vim.cmd(
 				[[highlight QuickScopePrimary guifg='#ffffff' gui=underline ctermfg=155 cterm=underline]]
@@ -32,6 +33,8 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 			vim.cmd(
 				[[highlight QuickScopeSecondary guifg='#999999' gui=underline ctermfg=81 cterm=underline]]
 			)
+
+			-- vim.cmd([[highlight Variable guifg=#E06C75]])
 
 			-- WinBar         xxx cterm=bold gui=bold
 			-- vim.cmd([[highlight WinBar guifg='#000099' ]])
