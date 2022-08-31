@@ -146,7 +146,7 @@ return gears.table.join(
 		description = "Client switcher",
 		group = "Launcher",
 	}),
-	awful.key({ "Control" }, "#65", function()
+	awful.key({ modkey }, "#40", function() -- { "Control" }, "#65"
 		awful.spawn("rofi -show drun")
 	end, {
 		description = "Run prompt rofi",
@@ -306,9 +306,7 @@ return gears.table.join(
 							)
 							local c = mouse.screen.selected_tag:clients()
 							for j, client in ipairs(c) do
-								if
-									client.class:match(stdout:gsub("\n", ""))
-								then
+								if client.class:match(stdout:gsub("\n", "")) then
 									client.floating = true
 								end
 							end
@@ -332,10 +330,7 @@ return gears.table.join(
 						},
 					})
 					awful.spawn.easy_async_with_shell([[
-                                REMOVE="]] .. stdout:gsub(
-						"\n",
-						""
-					) .. [[;"
+                                REMOVE="]] .. stdout:gsub("\n", "") .. [[;"
                                 STR=$(cat ~/.config/awesome/src/assets/rules.txt)
                                 echo -n ${STR//$REMOVE/} > ~/.config/awesome/src/assets/rules.txt
                             ]], function(stdout2)

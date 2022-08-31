@@ -1,4 +1,3 @@
--- function M.get_sections()
 local get_sections = function()
 	local header = {
 		type = "text",

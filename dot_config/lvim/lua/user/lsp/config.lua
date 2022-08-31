@@ -24,5 +24,3 @@
 --   --Enable completion triggered by <c-x><c-o>
 --   buf_set_option("omnifunc", "v:lua.vim.lsp.omnifunc")
 -- end
-
-lvim.lsp.diagnostics.virtual_text = false

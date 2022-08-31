@@ -55,29 +55,29 @@ lvim.plugins = {
 	{ "tpope/vim-surround" }, -- Delete/change/add parentheses/quotes,
 	-- { "svermeulen/vim-yoink" }, -- maintains a yank history to cycle between
 	{ "svermeulen/vim-subversive" }, -- operator motions to quickly replace text
-	{ "github/copilot.vim" },
-	-- {
-	-- 	"zbirenbaum/copilot.lua",
-	-- 	event = { "VimEnter" },
-	-- 	config = function()
-	-- 		vim.schedule(function()
-	-- 			require("copilot").setup({
-	-- 				cmp = {
-	-- 					enabled = true,
-	-- 					method = "getCompletionsCycling",
-	-- 				},
-	-- 				panel = { -- no config options yet
-	-- 					enabled = true,
-	-- 				},
-	-- 				ft_disable = { "markdown" },
-	-- 				plugin_manager_path = vim.fn.expand("$HOME")
-	-- 					.. "/.local/share/lunarvim/site/pack/packer",
-	-- 			})
-	-- 		end)
-	-- 	end,
-	-- },
-	-- {
-	-- 	"zbirenbaum/copilot-cmp",
-	-- 	module = "copilot_cmp",
-	-- },
+	-- { "github/copilot.vim" },
+	{
+		"zbirenbaum/copilot.lua",
+		event = { "VimEnter" },
+		config = function()
+			vim.schedule(function()
+				require("copilot").setup({
+					cmp = {
+						enabled = true,
+						method = "getCompletionsCycling",
+					},
+					panel = { -- no config options yet
+						enabled = true,
+					},
+					ft_disable = { "markdown" },
+					plugin_manager_path = vim.fn.expand("$HOME")
+						.. "/.local/share/lunarvim/site/pack/packer",
+				})
+			end)
+		end,
+	},
+	{
+		"zbirenbaum/copilot-cmp",
+		module = "copilot_cmp",
+	},
 }

@@ -17,7 +17,7 @@ vim.keymap.set("n", "S", "<cmd>lua require('spectre').open()<CR>", opts)
 
 local config = {
 	color_devicons = true,
-	open_cmd = "vnew",
+	-- open_cmd = "vnew",
 	live_update = false, -- auto execute search again when you write any file in vim
 	default = {
 		find = {
