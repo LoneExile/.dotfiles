@@ -225,6 +225,7 @@ lvim.builtin.cmp.mapping = cmp.mapping.preset.insert({
 	}),
 	["<Tab>"] = cmp.mapping(function(fallback)
 		if cmp.visible() and has_words_before() then
+		-- if cmp.visible() then
 			cmp.select_next_item()
 		elseif luasnip.expand_or_locally_jumpable() then
 			luasnip.expand_or_jump()
@@ -258,9 +259,9 @@ lvim.builtin.cmp.mapping = cmp.mapping.preset.insert({
 				return vim.api.nvim_get_mode().mode:sub(1, 1) == "i"
 			end
 			if is_insert_mode() then -- prevent overwriting brackets
-				-- confirm_opts.behavior = cmp.ConfirmBehavior.Insert
-				confirm_opts.behavior = cmp.ConfirmBehavior.Replace
-				confirm_opts.select = true
+				confirm_opts.behavior = cmp.ConfirmBehavior.Insert
+				-- -- confirm_opts.behavior = cmp.ConfirmBehavior.Replace
+				-- confirm_opts.select = true
 			end
 			cmp.confirm(confirm_opts)
 			if jumpable(1) then

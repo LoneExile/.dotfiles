@@ -1,3 +1,3 @@
 Steam;
 Virt-manager;
-awesome;Brave-browser;Brave-browser;qt5ct;Brave-browser;
+awesome;qt5ct;

@@ -15,25 +15,12 @@ lvim.builtin.which_key.vmappings["z"] = {
 }
 
 lvim.builtin.which_key.mappings = {
-	-- ["c"] = { "<cmd>BufferClose!<CR>", "Close Buffer" },
 	["e"] = { "<cmd>lua require'core.nvimtree'.toggle_tree()<CR>", "Explorer" },
-	-- ["h"] = { '<cmd>let @/=""<CR>', "No Highlight" },
-
-	-- p = {
-	--   name = "Packer",
-	--   c = { "<cmd>PackerCompile<cr>", "Compile" },
-	--   i = { "<cmd>PackerInstall<cr>", "Install" },
-	--   r = { "<cmd>lua require('lv-utils').reload_lv_config()<cr>", "Reload" },
-	--   s = { "<cmd>PackerSync<cr>", "Sync" },
-	--   u = { "<cmd>PackerUpdate<cr>", "Update" },
-	-- },
 	[";"] = { "<cmd>Alpha<CR>", "Dashboard" },
-	-- ["w"] = { "<cmd>w!<CR>", "Save" },
-	-- ["q"] = { "<cmd>lua require('lvim.utils.functions').smart_quit()<CR>", "Quit" },
+	["w"] = { "<cmd>SaveNFormat<CR>", "Save" },
+	["q"] = { "<cmd>lua require('lvim.utils.functions').smart_quit()<CR>", "Quit" },
 	["/"] = {
-		-- "<cmd>lua require('Comment.api').toggle_current_linewise()<CR>",
 		"<cmd>lua require('Comment.api').toggle.linewise.current()<CR>",
-		-- require('Comment.api').toggle_current_linewise({cfg}) is deprecated, use require('Comment.api').toggle.linewise.current(nil, {cfg}) instead. See :h deprecated
 		"Comment",
 	},
 	["c"] = {

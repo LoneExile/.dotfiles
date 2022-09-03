@@ -6,6 +6,7 @@ require("user.lsp")
 require("user.treesitter")
 require("user.dap")
 require("user.utility")
+
 require("user.copilot")
 
 -- ~/.local/share/lunarvim/site/pack/packer/start/nvim-spectre

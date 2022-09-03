@@ -27,9 +27,9 @@ lvim.plugins = {
 		"folke/trouble.nvim",
 		cmd = "TroubleToggle",
 		requires = "kyazdani42/nvim-web-devicons",
-		config = function()
-			require("trouble").setup()
-		end,
+		-- config = function()
+		-- 	require("trouble").setup()
+		-- end,
 	},
 	{ "windwp/nvim-ts-autotag" },
 
@@ -54,11 +54,22 @@ lvim.plugins = {
 	{ "tpope/vim-repeat" }, -- enable repeating supported plugin maps with "."
 	{ "tpope/vim-surround" }, -- Delete/change/add parentheses/quotes,
 	-- { "svermeulen/vim-yoink" }, -- maintains a yank history to cycle between
-	{ "svermeulen/vim-subversive" }, -- operator motions to quickly replace text
+	-- { "svermeulen/vim-subversive" }, -- operator motions to quickly replace text
+
+	{
+		"folke/zen-mode.nvim",
+	},
+
+	-- copilot
 	-- { "github/copilot.vim" },
 	{
 		"zbirenbaum/copilot.lua",
 		event = { "VimEnter" },
+		config = function()
+			vim.defer_fn(function()
+				require("copilot").setup()
+			end, 100)
+		end,
 	},
 	{
 		"zbirenbaum/copilot-cmp",
