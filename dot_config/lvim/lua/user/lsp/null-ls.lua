@@ -75,27 +75,31 @@ linters.setup({
 			"vue",
 		},
 		extra_args = {
-			"-f",
-			"json",
-			"--stdin",
-			"--stdin-filename",
-			"$FILENAME",
+			-- "-f",
+			-- "json",
+			-- "--stdin",
+			-- "--stdin-filename",
+			-- "$FILENAME",
+			"--no-eslintrc",
+			"--env",
+			"es6",
 		},
 	},
-	-- {
-	-- 	command = "proselint",
-	-- 	filetypes = { "markdown", "tex" },
-	-- },
+	{
+		command = "proselint",
+		filetypes = { "markdown", "tex" },
+		args = { "--json" },
+	},
 	{
 		command = "alex",
 		filetypes = { "markdown" },
 		extra_args = { "--stdin", "--quiet" },
 	},
-	{
-		command = "hadolint",
-		filetype = { "dockerfile" },
-		extra_args = { "--no-fail", "--format=json", "-" },
-	},
+	-- {
+	-- 	command = "hadolint",
+	-- 	filetype = { "dockerfile" },
+	-- 	extra_args = { "--no-fail", "--format=json", "-" },
+	-- },
 	{
 		command = "zsh",
 		filetypes = { "zsh" },
@@ -112,6 +116,10 @@ linters.setup({
 local codeaction = require("lvim.lsp.null-ls.code_actions")
 codeaction.setup({
 	{
+		command = "refactoring",
+		filetype = { "go", "javascript", "lua", "python", "typescript" },
+	},
+	{
 		command = "eslint",
 		filetypes = {
 			"javascript",
@@ -121,16 +129,20 @@ codeaction.setup({
 			"vue",
 		},
 		extra_args = {
-			"-f",
-			"json",
-			"--stdin",
-			"--stdin-filename",
-			"$FILENAME",
+			-- "-f",
+			-- "json",
+			-- "--stdin",
+			-- "--stdin-filename",
+			-- "$FILENAME",
+			"--no-eslintrc",
+			"--env",
+			"es6",
 		},
 	},
 	{
 		command = "proselint",
 		filetypes = { "markdown", "tex" },
+		args = { "--json" },
 	},
 	{
 		-- each linter accepts a list of options identical to https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md#Configuration

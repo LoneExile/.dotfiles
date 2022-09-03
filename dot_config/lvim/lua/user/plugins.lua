@@ -32,6 +32,13 @@ lvim.plugins = {
 		-- end,
 	},
 	{ "windwp/nvim-ts-autotag" },
+	{
+		"ThePrimeagen/refactoring.nvim",
+		requires = {
+			{ "nvim-lua/plenary.nvim" },
+			{ "nvim-treesitter/nvim-treesitter" },
+		},
+	},
 
 	-- utility
 	{ "unblevable/quick-scope" }, -- jumpy but in line

@@ -9,10 +9,10 @@
 --   l = { "<cmd>Trouble loclist<cr>", "LocationList" },
 --   w = { "<cmd>Trouble workspace_diagnostics<cr>", "Wordspace Diagnostics" },
 -- }
-lvim.builtin.which_key.vmappings["z"] = {
-	"<cmd><C-U>Lspsaga range_code_action<CR>",
-	"Diagnostics",
-}
+-- lvim.builtin.which_key.vmappings["z"] = {
+-- 	"<cmd><C-U>Lspsaga range_code_action<CR>",
+-- 	"Diagnostics",
+-- }
 
 lvim.builtin.which_key.mappings = {
 	["e"] = { "<cmd>lua require'core.nvimtree'.toggle_tree()<CR>", "Explorer" },
@@ -163,17 +163,6 @@ lvim.builtin.which_key.mappings = {
 			"Git Diff",
 		},
 	},
-	-- C = {
-	--   name = "Code",
-	--   c = { "<cmd>Lspsaga code_action<CR>", "Code Action" },
-	--   d = { "<cmd>Lspsaga show_line_diagnostics<CR>", "Diagnostics" },
-	--   o = { ":LSoutlineToggle", "Outline" },
-	--   f = { require("lvim.lsp.utils").format, "Format" },
-	--   r = { "<cmd>Lspsaga rename<CR>", "Rename" },
-	--   j = { "<cmd>Lspsaga diagnostic_jump_next<CR>", "Next Diagnostic" },
-	--   k = { "<cmd>Lspsaga diagnostic_jump_prev<CR>", "Prev Diagnostic" },
-	--   -- k = { "", "Sync" },
-	-- },
 	-- t = {
 	-- 	name = "+Trouble",
 	-- 	r = { "<cmd>Trouble lsp_references<cr>", "References" },
@@ -185,10 +174,10 @@ lvim.builtin.which_key.mappings = {
 	-- },
 	l = {
 		name = "LSP",
-		d = {
-			"<cmd>Trouble document_diagnostics<cr>",
-			"Diagnostics",
-		},
+		-- d = {
+		-- 	"<cmd>Trouble document_diagnostics<cr>",
+		-- 	"Diagnostics",
+		-- },
 		D = {
 			"<cmd>Trouble workspace_diagnostics<cr>",
 			"Diagnostics All",
@@ -197,10 +186,10 @@ lvim.builtin.which_key.mappings = {
 			"<cmd>Trouble lsp_references<cr>",
 			"References",
 		},
-		c = {
-			"<cmd>Lspsaga code_action<CR>",
-			"Code Action",
-		},
+		-- c = {
+		-- 	"<cmd>Lspsaga code_action<CR>",
+		-- 	"Code Action",
+		-- },
 		o = {
 			"<cmd>LSoutlineToggle<cr>",
 			"Outline",
@@ -221,10 +210,9 @@ lvim.builtin.which_key.mappings = {
 		-- 	"<cmd>Lspsaga diagnostic_jump_prev<CR>",
 		-- 	"Prev Diagnostic",
 		-- },
-		-- a = { "<cmd>lua vim.lsp.buf.code_action()<cr>", "Code Action" },
+		a = { "<cmd>lua vim.lsp.buf.code_action()<cr>", "Code Action" },
 		-- d = { "<cmd>Telescope diagnostics bufnr=0 theme=get_ivy<cr>", "Buffer Diagnostics" },
 		-- w = { "<cmd>Telescope diagnostics<cr>", "Diagnostics" },
-		-- f = { require("lvim.lsp.utils").format, "Format" },
 		i = { "<cmd>LspInfo<cr>", "Info" },
 		I = {
 			"<cmd>LspInstallInfo<cr>",
@@ -403,22 +391,34 @@ lvim.builtin.which_key.mappings = {
 		-- 	"Colorscheme with Preview",
 		-- },
 	},
-	-- d = {
-	--   name = "Debug",
-	--   t = { "<cmd>lua require'dap'.toggle_breakpoint()<cr>", "Toggle Breakpoint" },
-	--   b = { "<cmd>lua require'dap'.step_back()<cr>", "Step Back" },
-	--   c = { "<cmd>lua require'dap'.continue()<cr>", "Continue" },
-	--   C = { "<cmd>lua require'dap'.run_to_cursor()<cr>", "Run To Cursor" },
-	--   d = { "<cmd>lua require'dap'.disconnect()<cr>", "Disconnect" },
-	--   g = { "<cmd>lua require'dap'.session()<cr>", "Get Session" },
-	--   i = { "<cmd>lua require'dap'.step_into()<cr>", "Step Into" },
-	--   o = { "<cmd>lua require'dap'.step_over()<cr>", "Step Over" },
-	--   u = { "<cmd>lua require'dap'.step_out()<cr>", "Step Out" },
-	--   p = { "<cmd>lua require'dap'.pause()<cr>", "Pause" },
-	--   r = { "<cmd>lua require'dap'.repl.toggle()<cr>", "Toggle Repl" },
-	--   s = { "<cmd>lua require'dap'.continue()<cr>", "Start" },
-	--   q = { "<cmd>lua require'dap'.close()<cr>", "Quit" },
+	-- r = {
+	-- 	name = "Refactor",
+	-- 	e = {
+	-- 		"<Cmd>lua require('refactoring').refactor('Extract Function')<CR>",
+	-- 		"Extract Function",
+	-- 	},
+	-- 	f = {
+	-- 		"<Cmd>lua require('refactoring').refactor('Extract Function to File')<CR>",
+	-- 		"Extract Function to File",
+	-- 	},
+	-- 	v = {
+	-- 		"<Cmd>lua require('refactoring').refactor('Extract Variable')<CR>",
+	-- 		"Extract Variable",
+	-- 	},
+	-- 	i = {
+	-- 		"<Cmd>lua require('refactoring').refactor('Inline Variable')<CR>",
+	-- 		"Inline Variable",
+	-- 	},
+	-- 	r = {
+	-- 		"<Cmd>lua require('telescope').extensions.refactoring.refactors()<CR>",
+	-- 		"Refactor",
+	-- 	},
+	-- 	V = {
+	-- 		"<Cmd>lua require('refactoring').debug.print_var({})<CR>",
+	-- 		"Debug Print Var",
+	-- 	},
 	-- },
+
 	-- T = {
 	--   name = "Treesitter",
 	--   i = { ":TSConfigInfo<cr>", "Info" },
