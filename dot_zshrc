@@ -119,7 +119,7 @@ alias pg="pyenv global"
 
 # vim
 alias v="lvim"
-alias nvim="lvim"
+# alias nvim="lvim"
 alias sv="sudo lvim"
 
 # Theming section

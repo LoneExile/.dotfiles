@@ -1,0 +1,3 @@
+m = "hello"
+
+print(m)
