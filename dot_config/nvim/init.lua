@@ -1,24 +1,34 @@
+-- setting
 require("user.impatient")
 require("user.options")
 require("user.keymaps")
 require("user.plugins")
-require("user.colorscheme")
 require("user.autoCmd")
+
+-- language server
 require("user.lsp")
 require("user.dap")
 
-require("user.whichkey")
+-- treesitter
 require("user.treesitter")
-require("user.comment")
-require("user.bufferline")
-require("user.neoTree")
-require("user.lualine")
-require("user.gitsigns")
-require("user.alpha")
-require("user.refactoring")
-require("user.mini")
 require("user.tsContext")
 require("user.tsIndent")
+require("user.comment")
+
+-- UI
+require("user.colorscheme")
+require("user.bufferline")
+require("user.whichkey")
+require("user.neoTree")
+require("user.lualine")
+require("user.alpha")
+
+-- code helpers
+require("user.gitsigns")
+require("user.refactoring")
+
+-- utility
+require("user.mini")
 require("user.spectre")
 require("user.numb")
 require("user.colorizer")
