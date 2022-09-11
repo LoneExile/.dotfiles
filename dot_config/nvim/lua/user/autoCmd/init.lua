@@ -1,3 +1,2 @@
-require("user.autoCmd.color")
-require("user.autoCmd.autoCmd")
+require("user.autoCmd.transparent")
 require("user.autoCmd.attachColor")

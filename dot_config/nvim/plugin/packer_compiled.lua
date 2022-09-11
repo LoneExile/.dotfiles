@@ -268,11 +268,6 @@ _G.packer_plugins = {
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-spectre",
     url = "https://github.com/windwp/nvim-spectre"
   },
-  ["nvim-transparent"] = {
-    loaded = true,
-    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-transparent",
-    url = "https://github.com/xiyaowong/nvim-transparent"
-  },
   ["nvim-treesitter"] = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-treesitter",

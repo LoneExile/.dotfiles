@@ -143,8 +143,7 @@ return packer.startup(function(use)
 	use({ "folke/which-key.nvim", commit = "" })
 
 	-- Colorschemes
-	use({ "LunarVim/onedarker.nvim", commit = "" })
-	use({ "xiyaowong/nvim-transparent", commit = "" })
+	use({ "LunarVim/onedarker.nvim" })
 
 	-- Telescope
 	use({ "nvim-telescope/telescope.nvim" })
