@@ -1,0 +1,5 @@
+vim.api.nvim_create_user_command("SaveNFormat", function()
+	vim.cmd("lua 	require('user.lsp.utils').format()")
+	-- vim.cmd("LspZeroFormat")
+	vim.cmd("w!")
+end, {})

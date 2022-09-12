@@ -79,6 +79,11 @@ _G.packer_plugins = {
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/Comment.nvim",
     url = "https://github.com/numToStr/Comment.nvim"
   },
+  ["FixCursorHold.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/FixCursorHold.nvim",
+    url = "https://github.com/antoinemadec/FixCursorHold.nvim"
+  },
   LuaSnip = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/LuaSnip",
@@ -119,13 +124,17 @@ _G.packer_plugins = {
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/cmp_luasnip",
     url = "https://github.com/saadparwaiz1/cmp_luasnip"
   },
-  ["colortils.nvim"] = {
-    commands = { "Colortils" },
-    config = { "\27LJ\2\n7\0\0\3\0\3\0\0066\0\0\0'\2\1\0B\0\2\0029\0\2\0B\0\1\1K\0\1\0\nsetup\14colortils\frequire\0" },
+  ["codi.vim"] = {
+    commands = { "Codi" },
     loaded = false,
     needs_bufread = false,
     only_cond = false,
-    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/opt/colortils.nvim",
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/opt/codi.vim",
+    url = "https://github.com/metakirby5/codi.vim"
+  },
+  ["colortils.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/colortils.nvim",
     url = "https://github.com/max397574/colortils.nvim"
   },
   ["copilot-cmp"] = {
@@ -163,6 +172,11 @@ _G.packer_plugins = {
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/gitsigns.nvim",
     url = "https://github.com/lewis6991/gitsigns.nvim"
   },
+  harpoon = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/harpoon",
+    url = "https://github.com/ThePrimeagen/harpoon"
+  },
   ["impatient.nvim"] = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/impatient.nvim",
@@ -182,6 +196,11 @@ _G.packer_plugins = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/lspsaga.nvim",
     url = "https://github.com/glepnir/lspsaga.nvim"
+  },
+  ["lua-dev.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/lua-dev.nvim",
+    url = "https://github.com/folke/lua-dev.nvim"
   },
   ["lualine.nvim"] = {
     loaded = true,
@@ -223,6 +242,11 @@ _G.packer_plugins = {
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/numb.nvim",
     url = "https://github.com/nacro90/numb.nvim"
   },
+  ["nvim-autopairs"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-autopairs",
+    url = "https://github.com/windwp/nvim-autopairs"
+  },
   ["nvim-cmp"] = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-cmp",
@@ -262,6 +286,11 @@ _G.packer_plugins = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-lspconfig",
     url = "https://github.com/neovim/nvim-lspconfig"
+  },
+  ["nvim-notify"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/nvim-notify",
+    url = "https://github.com/rcarriga/nvim-notify"
   },
   ["nvim-spectre"] = {
     loaded = true,
@@ -313,10 +342,25 @@ _G.packer_plugins = {
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/popup.nvim",
     url = "https://github.com/nvim-lua/popup.nvim"
   },
+  ["project.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/project.nvim",
+    url = "https://github.com/ahmedkhalf/project.nvim"
+  },
   ["refactoring.nvim"] = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/refactoring.nvim",
     url = "https://github.com/ThePrimeagen/refactoring.nvim"
+  },
+  ["schemastore.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/schemastore.nvim",
+    url = "https://github.com/b0o/schemastore.nvim"
+  },
+  sniprun = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/sniprun",
+    url = "https://github.com/michaelb/sniprun"
   },
   ["telescope-dap.nvim"] = {
     loaded = true,
@@ -338,10 +382,25 @@ _G.packer_plugins = {
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/toggleterm.nvim",
     url = "https://github.com/akinsho/toggleterm.nvim"
   },
+  ["vim-open-url"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/vim-open-url",
+    url = "https://github.com/dhruvasagar/vim-open-url"
+  },
+  ["vim-repeat"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/vim-repeat",
+    url = "https://github.com/tpope/vim-repeat"
+  },
   ["which-key.nvim"] = {
     loaded = true,
     path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/which-key.nvim",
     url = "https://github.com/folke/which-key.nvim"
+  },
+  ["zen-mode.nvim"] = {
+    loaded = true,
+    path = "/home/bunlaikun/.local/share/nvim/site/pack/packer/start/zen-mode.nvim",
+    url = "https://github.com/folke/zen-mode.nvim"
   }
 }
 
@@ -377,7 +436,7 @@ end
 
 -- Command lazy-loads
 time([[Defining lazy-load commands]], true)
-pcall(vim.cmd, [[command -nargs=* -range -bang -complete=file Colortils lua require("packer.load")({'colortils.nvim'}, { cmd = "Colortils", l1 = <line1>, l2 = <line2>, bang = <q-bang>, args = <q-args>, mods = "<mods>" }, _G.packer_plugins)]])
+pcall(vim.cmd, [[command -nargs=* -range -bang -complete=file Codi lua require("packer.load")({'codi.vim'}, { cmd = "Codi", l1 = <line1>, l2 = <line2>, bang = <q-bang>, args = <q-args>, mods = "<mods>" }, _G.packer_plugins)]])
 time([[Defining lazy-load commands]], false)
 
 vim.cmd [[augroup packer_load_aucmds]]

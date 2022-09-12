@@ -34,6 +34,7 @@ local opts = {
 		"lsp-installer",
 		"mason",
 		"neo-tree",
+		"packer",
 	},
 	buftype_exclude = { "terminal" },
 	bufname_exclude = { "config.lua" },

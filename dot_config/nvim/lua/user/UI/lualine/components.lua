@@ -1,5 +1,5 @@
-local conditions = require("user.lualine.conditions")
-local colors = require("user.lualine.colors")
+local conditions = require("user.UI.lualine.conditions")
+local colors = require("user.UI.lualine.colors")
 
 local function diff_source()
 	local gitsigns = vim.b.gitsigns_status_dict

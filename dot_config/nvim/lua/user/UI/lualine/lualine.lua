@@ -3,12 +3,13 @@ if not status_ok then
 	return
 end
 
-local components = require("user.lualine.components")
+local components = require("user.UI.lualine.components")
+local theme = require("user.UI.lualine.theme").theme()
 
 lualine.setup({
 	options = {
 		icons_enabled = true,
-		theme = require("user.lualine.theme").theme(),
+		theme = theme,
 		component_separators = "",
 		section_separators = { left = "", right = "" },
 		disabled_filetypes = { "alpha", "NvimTree", "Outline", "neo-tree" },

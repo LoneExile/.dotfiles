@@ -19,7 +19,6 @@ vim.g.maplocalleader = " "
 --   command_mode = "c",
 
 -- #########################
--- vim.keymap.set("n", "<C-h>", "<C-w>h", { buffer = 0 })
 
 -- Normal --
 -- Better window navigation
@@ -67,7 +66,6 @@ keymap("x", "<A-k>", ":move '<-2<CR>gv-gv", opts)
 keymap("n", "s", "<Plug>Sneak_s", opts)
 keymap("n", "S", "<Plug>Sneak_S", opts)
 
-
 -- Terminal --
 -- Better terminal navigation
 keymap("t", "<C-j>", "<C-\\><C-N><C-w>j", term_opts)
@@ -75,5 +73,4 @@ keymap("t", "<C-h>", "<C-\\><C-N><C-w>h", term_opts)
 keymap("t", "<C-k>", "<C-\\><C-N><C-w>k", term_opts)
 keymap("t", "<C-l>", "<C-\\><C-N><C-w>l", term_opts)
 
--- Nvimtree
--- keymap("n", "<leader>e", ":NvimTreeToggle<cr>", opts)
+-- #########################
