@@ -1,5 +1,0 @@
-require("user.config.impatient")
-require("user.config.keymaps")
-require("user.config.options")
-require("user.config.autoCmd")
-require("user.config.notify")

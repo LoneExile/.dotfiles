@@ -38,8 +38,8 @@ zstyle ':completion:*' cache-path ~/.zsh/cache
 HISTFILE=~/.zhistory
 HISTSIZE=10000
 SAVEHIST=10000
-export EDITOR=$HOME/.local/bin/lvim
-export VISUAL=$HOME/.local/bin/lvim
+export EDITOR=/usr/local/bin/nvim
+export VISUAL=/usr/local/bin/nvim
 WORDCHARS=${WORDCHARS//\/[&.;]}                                 # Don't consider certain characters part of the word
 
 
@@ -118,9 +118,8 @@ alias pg="pyenv global"
 
 
 # vim
-alias v="lvim"
-# alias nvim="lvim"
-alias sv="sudo lvim"
+alias v="nvim"
+alias sv="sudo nvim"
 
 # Theming section
 autoload -U compinit colors zcalc
@@ -280,7 +279,7 @@ eval "$(dircolors -b)"
 alias ls='ls $LS_OPTIONS'
 
 # pnpm
-export PNPM_HOME="~/.local/share/pnpm"
+export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 
 ## NVM
@@ -301,7 +300,7 @@ export NVM_DIR="$HOME/.nvm"
 ## Lazygit
 lg()
 {
-    export LAZYGIT_NEW_DIR_FILE=~/.lazygit/newdir
+    export LAZYGIT_NEW_DIR_FILE="$HOME/.lazygit/newdir"
 
     lazygit "$@"
 
@@ -319,7 +318,7 @@ eval "$(pyenv virtualenv-init -)"
 ## Haskell GHCup
 [ -f "/home/bunlaikun/.ghcup/env" ] && source "/home/bunlaikun/.ghcup/env" # ghcup-env
 
-export PYENV_ROOT=~/.pyenv
+export PYENV_ROOT="$HOME/.pyenv"
 export PATH=$PYENV_ROOT/shims:$PATH
 export PATH=$HOME/.cargo/bin:$PATH
 
@@ -338,7 +337,7 @@ alias n="nnn -er"
 codi() {
   local syntax="${1:-python}"
   shift
-  lvim -c \
+  nvim -c \
     "let g:startify_disable_at_vimenter = 1 |\
     set bt=nofile ls=0 noru nonu nornu |\
     hi ColorColumn ctermbg=NONE |\
