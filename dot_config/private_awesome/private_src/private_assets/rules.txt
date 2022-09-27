@@ -1,3 +1,4 @@
 Steam;
 Virt-manager;
 awesome;qt5ct;
+Input-remapper-gtk;
