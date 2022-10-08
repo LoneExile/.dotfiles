@@ -45,10 +45,6 @@ function zsh_add_completion() {
 
 ############################################################################################################
 
-zsh_add_plugin "zsh-users/zsh-autosuggestions"
-zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
-zsh_add_plugin "softmoth/zsh-vim-mode"
-zsh_add_plugin "unixorn/fzf-zsh-plugin"
 
 export FZF_PREVIEW_ADVANCED=true
 
@@ -73,6 +69,11 @@ setopt autocd                                                   # if only direct
 setopt inc_append_history                                       # save commands are added to the history immediately, otherwise only when shell exits.
 setopt histignorespace                                          # Don't save commands that start with space
 unsetopt BEEP                                                   # beeping is annoying
+
+# File and Dir colors for ls and other outputs
+export LS_OPTIONS='--color=auto'
+# eval "$(dircolors -b)"
+alias ls='ls $LS_OPTIONS'
 
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'       # Case insensitive tab completion
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"         # Colored completion (different colors for dirs/files/etc)
@@ -221,3 +222,14 @@ export PATH=$HOME/.cargo/bin:$PATH
 
 # disabled Telemetry dotnet (https://wiki.archlinux.org/title/.NET#Telemetry)
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+############################################################################################################
+## Plugins
+source ~/.fzf/shell/completion.zsh
+source ~/.fzf/shell/key-bindings.zsh
+
+zsh_add_plugin "zsh-users/zsh-autosuggestions"
+zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
+zsh_add_plugin "softmoth/zsh-vim-mode"
+zsh_add_plugin "Aloxaf/fzf-tab"
+# zsh_add_plugin "unixorn/fzf-zsh-plugin"
