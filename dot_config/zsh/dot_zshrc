@@ -47,6 +47,7 @@ function zsh_add_completion() {
 
 
 export FZF_PREVIEW_ADVANCED=true
+export FZF_PREVIEW_WINDOW=''
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -231,5 +232,5 @@ source ~/.fzf/shell/key-bindings.zsh
 zsh_add_plugin "zsh-users/zsh-autosuggestions"
 zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
 zsh_add_plugin "softmoth/zsh-vim-mode"
+zsh_add_plugin "unixorn/fzf-zsh-plugin"
 zsh_add_plugin "Aloxaf/fzf-tab"
-# zsh_add_plugin "unixorn/fzf-zsh-plugin"
