@@ -66,17 +66,10 @@ cpanm --uninstall Module::Name
 
 ## TODO
 
-markdown yaml header add to obsidian
+add `.Keyboard Layouts` to `/Library/Keyboard Layouts`
 
-- .zshrc
-- Yabai *
-- Font
-- Alfred
-- rclone **
-- Font icon **
-- Keyboard mapping
+### Resource
 
-- look good
 [SketchyBar](https://github.com/FelixKratz/SketchyBar)
 
 [ke-complex](https://ke-complex-modifications.pqrs.org/?q=vi%20mode)
