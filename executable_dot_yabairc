@@ -7,8 +7,8 @@
 # see this wiki page for information:
 #  - https://github.com/koekeishiya/yabai/wiki/Installing-yabai-(latest-release)#configure-scripting-addition
 #
-# yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
-# sudo yabai --load-sa
+yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
+sudo yabai --load-sa
 #
 
 # global settings
@@ -49,11 +49,7 @@ yabai -m config                                 \
 # apps to not manage (ignore)
 yabai -m rule --add app="^System Preferences$" manage=off
 yabai -m rule --add app="^Archive Utility$" manage=off
-yabai -m rule --add app="^Wally$" manage=off
-yabai -m rule --add app="^Pika$" manage=off
 yabai -m rule --add app="^balenaEtcher$" manage=off
-yabai -m rule --add app="^Creative Cloud$" manage=off
-yabai -m rule --add app="^Logi Options$" manage=off
 yabai -m rule --add app="^Alfred Preferences$" manage=off
 
 

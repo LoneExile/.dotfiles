@@ -119,6 +119,8 @@ bindkey '^[[Z' undo                                             # Shift+tab undo
 
 ## Alias section
 alias bu="brew upgrade && brew update"
+alias rcu="rclone sync -P ~/Downloads/gdrive/note/SecondBrain gdrive:'Note/Obsidian/SecondBrain'"
+alias rcd="rclone sync -P gdrive:'Note/Obsidian/SecondBrain' ~/Downloads/gdrive/note/SecondBrain"
 alias cp="cp -i"                                                # Confirm before overwriting something
 alias mv="mv -i"                                                # Confirm before overwriting something
 # alias cp="advcp -gi"                                            # g show progress, i Confirm before overwriting
@@ -145,7 +147,8 @@ alias gcl='git clone'
 alias gi='git init'
 alias ga='git add'
 alias gc='git commit -m'
-alias gp='git push'
+alias gp='git pull'
+alias gP='git push'
 alias gs='git status'
 alias gl='git log'
 alias grl='git reflog'
