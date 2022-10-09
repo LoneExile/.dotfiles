@@ -118,6 +118,7 @@ bindkey '^H' backward-kill-word                                 # delete previou
 bindkey '^[[Z' undo                                             # Shift+tab undo last action
 
 ## Alias section
+alias bu="brew upgrade && brew update"
 alias cp="cp -i"                                                # Confirm before overwriting something
 alias mv="mv -i"                                                # Confirm before overwriting something
 # alias cp="advcp -gi"                                            # g show progress, i Confirm before overwriting
