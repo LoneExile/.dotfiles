@@ -72,6 +72,9 @@ bindkey '^[[Z' undo                                             # Shift+tab undo
 
 ## Alias section
 # alias cp="cp -i"                                                # Confirm before overwriting something
+alias rcd="rclone sync -P gdrive:'Note/Obsidian/SecondBrain' ~/Documents/note/SecondBrain"
+alias rcu="rclone sync -P ~/Documents/note/SecondBrain gdrive:'Note/Obsidian/SecondBrain'"
+alias top="btop"
 alias cp="advcp -gi"                                            # g show progress, i Confirm before overwriting
 alias mv="advmv -gi"
 alias df='df -h'                                                # Human-readable sizes
@@ -100,7 +103,8 @@ alias gcl='git clone'
 alias gi='git init'
 alias ga='git add'
 alias gc='git commit -m'
-alias gp='git push'
+alias gp='git pull'
+alias gP='git push'
 alias gs='git status'
 alias gl='git log'
 alias grl='git reflog'
@@ -187,22 +191,22 @@ fi
 # Fully supports screen and probably most modern xterm and rxvt
 # (In screen, only short_tab_title is used)
 function title {
-  emulate -L zsh
-  setopt prompt_subst
+    emulate -L zsh
+    setopt prompt_subst
 
-  [[ "$EMACS" == *term* ]] && return
+    [[ "$EMACS" == *term* ]] && return
 
-  # if $2 is unset use $1 as default
-  # if it is set and empty, leave it as is
-  : ${2=$1}
+    # if $2 is unset use $1 as default
+    # if it is set and empty, leave it as is
+    : ${2=$1}
 
-  case "$TERM" in
-    xterm*|putty*|rxvt*|konsole*|ansi|mlterm*|alacritty|st*)
-      print -Pn "\e]2;${2:q}\a" # set window name
-      print -Pn "\e]1;${1:q}\a" # set tab name
-      ;;
-    screen*|tmux*)
-      print -Pn "\ek${1:q}\e\\" # set screen hardstatus
+    case "$TERM" in
+        xterm*|putty*|rxvt*|konsole*|ansi|mlterm*|alacritty|st*)
+            print -Pn "\e]2;${2:q}\a" # set window name
+            print -Pn "\e]1;${1:q}\a" # set tab name
+            ;;
+        screen*|tmux*)
+            print -Pn "\ek${1:q}\e\\" # set screen hardstatus
       ;;
     *)
     # Try to use terminfo to set the title
@@ -344,19 +348,19 @@ codi() {
   local syntax="${1:-python}"
   shift
   nvim -c \
-    "let g:startify_disable_at_vimenter = 1 |\
-    set bt=nofile ls=0 noru nonu nornu |\
-    hi ColorColumn ctermbg=NONE |\
-    hi VertSplit ctermbg=NONE |\
-    hi NonText ctermfg=0 |\
-    Codi $syntax" "$@"
-}
+                "let g:startify_disable_at_vimenter = 1 |\
+                set bt=nofile ls=0 noru nonu nornu |\
+                hi ColorColumn ctermbg=NONE |\
+                hi VertSplit ctermbg=NONE |\
+                hi NonText ctermfg=0 |\
+                Codi $syntax" "$@"
+        }
 
-## p10 theme
-source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
+        ## p10 theme
+        source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
 
-## rust
-source "$HOME/.cargo/env"
+        ## rust
+        source "$HOME/.cargo/env"
 
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+        # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+        [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
