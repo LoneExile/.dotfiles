@@ -90,3 +90,4 @@ aspnet-runtime-2.1
 dotnet-sdk-2.1
 sof-tools
 sof-firmware
+advcpmv
