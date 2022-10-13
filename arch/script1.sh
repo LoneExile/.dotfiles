@@ -7,7 +7,8 @@ sudo pacman -Syyu
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
 
 # pyenv
-curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+# curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+sudo pacman -S pyenv
 
 # install rust
 curl --proto '=https' --tlsv1.3 https://sh.rustup.rs -sSf | sh
@@ -17,6 +18,7 @@ sudo pacman -S git base-devel yay manjaro-pipewire
 
 # install grub theme
 wget -O - https://github.com/shvchk/fallout-grub-theme/raw/master/install.sh | bash
+sudo grup-mkconfig -o /boot/grub/grub.cfg
 
 # install package
 sudo pacman -Syu --needed --noconfirm - < packages.txt
