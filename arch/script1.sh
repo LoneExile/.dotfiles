@@ -7,7 +7,7 @@ sudo pacman -Syyu
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
 
 # pyenv
-# curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+curl https://pyenv.run | bash
 sudo pacman -S pyenv
 
 # install rust
