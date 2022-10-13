@@ -77,4 +77,3 @@ dotnet-sdk-bin
 dotnet-host-bin
 sof-tools
 sof-firmware
-advcpmv
