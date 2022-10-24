@@ -155,6 +155,7 @@ source $HOME/.config/zsh/plugins/fzf-tab/fzf-tab.zsh
 source $HOME/.config/zsh/plugins/zsh-vim-mode/zsh-vim-mode.plugin.zsh
 # source $HOME/.config/zsh/plugins/zsh-vi-mode/zsh-vi-mode.zsh # bug
 # Use history substring search
+# TODO: fix this
 source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
 # Fuzzy
 source /usr/share/fzf/key-bindings.zsh
@@ -183,6 +184,7 @@ if [[ -r /usr/share/zsh/functions/command-not-found.zsh ]]; then
     export PKGFILE_PROMPT_INSTALL_MISSING=1
 fi
 
+# -----------------------------------------------------------------------------
 # Set terminal window and tab/icon title
 #
 # usage: title short_tab_title [long_window_title]
@@ -235,9 +237,11 @@ function mzc_termsupport_preexec {
 
   emulate -L zsh
 
+# WARN: have no idea why this is needed
   # split command into array of arguments
   local -a cmdargs
-  cmdargs=("${(z)2}")
+  # cmdargs=("${(z)2}")
+  cmdargs=${(z)2}
   # if running fg, extract the command from the job description
   if [[ "${cmdargs[1]}" = fg ]]; then
     # get the job id from the first argument passed to the fg command
@@ -287,6 +291,9 @@ add-zsh-hook preexec mzc_termsupport_preexec
 export LS_OPTIONS='--color=auto'
 eval "$(dircolors -b)"
 alias ls='ls $LS_OPTIONS'
+
+
+# -----------------------------------------------------------------------------
 
 # pnpm
 export PNPM_HOME="$HOME/.local/share/pnpm"
@@ -342,6 +349,20 @@ export NNN_FIFO="/tmp/nnn.fifo"
 # alias nnn="$HOME/.config/nnn/nnn -e"
 alias n="nnn -er"
 
+## p10 theme
+source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
+
+## rust
+source "$HOME/.cargo/env"
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+eval "$(zoxide init zsh)"
+
+
+# -----------------------------------------------------------------------------
+
 # Codi
 # Usage: codi [filetype] [filename]
 codi() {
@@ -355,12 +376,3 @@ codi() {
                 hi NonText ctermfg=0 |\
                 Codi $syntax" "$@"
         }
-
-        ## p10 theme
-        source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
-
-        ## rust
-        source "$HOME/.cargo/env"
-
-        # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-        [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
