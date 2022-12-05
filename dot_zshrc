@@ -341,6 +341,7 @@ export PATH=$HOME/.cargo/bin:$PATH
 
 # disabled Telemetry dotnet (https://wiki.archlinux.org/title/.NET#Telemetry)
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_HTTPREPL_TELEMETRY_OPTOUT=1
 
 # nnn file manager
 # export NNN_FCOLORS='0000E6310000000000000000'
