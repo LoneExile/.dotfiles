@@ -175,7 +175,7 @@ bindkey '^[[B' history-substring-search-down
 # --preview-window hidden
 # --color=bg+:#3f3f3f,bg:#252525,border:#6b6b6b,spinner:#98c378,hl:#98c378,fg:#d9d9d9,header:#98c378,info:#e5c07b,pointer:#ff9999,marker:#e5c07b,fg+:#d9d9d9,preview-bg:#1e1e1e,prompt:#bb88e5,hl+:#98c378
 # '
-export FZF_CTRL_R_OPTS='--preview "echo {}"'
+# export FZF_CTRL_R_OPTS='--preview "echo {}"'
 # export FZF_COMPLETION_TRIGGER='\'
 
 # Offer to install missing package if command is not found
