@@ -67,8 +67,8 @@ end)
 -- Workaround for focused border color, why in the love of god doesnt it work with
 -- beautiful.border_focus
 client.connect_signal("focus", function(c)
-	c.border_color = "#f48fb1"
-	-- c.border_color = "#f5f5f5"
+	-- c.border_color = "#f48fb1"
+	c.border_color = "#f5f5f5"
 end)
 
 client.connect_signal("unfocus", function(c)

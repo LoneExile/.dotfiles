@@ -10,7 +10,7 @@
 [ -n "$(pidof picom)" ] || picom --experimental-backends &
 [ -n "$(pidof polkit-gnome-authentication-agent-1)" ] || /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
 [ -n "$(pidof flameshot)" ] || flameshot &
-[ -n "$(pidof input-remapper-control)" ] || input-remapper-control --command autoload &
+# [ -n "$(pidof input-remapper-control)" ] || input-remapper-control --command autoload &
 [ -n "$(pidof xfce4-power-manager)" ] || xfce4-power-manager &
 # [ -n "$(pidof rclone)" ] || rclone mount --vfs-cache-mode full --daemon gdrive: ~/Downloads/gdrive/usu
 [ -n "$(pidof spotifyd)" ] || spotifyd &
