@@ -68,6 +68,8 @@ cpanm --uninstall Module::Name
 
 add `.Keyboard Layouts` to `/Library/Keyboard Layouts`
 
+add `MTMR` to `/Users/<your pc name>/Library/Application Support/MTMR/`
+
 ### Resource
 
 [SketchyBar](https://github.com/FelixKratz/SketchyBar)
