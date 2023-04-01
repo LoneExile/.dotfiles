@@ -70,6 +70,9 @@ add `.Keyboard Layouts` to `/Library/Keyboard Layouts`
 
 add `MTMR` to `/Users/<your pc name>/Library/Application Support/MTMR/`
 
+add `karabiner` to `~/.config/karabiner/assets/complex_modifications/`
+`Windows shortcuts on macOS`
+
 ### Resource
 
 [SketchyBar](https://github.com/FelixKratz/SketchyBar)
