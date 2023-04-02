@@ -73,6 +73,17 @@ add `MTMR` to `/Users/<your pc name>/Library/Application Support/MTMR/`
 add `karabiner` to `~/.config/karabiner/assets/complex_modifications/`
 `Windows shortcuts on macOS`
 
+- zsh plugins list
+
+```
+fzf-tab
+fzf-zsh-plugin
+zsh-autosuggestions
+zsh-syntax-highlighting
+zsh-vim-mode
+
+```
+
 ### Resource
 
 [SketchyBar](https://github.com/FelixKratz/SketchyBar)
