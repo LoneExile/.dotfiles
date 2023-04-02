@@ -81,7 +81,18 @@ fzf-zsh-plugin
 zsh-autosuggestions
 zsh-syntax-highlighting
 zsh-vim-mode
+```
 
+## Notes
+
+```bash
+sudo lsof -i :53
+# sudo kill -9 <PID>
+sudo kill <PID>
+
+# lock file to prevent modification
+sudo chflags uchg /etc/hosts
+sudo chflags schg /etc/hosts
 ```
 
 ### Resource
