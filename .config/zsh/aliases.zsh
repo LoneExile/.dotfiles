@@ -1,14 +1,22 @@
-## Alias section
+## Aliases Brew
+alias brew='arch -arm64e /opt/homebrew/bin/brew'
+alias ibrew='arch -x86_64 /usr/local/bin/brew'
+alias bu='brew update && brew upgrade && ibrew update && ibrew upgrade'
+alias bua='brew update && brew upgrade && ibrew update && ibrew upgrade && zap update -a'
+alias bc='brew cleanup && brew autoremove && ibrew cleanup && ibrew autoremove'
+alias wu='brew upgrade --cask wezterm-nightly --no-quarantine --greedy-latest'
+
+## Aliases section
 alias cp="cp -i"                                                # Confirm before overwriting something
 alias mv="mv -i"                                                # Confirm before overwriting something
-alias top="btop"
 alias df='df -h'                                                # Human-readable sizes
 alias free='free -m'                                            # Show sizes in MB
+alias top="btop"
 alias :q="exit"
 alias c="clear"
 alias v="nvim"
-alias rcu="rclone sync -P ~/Downloads/gdrive/note/SecondBrain gdrive:'Note/Obsidian/SecondBrain'"
-alias rcd="rclone sync -P gdrive:'Note/Obsidian/SecondBrain' ~/Downloads/gdrive/note/SecondBrain"
+# alias rcu="rclone sync -P ~/Downloads/gdrive/note/SecondBrain gdrive:'Note/Obsidian/SecondBrain'"
+# alias rcd="rclone sync -P gdrive:'Note/Obsidian/SecondBrain' ~/Downloads/gdrive/note/SecondBrain"
 
 # ls
 alias l='ls -lh'
@@ -18,7 +26,7 @@ alias lm='ls -m'
 alias lr='ls -R'
 alias llg='ls -l --group-directories-first'
 
-# git
+# Aliases Git
 alias gcl='git clone'
 alias gi='git init'
 alias ga='git add'
