@@ -79,5 +79,7 @@ lgy() {
 # nnn file manager
 # export NNN_FCOLORS='0000E6310000000000000000'
 # export NNN_PLUG='v:imgview;d:dragdrop;p:preview-tui;'
+export NNN_PLUG='v:imgview;p:preview-tui;'
 export NNN_FIFO="/tmp/nnn.fifo"
+export NNN_PREVIEWIMGPROG="catimg"
 alias n="nnn -er"

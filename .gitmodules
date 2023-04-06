@@ -1,3 +1,6 @@
 [submodule "/Users/$USER/.config/nvim"]
 	path = /Users/$USER/.config/nvim
 	url = git@github.com:LoneExile/nvim.git
+[submodule "/Users/$USER/.config/nnn"]
+	path = /Users/$USER/.config/nnn
+	url = git@github.com:jarun/nnn.git
