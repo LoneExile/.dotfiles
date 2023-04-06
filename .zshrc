@@ -10,16 +10,10 @@ fi
 eval "$(/opt/homebrew/bin/brew shellenv)"
 eval "$(/usr/local/bin/brew shellenv)"
 
-alias brew='arch -arm64e /opt/homebrew/bin/brew'
-alias ibrew='arch -x86_64 /usr/local/bin/brew'
-alias bu='brew update && brew upgrade && ibrew update && ibrew upgrade'
-alias bua='brew update && brew upgrade && ibrew update && ibrew upgrade && zap update -a'
-alias bc='brew cleanup && brew autoremove && ibrew cleanup && ibrew autoremove'
-alias wu='brew upgrade --cask wezterm-nightly --no-quarantine --greedy-latest'
-
 # Enabling the Zsh Completion System
 autoload -U compinit; compinit
 
+# Zap Plugin Manager
 [ -f "$HOME/.local/share/zap/zap.zsh" ] && source "$HOME/.local/share/zap/zap.zsh"
 
 plug "/opt/homebrew/opt/asdf/libexec/asdf.sh"

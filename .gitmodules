@@ -1,0 +1,3 @@
+[submodule "/Users/$USER/.config/nvim"]
+	path = /Users/$USER/.config/nvim
+	url = git@github.com:LoneExile/nvim.git
