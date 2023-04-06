@@ -28,24 +28,33 @@ alias llg='ls -l --group-directories-first'
 
 # Aliases Git
 alias gcl='git clone'
+alias gcld='git clone --depth'
 alias gi='git init'
 alias ga='git add'
 alias gc='git commit -m'
 alias gp='git pull'
+alias gpa='git pull --recurse-submodules'
+alias gf='git fetch'
+alias gfa='git fetch --recurse-submodules'
 alias gP='git push'
 alias gs='git status'
 alias gl='git log'
 alias grl='git reflog'
 alias glg="git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)'"
 alias glg1="git log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)'"
-alias gf='git fetch'
 alias gco='git checkout'
 alias gw='git worktree'
 alias gclb='git clone --bare'
-alias ld='lazydocker'
 # alias lg='lazygit'
 # alias gitu='git add . && git commit && git push'
-# alias gcl='git clone --depth 1'
+
+alias yp='yadm pull'
+alias ypa='yadm pull --recurse-submodules'
+alias yf='yadm fetch'
+alias yfa='yadm fetch --recurse-submodules'
+alias yadd= 'yadm add'
+
+alias ld='lazydocker'
 
 
 ## Lazygit
