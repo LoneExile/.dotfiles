@@ -15,7 +15,12 @@ end
 -- For example, changing the color scheme:
 -- config.color_scheme = 'AdventureTime'
 -- config.color_scheme = 'Batman'
-config.color_scheme = 'SpaceGray'
+-- config.color_scheme = 'SpaceGray'
+-- config.color_scheme = 'tokyonight_moon'
+config.color_scheme = 'tokyonight_night'
+-- config.color_scheme = 'Tomorrow (dark) (terminal.sexy)'
+-- config.color_scheme = 'Tomorrow Night'
+-- config.color_scheme = 'Twilight'
 
 -- config.font = wezterm.font('JetBrains Mono')
 -- config.font = wezterm.font('JetBrains Mono', { weight = 'Bold', italic = true })
