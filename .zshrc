@@ -13,6 +13,9 @@ eval "$(/usr/local/bin/brew shellenv)"
 # Enabling the Zsh Completion System
 autoload -U compinit; compinit
 
+#A smarter cd command.
+eval "$(zoxide init zsh)"
+
 # Zap Plugin Manager
 [ -f "$HOME/.local/share/zap/zap.zsh" ] && source "$HOME/.local/share/zap/zap.zsh"
 
