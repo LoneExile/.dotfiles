@@ -22,6 +22,10 @@ config.color_scheme = 'tokyonight_night'
 -- config.color_scheme = 'Tomorrow Night'
 -- config.color_scheme = 'Twilight'
 
+--[[ config.colors = {
+  background = 'black',
+} ]]
+
 -- config.font = wezterm.font('JetBrains Mono')
 -- config.font = wezterm.font('JetBrains Mono', { weight = 'Bold', italic = true })
 config.font = wezterm.font_with_fallback({
@@ -46,7 +50,7 @@ config.window_padding = {
 config.font_size = 14.0
 
 config.window_close_confirmation = 'NeverPrompt'
-config.window_background_opacity = 0.8
+config.window_background_opacity = 0.75
 -- config.text_background_opacity = 1.0
 
 -- config.exit_behavior = 'Close'

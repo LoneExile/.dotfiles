@@ -18,6 +18,8 @@ alias v="nvim"
 # alias rcu="rclone sync -P ~/Downloads/gdrive/note/SecondBrain gdrive:'Note/Obsidian/SecondBrain'"
 # alias rcd="rclone sync -P gdrive:'Note/Obsidian/SecondBrain' ~/Downloads/gdrive/note/SecondBrain"
 
+alias zel="zellij --layout ~/.config/zellij/layouts/clean.yaml"
+
 # ls
 alias l='ls -lh'
 # alias ll='ls -lah'
