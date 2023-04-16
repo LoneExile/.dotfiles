@@ -4,3 +4,6 @@
 [submodule "/Users/$USER/.config/nnn"]
 	path = /Users/$USER/.config/nnn
 	url = git@github.com:jarun/nnn.git
+[submodule "/Users/$USER/.tmux/plugins/tpm"]
+	path = /Users/$USER/.tmux/plugins/tpm
+	url = git@github.com:tmux-plugins/tpm.git
