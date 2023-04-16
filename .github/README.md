@@ -93,6 +93,9 @@ sudo kill <PID>
 # lock file to prevent modification
 sudo chflags uchg /etc/hosts
 sudo chflags schg /etc/hosts
+
+# unlock
+sudo chflags nouchg,noschg /etc/hosts
 ```
 
 ### Resource
