@@ -20,6 +20,16 @@ alias v="nvim"
 
 alias zel="zellij --layout ~/.config/zellij/layouts/clean.yaml"
 
+## TMUX
+alias t='tmux attach || tmux new-session'
+alias ta="tmux attach -t"
+alias tl="tmux ls"
+alias tk="tmux kill-session -t"
+alias tka="tmux kill-session -a"
+
+# ssh
+alias ssha='eval $(ssh-agent) && ssh-add'
+
 # ls
 alias l='ls -lh'
 # alias ll='ls -lah'
