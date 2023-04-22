@@ -27,6 +27,23 @@ alias tl="tmux ls"
 alias tk="tmux kill-session -t"
 alias tka="tmux kill-session -a"
 
+## Docker with Colima
+d() {
+    if [ "$1" = "start" ]; then
+        colima start
+        sudo ln -s /Users/$USER/.colima/default/docker.sock /var/run/docker.sock
+    elif [ "$1" = "stop" ]; then
+        colima stop
+        sudo rm /var/run/docker.sock
+    elif [ "$1" = "restart" ]; then
+        colima restart
+    elif [ "$1" = "status" ]; then
+        colima status
+    else
+        echo "Usage: d [start|stop|restart|status]"
+    fi
+}
+
 # ssh
 alias ssha='eval $(ssh-agent) && ssh-add'
 
