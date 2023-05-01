@@ -31,7 +31,7 @@ config.colors = {
 config.font = wezterm.font_with_fallback({
   'JetBrains Mono',
   'Noto Looped Thai',
-  -- 'DengXian',
+  'Noto Color Emoji',
 })
 config.use_dead_keys = false
 
