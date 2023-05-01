@@ -51,5 +51,7 @@ export PATH=$PATH:$HOME/.local/bin
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source "$HOME/.p10k.zsh"
 
+eval "$(github-copilot-cli alias -- "$0")"
+
 #NOTE:
 # https://thevaluable.dev/zsh-completion-guide-examples/
