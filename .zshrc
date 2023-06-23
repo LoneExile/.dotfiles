@@ -7,11 +7,14 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$USER.zsh" ]]; the
     source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$USER.zsh"
 fi
 
+# Enabling the Zsh Completion System
+autoload bashcompinit && bashcompinit
+autoload -Uz compinit && compinit
+
+
 eval "$(/opt/homebrew/bin/brew shellenv)"
 eval "$(/usr/local/bin/brew shellenv)"
 
-# Enabling the Zsh Completion System
-autoload -U compinit; compinit
 
 #A smarter cd command.
 eval "$(zoxide init zsh)"
@@ -35,6 +38,7 @@ plug "zap-zsh/exa"
 plug "Freed-Wu/fzf-tab-source"
 plug "zsh-users/zsh-history-substring-search"
 
+
 # pnpm
 export PNPM_HOME="/Users/$USER/Library/pnpm"
 case ":$PATH:" in
@@ -52,6 +56,11 @@ export PATH=$PATH:$HOME/.local/bin
 [[ ! -f ~/.p10k.zsh ]] || source "$HOME/.p10k.zsh"
 
 eval "$(github-copilot-cli alias -- "$0")"
+
+
+
+# aws cli completion
+complete -C '/usr/local/bin/aws_completer' aws
 
 #NOTE:
 # https://thevaluable.dev/zsh-completion-guide-examples/
