@@ -28,7 +28,7 @@ alias tk="tmux kill-session -t"
 alias tka="tmux kill-session -a"
 
 ## Docker with Colima
-d() {
+dk() {
     if [ "$1" = "start" ]; then
         colima start
         sudo ln -s /Users/$USER/.colima/default/docker.sock /var/run/docker.sock
