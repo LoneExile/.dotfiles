@@ -57,5 +57,10 @@ eval "$(github-copilot-cli alias -- "$0")"
 # aws cli completion
 complete -C '/usr/local/bin/aws_completer' aws
 
+# dotnet tools
+export PATH="$PATH:~/.dotnet/tools"
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+
 #NOTE:
 # https://thevaluable.dev/zsh-completion-guide-examples/
