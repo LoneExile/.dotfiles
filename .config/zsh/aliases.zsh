@@ -4,6 +4,7 @@ alias ibrew='arch -x86_64 /usr/local/bin/brew'
 alias bu='brew update && brew upgrade && ibrew update && ibrew upgrade'
 alias bc='brew cleanup && brew autoremove && ibrew cleanup && ibrew autoremove'
 alias wu='brew upgrade --cask wezterm-nightly --no-quarantine --greedy-latest'
+alias vu='brew reinstall neovim'
 alias zu='zap update -a && zap clean'
 
 ## Aliases section
@@ -17,6 +18,8 @@ alias c="clear"
 alias v="nvim"
 # alias rcu="rclone sync -P ~/Downloads/gdrive/note/SecondBrain gdrive:'Note/Obsidian/SecondBrain'"
 # alias rcd="rclone sync -P gdrive:'Note/Obsidian/SecondBrain' ~/Downloads/gdrive/note/SecondBrain"
+
+alias treee="tree --no-permissions --no-filesize --no-user --no-time"
 
 alias zel="zellij --layout ~/.config/zellij/layouts/clean.yaml"
 
