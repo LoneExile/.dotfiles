@@ -26,11 +26,8 @@ plug "Freed-Wu/fzf-tab-source"
 # plug "zsh-users/zsh-history-substring-search"
 
 # pnpm
-export PNPM_HOME="/Users/$USER/Library/pnpm"
-case ":$PATH:" in
-    *":$PNPM_HOME:"*) ;;
-    *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME:$PATH"
 
 alias code="/mnt/c/Users/ApinantU-suwantim/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code" # --remote wsl+archlinux
 
