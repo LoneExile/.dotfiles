@@ -29,6 +29,17 @@ plug "Freed-Wu/fzf-tab-source"
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 
+# go
+export GOPATH=$HOME/go
+export GOBIN=$GOPATH/bin
+export PATH=$PATH:$GOBIN
+
+export PATH="/usr/bin:$PATH"
+
+# dotnet tools
+export PATH="$PATH:~/.dotnet/tools"
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+
 alias code="/mnt/c/Users/ApinantU-suwantim/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code" # --remote wsl+archlinux
 
 # Load and initialise completion system
@@ -42,6 +53,7 @@ source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
 # fzf
 source /usr/share/fzf/key-bindings.zsh
 source /usr/share/fzf/completion.zsh
+source <(kompose completion zsh)
 
 # aws cli completion
 complete -C '/usr/bin//aws_completer' aws
@@ -53,12 +65,6 @@ complete -C '/usr/bin//aws_completer' aws
 eval "$(github-copilot-cli alias -- "$0")"
 eval "$(zoxide init zsh)"
 
-#
-export PATH="/usr/bin:$PATH"
-
-# dotnet tools
-export PATH="$PATH:~/.dotnet/tools"
-export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -67,3 +73,5 @@ export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
+
+eval "$(thefuck --alias)"
