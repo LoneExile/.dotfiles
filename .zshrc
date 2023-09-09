@@ -54,6 +54,8 @@ export PATH=$PATH:$HOME/.local/bin
 
 eval "$(github-copilot-cli alias -- "$0")"
 
+source <(kubectl completion zsh)
+
 # aws cli completion
 complete -C '/usr/local/bin/aws_completer' aws
 
