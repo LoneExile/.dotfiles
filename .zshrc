@@ -20,7 +20,12 @@ eval "$(zoxide init zsh)"
 # Zap Plugin Manager
 [ -f "$HOME/.local/share/zap/zap.zsh" ] && source "$HOME/.local/share/zap/zap.zsh"
 
-plug "/opt/homebrew/opt/asdf/libexec/asdf.sh"
+## TODO: fix this
+## asdf
+export ASDF_DIR="/opt/homebrew/Cellar/asdf/0.13.1/libexec/"
+plug "/opt/homebrew/Cellar/asdf/0.13.1/libexec/asdf.sh"
+eval "$(github-copilot-cli alias -- "$0")"
+
 plug "$HOME/.config/zsh/aliases.zsh"
 plug "$HOME/.config/zsh/options.zsh"
 plug "$HOME/.config/zsh/keybindings.zsh"
@@ -52,7 +57,6 @@ export PATH=$PATH:$HOME/.local/bin
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source "$HOME/.p10k.zsh"
 
-eval "$(github-copilot-cli alias -- "$0")"
 
 source <(kubectl completion zsh)
 
