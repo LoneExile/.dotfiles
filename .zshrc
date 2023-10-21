@@ -74,4 +74,9 @@ command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
+## check if docker is running
+# if ! docker info &>/dev/null; then
+#     eval $(minikube docker-env)
+# fi
+
 eval "$(thefuck --alias)"
