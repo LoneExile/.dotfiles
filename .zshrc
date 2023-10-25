@@ -53,7 +53,7 @@ source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
 # fzf
 source /usr/share/fzf/key-bindings.zsh
 source /usr/share/fzf/completion.zsh
-source <(kompose completion zsh)
+# source <(kompose completion zsh)
 
 # aws cli completion
 complete -C '/usr/bin//aws_completer' aws
