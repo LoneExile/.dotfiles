@@ -16,15 +16,14 @@ k9s:
     fullScreenLogs: false
     textWrap: false
     showTime: false
-  currentContext: dev
-  currentCluster: dev
+  currentContext: minikube
+  currentCluster: minikube
   clusters:
-    dev:
+    minikube:
       namespace:
-        active: all
+        active: default
         lockFavorites: false
         favorites:
-        - all
         - default
       view:
         active: po
