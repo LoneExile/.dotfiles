@@ -5,6 +5,7 @@
 # fi
 
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$USER.zsh" ]]; then
+    # shellcheck disable=SC1090
     source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$USER.zsh"
 fi
 
@@ -56,19 +57,22 @@ source /usr/share/fzf/key-bindings.zsh
 source /usr/share/fzf/completion.zsh
 # source <(kompose completion zsh)
 
+# shellcheck disable=SC1090
+source <(kubectl completion zsh)
+
 # aws cli completion
-complete -C '/usr/bin//aws_completer' aws
+complete -C '/usr/bin/aws_completer' aws
 
 # asdf
-. ~/.asdf/asdf.sh
-. ~/.asdf/completions/asdf.bash
+. $HOME/.asdf/asdf.sh
+. $HOME/.asdf/completions/asdf.bash
 
 eval "$(github-copilot-cli alias -- "$0")"
 eval "$(zoxide init zsh)"
 
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+[[ ! -f ~/.p10k.zsh ]] || source $HOME/.p10k.zsh
 
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
@@ -85,6 +89,7 @@ eval "$(thefuck --alias)"
 ###################################################
 
 # Highlight the current autocomplete option
+# shellcheck disable=SC2296
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 
 # Better SSH/Rsync/SCP Autocomplete
