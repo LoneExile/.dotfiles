@@ -1,0 +1,8 @@
+[Unit]
+Description=CopyQ Clipboard Manager
+
+[Service]
+ExecStart=/usr/bin/copyq
+
+[Install]
+WantedBy=default.target

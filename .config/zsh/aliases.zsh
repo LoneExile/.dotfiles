@@ -150,6 +150,27 @@ lgy() {
     cd - || return
 }
 
+ssh() {
+    # Get the argument to ssh (assumes it's the last argument)
+    local dest="${@: -1}"
+
+    # If we are inside tmux, create a new window and rename it
+    if [ -n "$TMUX" ]; then
+        tmux new-window -n "$dest" "command ssh $@"
+    else
+        # If not inside tmux, just run the ssh command
+        command ssh "$@"
+    fi
+
+    ## If we are inside tmux, rename the current window
+    #     if [ -n "$TMUX" ]; then
+    #         tmux rename-window "$dest"
+    #     fi
+    #     command ssh "$@"
+
+}
+
+
 # nnn file manager
 # export NNN_FCOLORS='0000E6310000000000000000'
 # export NNN_PLUG='v:imgview;d:dragdrop;p:preview-tui;'
