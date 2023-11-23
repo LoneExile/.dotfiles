@@ -167,7 +167,6 @@ ssh() {
     #         tmux rename-window "$dest"
     #     fi
     #     command ssh "$@"
-
 }
 
 
