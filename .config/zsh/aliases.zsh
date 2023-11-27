@@ -18,6 +18,9 @@ alias treee="tree --no-permissions --no-filesize --no-user --no-time"
 
 alias zel="zellij --layout ~/.config/zellij/layouts/clean.yaml"
 
+alias kk="kalker"
+alias bw="bandwhich"
+
 ## TMUX
 alias t='tmux attach || tmux new-session'
 alias ta="tmux attach -t"
