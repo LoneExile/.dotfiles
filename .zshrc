@@ -9,6 +9,11 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$USER.zsh" ]]; the
     source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$USER.zsh"
 fi
 
+# Load and initialise completion system
+autoload -Uz compinit
+autoload -U +X bashcompinit && bashcompinit
+autoload -U +X compinit && compinit
+
 # Created by Zap installer
 [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
 plug "$HOME/.config/zsh/aliases.zsh"
@@ -22,11 +27,11 @@ plug "zap-zsh/supercharge"
 plug "zsh-users/zsh-syntax-highlighting"
 plug "zsh-users/zsh-completions"
 plug "Aloxaf/fzf-tab"
-plug "softmoth/zsh-vim-mode"
+# plug "softmoth/zsh-vim-mode" ## buggy
 plug "zap-zsh/exa"
 plug "Freed-Wu/fzf-tab-source"
 plug "sunlei/zsh-ssh"
-# plug "zsh-users/zsh-history-substring-search"
+plug "zsh-users/zsh-history-substring-search"
 plug "$HOME/.config/zsh/aws.zsh"
 
 # Check if AWS_PROFILE is set, if not, set it to 'default'
@@ -51,10 +56,8 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 alias code="/mnt/c/Users/ApinantU-suwantim/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code" # --remote wsl+archlinux
 
-# Load and initialise completion system
-autoload -Uz compinit
-autoload -U +X bashcompinit && bashcompinit
-autoload -U +X compinit && compinit
+
+plug "$HOME/.config/symbiote/symbiote.zsh"
 
 # powerlevel10k
 source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
