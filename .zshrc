@@ -56,9 +56,6 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 alias code="/mnt/c/Users/ApinantU-suwantim/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code" # --remote wsl+archlinux
 
-
-plug "$HOME/.config/symbiote/symbiote.zsh"
-
 # powerlevel10k
 source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
 
