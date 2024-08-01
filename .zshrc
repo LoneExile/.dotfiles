@@ -70,13 +70,15 @@ source <(kubectl completion zsh)
 # aws cli completion
 complete -C '/usr/bin/aws_completer' aws
 
+# poetry
+fpath+=~/.zfunc
+
 # asdf
 . $HOME/.asdf/asdf.sh
 . $HOME/.asdf/completions/asdf.bash
 
 eval "$(github-copilot-cli alias -- "$0")"
 eval "$(zoxide init zsh)"
-
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source $HOME/.p10k.zsh
@@ -94,4 +96,4 @@ eval "$(pyenv virtualenv-init -)"
 eval "$(thefuck --alias)"
 
 ###################################################
-
+export ELIXIR_ERL_OPTIONS="+fnu"
