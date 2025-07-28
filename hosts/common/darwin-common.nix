@@ -35,6 +35,8 @@ in
     pkgs.lima
     pkgs.nix
     pkgs.aerospace
+    pkgs.brave
+    pkgs.wezterm
   ];
 
   fonts.packages = [
