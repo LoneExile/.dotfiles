@@ -2,7 +2,7 @@
 {
   system.defaults.dock = {
     persistent-apps = [
-      "/Applications/Telegram.app"
+      # "/Applications/Telegram.app"
     ];
   };
 }

@@ -34,6 +34,7 @@ in
     pkgs.just
     pkgs.lima
     pkgs.nix
+    pkgs.aerospace
   ];
 
   fonts.packages = [
@@ -80,7 +81,6 @@ in
       #"FelixKratz/formulae" #sketchybar
     ];
     casks = [
-      "nikitabobko/tap/aerospace"
       "audacity"
       "discord"
       "firefox"
@@ -103,7 +103,7 @@ in
     ];
     masApps = {
       "Bitwarden" = 1352778147;
-      "Telegram" = 747648890;
+      # "Telegram" = 747648890;
 
       "Keynote" = 409183694;
       "Numbers" = 409203825;
