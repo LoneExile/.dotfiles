@@ -77,6 +77,7 @@ in
 
     brews = [
       "bitwarden-cli"
+      "displayplacer"
       #"borders"
     ];
     taps = [
@@ -119,6 +120,20 @@ in
 
   # Add ability to used TouchID for sudo authentication
   security.pam.services.sudo_local.touchIdAuth = true;
+
+  # System activation scripts
+  system.activationScripts.extraActivation.text = ''
+    # Set display to maximum resolution using displayplacer
+    echo "Setting display to maximum resolution..."
+    if command -v displayplacer >/dev/null 2>&1; then
+      # Set MacBook built-in screen to maximum resolution (mode 13: 2560x1600)
+      displayplacer "id:1 mode:13 degree:0" 2>/dev/null || {
+        echo "Warning: Failed to set display resolution with contextual ID, this is normal on first run"
+      }
+    else
+      echo "displayplacer not found, skipping display configuration"
+    fi
+  '';
 
   # macOS configuration
   system.defaults = {
