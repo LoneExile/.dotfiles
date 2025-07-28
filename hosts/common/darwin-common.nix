@@ -103,6 +103,7 @@ in
       "slack"
       "spotify"
       "tailscale"
+      "nordvpn"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
