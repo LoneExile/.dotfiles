@@ -155,6 +155,7 @@ in
     NSGlobalDomain.AppleInterfaceStyle = "Dark";
     NSGlobalDomain._HIHideMenuBar = true;
     NSGlobalDomain.AppleFontSmoothing = 2;
+    NSGlobalDomain."com.apple.swipescrolldirection" = false;
     LaunchServices.LSQuarantine = false; # disables "Are you sure?" for new apps
     loginwindow.GuestEnabled = false;
     finder.FXPreferredViewStyle = "Nlsv";
