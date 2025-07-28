@@ -136,6 +136,9 @@ in
     NSGlobalDomain."com.apple.mouse.tapBehavior" = 1;
     NSGlobalDomain.NSWindowShouldDragOnGesture = true;
     NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;
+    NSGlobalDomain.AppleInterfaceStyle = "Dark";
+    NSGlobalDomain._HIHideMenuBar = true;
+    NSGlobalDomain.AppleFontSmoothing = 2;
     LaunchServices.LSQuarantine = false; # disables "Are you sure?" for new apps
     loginwindow.GuestEnabled = false;
     finder.FXPreferredViewStyle = "Nlsv";
@@ -170,7 +173,7 @@ in
         static-only = false;
         show-recents = false;
         show-process-indicators = true;
-        orientation = "left";
+        orientation = "bottom";
         tilesize = 36;
         minimize-to-application = true;
         mineffect = "scale";
