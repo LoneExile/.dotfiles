@@ -29,7 +29,6 @@
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
             home-manager.extraSpecialArgs = { inherit inputs; };
-            #home-manager.sharedModules = [ inputs.nixvim.homeManagerModules.nixvim ];
             home-manager.users.${username} = { imports = [ ./../home/${username}.nix ]; };
         }
         inputs.nix-homebrew.darwinModules.nix-homebrew {

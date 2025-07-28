@@ -100,12 +100,10 @@ in
       "slack"
       "spotify"
       "tailscale"
-
     ];
     masApps = {
       "Bitwarden" = 1352778147;
       "Telegram" = 747648890;
-      "Wireguard" = 1451685025;
 
       "Keynote" = 409183694;
       "Numbers" = 409203825;
