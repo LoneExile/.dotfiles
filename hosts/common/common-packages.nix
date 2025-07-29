@@ -20,7 +20,6 @@ in
     dua # Modern Unix `du`
     duf # Modern Unix `df`
     entr # Modern Unix `watch`
-    esptool
     fastfetch
     fd
     ffmpeg
@@ -29,7 +28,6 @@ in
     git-crypt
     gnused
     go
-    hugo
     iperf3
     ipmitool
     jetbrains-mono # font

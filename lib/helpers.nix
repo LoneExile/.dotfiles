@@ -9,7 +9,6 @@
   in
     inputs.nix-darwin.lib.darwinSystem {
       specialArgs = { inherit system inputs username unstablePkgs; };
-      #extraSpecialArgs = { inherit inputs; }
       modules = [
         ../hosts/common/common-packages.nix
         ../hosts/common/darwin-common.nix
@@ -47,8 +46,5 @@
         }
 
       ];
-      # ] ++ lib.optionals (builtins.pathExists ./../hosts/darwin/${hostname}/default.nix) [
-      #     (import ./../hosts/darwin/${hostname}/default.nix)
-      #   ];
     };
 }
