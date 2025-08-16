@@ -1,12 +1,12 @@
 { config, inputs, pkgs, lib, unstablePkgs, ... }:
-let
-  nvimConfig = pkgs.fetchFromGitHub {
-    owner = "LoneExile";
-    repo = "nvim";
-    rev = "main";
-    sha256 = "sha256-fc3VE/Uz/50hSXgiO8IpH6fI4oVBWJ9+GCv8fuo20pk=";
-  };
-in
+# let
+#   nvimConfig = pkgs.fetchFromGitHub {
+#     owner = "LoneExile";
+#     repo = "nvim";
+#     rev = "main";
+#     sha256 = "sha256-fc3VE/Uz/50hSXgiO8IpH6fI4oVBWJ9+GCv8fuo20pk=";
+#   };
+# in
 {
   home.stateVersion = "23.11";
 
@@ -21,11 +21,14 @@ in
     openjdk21          # Java (OpenJDK 21 LTS)
     lua                # Lua
     nodejs             # Node.js (uses overlay from helpers.nix)
+    pnpm               # Node.js package manager (uses overlay from helpers.nix)
+    deno               # Deno runtime
     python3            # Python 3
     rustc              # Rust compiler
     cargo              # Rust package manager
     uv                 # Python package installer
     neovim             # Neovim nightly (from overlay)
+    lua51Packages.luarocks # LuaRocks package manager
   ];
 
   # list of programs
@@ -33,21 +36,21 @@ in
 
   # aerospace config and nvim config
   home.file = lib.mkMerge [
-    {
-      # Copy nvim configuration from GitHub (writable)
-      ".config/nvim" = {
-        source = nvimConfig;
-        recursive = true;
-        # Make files writable by copying instead of symlinking
-        onChange = ''
-          if [ -L ~/.config/nvim ]; then
-            rm ~/.config/nvim
-            cp -r ${nvimConfig} ~/.config/nvim
-            chmod -R +w ~/.config/nvim
-          fi
-        '';
-      };
-    }
+    # {
+    #   # Copy nvim configuration from GitHub (writable)
+    #   ".config/nvim" = {
+    #     source = nvimConfig;
+    #     recursive = true;
+    #     # Make files writable by copying instead of symlinking
+    #     onChange = ''
+    #       if [ -L ~/.config/nvim ]; then
+    #         rm ~/.config/nvim
+    #         cp -r ${nvimConfig} ~/.config/nvim
+    #         chmod -R +w ~/.config/nvim
+    #       fi
+    #     '';
+    #   };
+    # }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
