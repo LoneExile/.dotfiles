@@ -1,7 +1,11 @@
 #!/bin/bash
 
 # Created by Zap installer
+if [ ! -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ]; then
+  zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1 --keep
+fi
 [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
+
 
 plug "$HOME/.config/zsh/aliases.zsh"
 plug "$HOME/.config/zsh/options.zsh"
@@ -20,7 +24,7 @@ plug "Freed-Wu/fzf-tab-source"
 autoload -Uz compinit
 compinit
 
-eval "$(/opt/homebrew/bin/mise activate zsh)"
+# eval "$(/opt/homebrew/bin/mise activate zsh)"
 eval "$(starship init zsh)"
 # shellcheck disable=SC1090
 source <(fzf --zsh)
