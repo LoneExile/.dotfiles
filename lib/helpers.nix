@@ -20,6 +20,7 @@
               nodejs = prev.nodejs_22;
               nodejs-slim = prev.nodejs-slim_22;
             })
+            inputs.neovim-nightly-overlay.overlays.default
           ];
         }
         inputs.home-manager.darwinModules.home-manager {

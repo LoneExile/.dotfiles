@@ -10,6 +10,7 @@ in
 {
   home.stateVersion = "23.11";
 
+
   # Development tools packages
   home.packages = with pkgs; [
     # Language runtimes and tools
@@ -24,6 +25,7 @@ in
     rustc              # Rust compiler
     cargo              # Rust package manager
     uv                 # Python package installer
+    neovim             # Neovim nightly (from overlay)
   ];
 
   # list of programs
@@ -62,6 +64,7 @@ in
     enable = true;
     nix-direnv.enable = true;
   };
+
 
   programs.eza = {
     enable = true;
