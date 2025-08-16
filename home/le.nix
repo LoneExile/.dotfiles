@@ -117,6 +117,7 @@
       battery
     ];
     extraConfig = ''
+      set -g default-shell /bin/zsh
       new-session -s main
       unbind C-b
       bind-key -n C-a send-prefix

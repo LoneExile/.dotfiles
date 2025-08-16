@@ -11,11 +11,13 @@ plug "$HOME/.config/zsh/aliases.zsh"
 plug "$HOME/.config/zsh/options.zsh"
 plug "$HOME/.config/zsh/keybindings.zsh"
 
-plug "zsh-users/zsh-autosuggestions"
 #plug "zap-zsh/supercharge"
 #plug "zap-zsh/zap-prompt"
-plug "zsh-users/zsh-syntax-highlighting"
-plug "zsh-users/zsh-completions"
+
+# plug "zsh-users/zsh-syntax-highlighting"
+# plug "zsh-users/zsh-autosuggestions"
+# plug "zsh-users/zsh-completions"
+
 plug "zsh-users/zsh-history-substring-search"
 plug "Aloxaf/fzf-tab"
 plug "Freed-Wu/fzf-tab-source"
