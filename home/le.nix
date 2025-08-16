@@ -2,6 +2,22 @@
 {
   home.stateVersion = "23.11";
 
+  # Development tools packages
+  home.packages = with pkgs; [
+    # Language runtimes and tools
+    dotnet-sdk_8        # .NET SDK (latest LTS)
+    elixir             # Elixir
+    erlang             # Erlang
+    go                 # Go (already in system packages, but adding here for user access)
+    openjdk21          # Java (OpenJDK 21 LTS)
+    lua                # Lua
+    nodejs             # Node.js (uses overlay from helpers.nix)
+    python3            # Python 3
+    rustc              # Rust compiler
+    cargo              # Rust package manager
+    uv                 # Python package installer
+  ];
+
   # list of programs
   # https://mipmip.github.io/home-manager-option-search
 
@@ -16,6 +32,9 @@
       ".config/zsh/aliases.zsh".text = builtins.readFile ./zsh/config/aliases.zsh;
       ".config/zsh/keybindings.zsh".text = builtins.readFile ./zsh/config/keybindings.zsh;
       ".config/zsh/options.zsh".text = builtins.readFile ./zsh/config/options.zsh;
+      ## mtmr
+      ## ~/Library/Application\ Support/MTMR/items.json
+      "Library/Application Support/MTMR/items.json".text = builtins.readFile ./mtmr/items.json;
       
     })
   ];
@@ -117,7 +136,6 @@
       battery
     ];
     extraConfig = ''
-      set -g default-shell /bin/zsh
       new-session -s main
       unbind C-b
       bind-key -n C-a send-prefix
@@ -158,6 +176,8 @@
       setw -g window-status-current-format "#[fg=colour234,bg=colour31,nobold,nounderscore,noitalics]#[fg=colour117,bg=colour31] #I #[fg=colour231,bg=colour31,bold] #W#{?window_zoomed_flag,[Z],} #[fg=colour31,bg=default,nobold,nounderscore,noitalics]"
       set -g status-position top
 
+      # set -g default-shell /bin/zsh
+      set -g default-shell "$SHELL"
     '';
   };
 

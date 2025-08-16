@@ -37,6 +37,7 @@ in
     pkgs.aerospace
     pkgs.brave
     pkgs.wezterm
+    pkgs.k9s
   ];
 
   fonts.packages = [
@@ -104,6 +105,7 @@ in
       "spotify"
       "tailscale"
       "nordvpn"
+      "mtmr"
     ];
     masApps = {
       "Bitwarden" = 1352778147;

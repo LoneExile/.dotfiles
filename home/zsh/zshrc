@@ -18,9 +18,9 @@ plug "$HOME/.config/zsh/keybindings.zsh"
 # plug "zsh-users/zsh-autosuggestions"
 # plug "zsh-users/zsh-completions"
 
-plug "zsh-users/zsh-history-substring-search"
-plug "Aloxaf/fzf-tab"
-plug "Freed-Wu/fzf-tab-source"
+# plug "zsh-users/zsh-history-substring-search"
+# plug "Aloxaf/fzf-tab"
+# plug "Freed-Wu/fzf-tab-source"
 
 # Load and initialise completion system
 autoload -Uz compinit
