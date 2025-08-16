@@ -1,4 +1,12 @@
 { config, inputs, pkgs, lib, unstablePkgs, ... }:
+let
+  nvimConfig = pkgs.fetchFromGitHub {
+    owner = "LoneExile";
+    repo = "nvim";
+    rev = "main";
+    sha256 = "sha256-fc3VE/Uz/50hSXgiO8IpH6fI4oVBWJ9+GCv8fuo20pk=";
+  };
+in
 {
   home.stateVersion = "23.11";
 
@@ -21,8 +29,12 @@
   # list of programs
   # https://mipmip.github.io/home-manager-option-search
 
-  # aerospace config
+  # aerospace config and nvim config
   home.file = lib.mkMerge [
+    {
+      # Clone nvim configuration from GitHub
+      ".config/nvim".source = nvimConfig;
+    }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
