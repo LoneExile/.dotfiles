@@ -9,8 +9,23 @@
   home.file = lib.mkMerge [
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
+      ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
+      # ".config/tmux/tmux.conf".text = builtins.readFile ./tmux/tmux.conf;
+      ## zsh
+      ".zshrc".text = builtins.readFile ./zsh/zshrc;
+      ".config/zsh/aliases.zsh".text = builtins.readFile ./zsh/config/aliases.zsh;
+      ".config/zsh/keybindings.zsh".text = builtins.readFile ./zsh/config/keybindings.zsh;
+      ".config/zsh/options.zsh".text = builtins.readFile ./zsh/config/options.zsh;
+      
     })
   ];
+
+  # programs.aerospace = {
+  #   enable = true;
+  #   userSettings = {
+  #     start-at-login = true;
+  #   };
+  # };
 
   programs.gpg.enable = true;
 
@@ -87,15 +102,61 @@
   programs.tmux = {
     enable = true;
     #keyMode = "vi";
-    clock24 = true;
-    historyLimit = 10000;
+    # clock24 = true;
+    # historyLimit = 10000;
     plugins = with pkgs.tmuxPlugins; [
-      gruvbox
+      # gruvbox
       vim-tmux-navigator
+      sensible
+      pain-control
+      open
+      copycat
+      resurrect
+      continuum
+      cpu
+      battery
     ];
     extraConfig = ''
       new-session -s main
+      unbind C-b
       bind-key -n C-a send-prefix
+      set -g base-index 1
+      set -g mouse on
+      set-option -g mouse on
+
+      setw -g xterm-keys on
+      set -g default-terminal "tmux-256color"
+      set-option -g default-terminal "screen-256color"
+      set -g default-terminal "screen-256color"
+      set-option -sa terminal-features ',xterm-256color:RGB'
+
+      unbind-key n
+      unbind-key e
+      unbind-key y
+      unbind-key o
+
+      set -g status-justify "left"
+      set -g status "on"
+      set -g status-style "none"
+      set -g message-command-style "bg=colour31"
+      set -g status-left-length "100"
+      set -g pane-active-border-style "fg=colour254"
+      set -g message-command-style "fg=colour231"
+      set -g pane-border-style "fg=colour240"
+      set -g message-style "bg=colour31"
+      set -g status-left-style "none"
+      set -g status-right-style "none"
+      set -g status-right-length "100"
+      set -g message-style "fg=colour231"
+      setw -g window-status-style "fg=colour250,bg=default,none"
+      setw -g window-status-activity-style "fg=colour250,bg=default,none"
+      setw -g window-status-separator ""
+      set -g status-left "#[fg=colour16,bg=colour254,bold] #S #[fg=colour254,bg=default,nobold,nounderscore,noitalics]"
+      set -g status-right ""
+      setw -g window-status-format "#[fg=colour244,bg=default] #I #[fg=colour250,bg=default] #W#{?window_zoomed_flag,[Z],} "
+      setw -g window-status-current-format "#[fg=colour234,bg=colour31,nobold,nounderscore,noitalics]#[fg=colour117,bg=colour31] #I #[fg=colour231,bg=colour31,bold] #W#{?window_zoomed_flag,[Z],} #[fg=colour31,bg=default,nobold,nounderscore,noitalics]"
+      set -g status-position top
+
     '';
   };
 
