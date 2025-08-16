@@ -34,8 +34,19 @@ in
   # aerospace config and nvim config
   home.file = lib.mkMerge [
     {
-      # Clone nvim configuration from GitHub
-      ".config/nvim".source = nvimConfig;
+      # Copy nvim configuration from GitHub (writable)
+      ".config/nvim" = {
+        source = nvimConfig;
+        recursive = true;
+        # Make files writable by copying instead of symlinking
+        onChange = ''
+          if [ -L ~/.config/nvim ]; then
+            rm ~/.config/nvim
+            cp -r ${nvimConfig} ~/.config/nvim
+            chmod -R +w ~/.config/nvim
+          fi
+        '';
+      };
     }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
