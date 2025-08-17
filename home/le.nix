@@ -1,15 +1,6 @@
 { config, inputs, pkgs, lib, unstablePkgs, ... }:
-# let
-#   nvimConfig = pkgs.fetchFromGitHub {
-#     owner = "LoneExile";
-#     repo = "nvim";
-#     rev = "main";
-#     sha256 = "sha256-fc3VE/Uz/50hSXgiO8IpH6fI4oVBWJ9+GCv8fuo20pk=";
-#   };
-# in
 {
   home.stateVersion = "23.11";
-
 
   # Development tools packages
   home.packages = with pkgs; [
@@ -31,40 +22,16 @@
       ".config/zsh/keybindings.zsh".text = builtins.readFile ./zsh/config/keybindings.zsh;
       ".config/zsh/options.zsh".text = builtins.readFile ./zsh/config/options.zsh;
       "Library/Application Support/MTMR/items.json".text = builtins.readFile ./mtmr/items.json;
-      # "Library/Keyboard\ Layouts/English.bundle" = {
-      #   source = ./keyboard-layouts/English.bundle;
-      #   recursive = true;
-      # };
-      # "Library/Keyboard\ Layouts/Thai.bundle" = {
-      #   source = ./keyboard-layouts/Thai.bundle;
-      #   recursive = true;
-      # };
+      "Library/Keyboard\ Layouts/English.bundle" = {
+        source = ./keyboard-layouts/English.bundle;
+        recursive = true;
+      };
+      "Library/Keyboard\ Layouts/Thai.bundle" = {
+        source = ./keyboard-layouts/Thai.bundle;
+        recursive = true;
+      };
     })
   ];
-
-  # # Copy keyboard layouts to system-wide directory
-  # home.activation = lib.mkIf pkgs.stdenv.isDarwin {
-  #   copyKeyboardLayouts = lib.hm.dag.entryAfter ["writeBoundary"] ''
-  #     echo "Copying keyboard layouts to system directory..."
-
-  #     # Create system keyboard layouts directory if it doesn't exist
-  #     $DRY_RUN_CMD sudo mkdir -p "/Library/Keyboard Layouts"
-
-  #     # Copy English keyboard layout
-  #     if [ -d "${./keyboard-layouts/English.bundle}" ]; then
-  #       $DRY_RUN_CMD sudo cp -r "${./keyboard-layouts/English.bundle}" "/Library/Keyboard Layouts/English.bundle"
-  #       $DRY_RUN_CMD sudo chmod -R 644 "/Library/Keyboard Layouts/English.bundle"
-  #     fi
-
-  #     # Copy Thai keyboard layout
-  #     if [ -d "${./keyboard-layouts/Thai.bundle}" ]; then
-  #       $DRY_RUN_CMD sudo cp -r "${./keyboard-layouts/Thai.bundle}" "/Library/Keyboard Layouts/Thai.bundle"
-  #       $DRY_RUN_CMD sudo chmod -R 644 "/Library/Keyboard Layouts/Thai.bundle"
-  #     fi
-
-  #     echo "Keyboard layouts copied to both user and system directories"
-  #   '';
-  # };
 
   # programs.aerospace = {
   #   enable = true;
@@ -98,6 +65,7 @@
         rust = "latest";
         uv = "latest";
         pnpm = "latest";
+        yarn = "latest";
       };
       settings = {
         not_found_auto_install = true;
