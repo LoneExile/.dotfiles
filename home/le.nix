@@ -27,19 +27,18 @@
       ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
       # ".config/tmux/tmux.conf".text = builtins.readFile ./tmux/tmux.conf;
-      ".zshrc".text = builtins.readFile ./zsh/zshrc;
       ".config/zsh/aliases.zsh".text = builtins.readFile ./zsh/config/aliases.zsh;
       ".config/zsh/keybindings.zsh".text = builtins.readFile ./zsh/config/keybindings.zsh;
       ".config/zsh/options.zsh".text = builtins.readFile ./zsh/config/options.zsh;
       "Library/Application Support/MTMR/items.json".text = builtins.readFile ./mtmr/items.json;
-      "Library/Keyboard\ Layouts/English.bundle" = {
-        source = ./keyboard-layouts/English.bundle;
-        recursive = true;
-      };
-      "Library/Keyboard\ Layouts/Thai.bundle" = {
-        source = ./keyboard-layouts/Thai.bundle;
-        recursive = true;
-      };
+      # "Library/Keyboard\ Layouts/English.bundle" = {
+      #   source = ./keyboard-layouts/English.bundle;
+      #   recursive = true;
+      # };
+      # "Library/Keyboard\ Layouts/Thai.bundle" = {
+      #   source = ./keyboard-layouts/Thai.bundle;
+      #   recursive = true;
+      # };
     })
   ];
 
@@ -168,9 +167,9 @@
 
   programs.zsh = {
     enable = true;
-    enableCompletion = true;
-    autosuggestion.enable = true;
-    #initExtra = (builtins.readFile ../mac-dot-zshrc);
+    # enableCompletion = true;
+    # autosuggestion.enable = true;
+    initContent = builtins.readFile ./zsh/zshrc;
   };
 
   programs.tmux = {

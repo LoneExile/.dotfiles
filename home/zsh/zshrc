@@ -12,23 +12,18 @@ plug "$HOME/.config/zsh/keybindings.zsh"
 #plug "zap-zsh/supercharge"
 #plug "zap-zsh/zap-prompt"
 
-# plug "zsh-users/zsh-syntax-highlighting"
-# plug "zsh-users/zsh-autosuggestions"
-# plug "zsh-users/zsh-completions"
+plug "zsh-users/zsh-syntax-highlighting"
+plug "zsh-users/zsh-autosuggestions"
+plug "zsh-users/zsh-completions"
 
-# plug "zsh-users/zsh-history-substring-search"
-# plug "Aloxaf/fzf-tab"
-# plug "Freed-Wu/fzf-tab-source"
+plug "zsh-users/zsh-history-substring-search"
+plug "Aloxaf/fzf-tab"
+plug "Freed-Wu/fzf-tab-source"
 
 # Load and initialise completion system
 autoload -Uz compinit
 compinit
 
-# eval "$(/opt/homebrew/bin/mise activate zsh)"
-eval "$(starship init zsh)"
-# shellcheck disable=SC1090
-source <(fzf --zsh)
-eval "$(zoxide init zsh)"
 PATH="$HOME/.local/bin/:$PATH"
 
 # shellcheck disable=SC1090
