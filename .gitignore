@@ -2,3 +2,4 @@ result
 com.googlecode.iterm2.plist
 .direnv
 ~
+.DS_Store

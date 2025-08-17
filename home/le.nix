@@ -13,22 +13,9 @@
 
   # Development tools packages
   home.packages = with pkgs; [
-    # Language runtimes and tools
-    dotnet-sdk_8        # .NET SDK (latest LTS)
-    elixir             # Elixir
-    erlang             # Erlang
-    go                 # Go (already in system packages, but adding here for user access)
-    openjdk21          # Java (OpenJDK 21 LTS)
-    lua                # Lua
-    nodejs             # Node.js (uses overlay from helpers.nix)
-    pnpm               # Node.js package manager (uses overlay from helpers.nix)
-    deno               # Deno runtime
-    python3            # Python 3
-    rustc              # Rust compiler
-    cargo              # Rust package manager
-    uv                 # Python package installer
+    mise
     neovim             # Neovim nightly (from overlay)
-    lua51Packages.luarocks # LuaRocks package manager
+    lazygit
   ];
 
   # list of programs
@@ -36,21 +23,6 @@
 
   # aerospace config and nvim config
   home.file = lib.mkMerge [
-    # {
-    #   # Copy nvim configuration from GitHub (writable)
-    #   ".config/nvim" = {
-    #     source = nvimConfig;
-    #     recursive = true;
-    #     # Make files writable by copying instead of symlinking
-    #     onChange = ''
-    #       if [ -L ~/.config/nvim ]; then
-    #         rm ~/.config/nvim
-    #         cp -r ${nvimConfig} ~/.config/nvim
-    #         chmod -R +w ~/.config/nvim
-    #       fi
-    #     '';
-    #   };
-    # }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
@@ -60,10 +32,40 @@
       ".config/zsh/keybindings.zsh".text = builtins.readFile ./zsh/config/keybindings.zsh;
       ".config/zsh/options.zsh".text = builtins.readFile ./zsh/config/options.zsh;
       "Library/Application Support/MTMR/items.json".text = builtins.readFile ./mtmr/items.json;
-      "Library/Keyboard\ Layouts/English.bundle".source = ./keyboard-layouts/English.bundle;
-      "Library/Keyboard\ Layouts/Thai.bundle".source = ./keyboard-layouts/Thai.bundle;
+      "Library/Keyboard\ Layouts/English.bundle" = {
+        source = ./keyboard-layouts/English.bundle;
+        recursive = true;
+      };
+      "Library/Keyboard\ Layouts/Thai.bundle" = {
+        source = ./keyboard-layouts/Thai.bundle;
+        recursive = true;
+      };
     })
   ];
+
+  # # Copy keyboard layouts to system-wide directory
+  # home.activation = lib.mkIf pkgs.stdenv.isDarwin {
+  #   copyKeyboardLayouts = lib.hm.dag.entryAfter ["writeBoundary"] ''
+  #     echo "Copying keyboard layouts to system directory..."
+
+  #     # Create system keyboard layouts directory if it doesn't exist
+  #     $DRY_RUN_CMD sudo mkdir -p "/Library/Keyboard Layouts"
+
+  #     # Copy English keyboard layout
+  #     if [ -d "${./keyboard-layouts/English.bundle}" ]; then
+  #       $DRY_RUN_CMD sudo cp -r "${./keyboard-layouts/English.bundle}" "/Library/Keyboard Layouts/English.bundle"
+  #       $DRY_RUN_CMD sudo chmod -R 644 "/Library/Keyboard Layouts/English.bundle"
+  #     fi
+
+  #     # Copy Thai keyboard layout
+  #     if [ -d "${./keyboard-layouts/Thai.bundle}" ]; then
+  #       $DRY_RUN_CMD sudo cp -r "${./keyboard-layouts/Thai.bundle}" "/Library/Keyboard Layouts/Thai.bundle"
+  #       $DRY_RUN_CMD sudo chmod -R 644 "/Library/Keyboard Layouts/Thai.bundle"
+  #     fi
+
+  #     echo "Keyboard layouts copied to both user and system directories"
+  #   '';
+  # };
 
   # programs.aerospace = {
   #   enable = true;
@@ -77,6 +79,32 @@
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
+    mise.enable = true;
+  };
+
+  programs.mise = {
+    enable = true;
+    enableZshIntegration = true;
+    enableBashIntegration = true;
+    globalConfig = {
+      tools = {
+        dotnet = "latest";
+        elixir = "latest";
+        erlang = "latest";
+        go = "latest";
+        java = "latest";
+        lua = "latest";
+        node = "latest";
+        python = "3";
+        rust = "latest";
+        uv = "latest";
+        pnpm = "latest";
+      };
+      settings = {
+        not_found_auto_install = true;
+        plugin_autoupdate_last_check_duration = "0";
+      };
+    };
   };
 
 
@@ -150,10 +178,11 @@
     #keyMode = "vi";
     # clock24 = true;
     # historyLimit = 10000;
+    prefix = "C-a";
     plugins = with pkgs.tmuxPlugins; [
       # gruvbox
       vim-tmux-navigator
-      sensible
+      # sensible
       pain-control
       open
       copycat
@@ -164,8 +193,6 @@
     ];
     extraConfig = ''
       new-session -s main
-      unbind C-b
-      bind-key -n C-a send-prefix
       set -g base-index 1
       set -g mouse on
       set-option -g mouse on
@@ -203,10 +230,21 @@
       setw -g window-status-current-format "#[fg=colour234,bg=colour31,nobold,nounderscore,noitalics]#[fg=colour117,bg=colour31] #I #[fg=colour231,bg=colour31,bold] #W#{?window_zoomed_flag,[Z],} #[fg=colour31,bg=default,nobold,nounderscore,noitalics]"
       set -g status-position top
 
-      # set -g default-shell /bin/zsh
-      set -g default-shell "$SHELL"
+      set -g default-shell /bin/zsh
     '';
   };
+
+  # programs.tmux = {
+  #   enable = true;
+  #   #keyMode = "vi";
+  #   clock24 = true;
+  #   historyLimit = 10000;
+  #   prefix = "C-a";
+  #   plugins = with pkgs.tmuxPlugins; [
+  #     gruvbox
+  #     vim-tmux-navigator
+  #   ];
+  # };
 
   programs.home-manager.enable = true;
   programs.nix-index.enable = true;

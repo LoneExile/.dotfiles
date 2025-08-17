@@ -109,11 +109,10 @@ in
     ];
     masApps = {
       "Bitwarden" = 1352778147;
-      # "Telegram" = 747648890;
-
       "Keynote" = 409183694;
       "Numbers" = 409203825;
       "Pages" = 409201541;
+      "Line" = 539883307;
     };
   };
 
@@ -126,6 +125,8 @@ in
 
   # System activation scripts
   system.activationScripts.extraActivation.text = ''
+    # mise install
+
     # Set display to maximum resolution using displayplacer
     echo "Setting display to maximum resolution..."
     if command -v displayplacer >/dev/null 2>&1; then
