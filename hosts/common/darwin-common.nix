@@ -36,6 +36,9 @@ in
     pkgs.nix
     pkgs.aerospace
     pkgs.brave
+    pkgs.colima
+    pkgs.docker
+    pkgs.lazydocker
     pkgs.wezterm
     pkgs.k9s
   ];
@@ -80,9 +83,10 @@ in
       "displayplacer"
       #"borders"
     ];
-    taps = [
-      #"FelixKratz/formulae" #sketchybar
-    ];
+    # taps = [
+    #   #"FelixKratz/formulae" #sketchybar
+    # ];
+    taps = builtins.attrNames config.nix-homebrew.taps; 
     casks = [
       "audacity"
       "discord"
@@ -105,6 +109,8 @@ in
       "tailscale"
       "nordvpn"
       "mtmr"
+      "raspberry-pi-imager"
+      "brave-browser"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
