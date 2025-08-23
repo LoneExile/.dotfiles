@@ -41,6 +41,9 @@ in
     pkgs.lazydocker
     pkgs.wezterm
     pkgs.k9s
+    pkgs.logseq
+    pkgs.obsidian
+    pkgs.syncthing-macos
   ];
 
   fonts.packages = [
@@ -111,6 +114,8 @@ in
       "mtmr"
       "raspberry-pi-imager"
       "brave-browser"
+      "trex"
+      "numi"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
@@ -118,6 +123,9 @@ in
       "Numbers" = 409203825;
       "Pages" = 409201541;
       "Line" = 539883307;
+      "Amphetamine" = 937984704;
+      "Dropover" = 1355679052;
+      "Runcat" = 1429033973;
     };
   };
 
@@ -130,8 +138,6 @@ in
 
   # System activation scripts
   system.activationScripts.extraActivation.text = ''
-    # mise install
-
     # Set display to maximum resolution using displayplacer
     echo "Setting display to maximum resolution..."
     if command -v displayplacer >/dev/null 2>&1; then

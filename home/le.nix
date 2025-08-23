@@ -33,6 +33,11 @@
     })
   ];
 
+  # home.activation.myCustomScript = lib.hm.dag.entryAfter ["writeBoundary"] ''
+  #   echo "Hello, this runs after home-manager switch!"
+  #   # Place your script/commands here
+  # '';
+
   # programs.aerospace = {
   #   enable = true;
   #   userSettings = {
