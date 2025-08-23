@@ -35,7 +35,7 @@ in
     pkgs.lima
     pkgs.nix
     pkgs.aerospace
-    pkgs.brave
+    # pkgs.brave
     pkgs.colima
     pkgs.docker
     pkgs.lazydocker
