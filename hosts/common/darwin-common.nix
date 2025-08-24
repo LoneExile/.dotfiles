@@ -44,6 +44,8 @@ in
     pkgs.logseq
     pkgs.obsidian
     pkgs.syncthing-macos
+    pkgs.talosctl
+    pkgs.yq-go
   ];
 
   fonts.packages = [
@@ -104,7 +106,7 @@ in
       "google-chrome"
       "iina"
       "obs"
-      "obsidian"
+      # "obsidian"
       "raycast"
       "signal"
       "slack"
@@ -116,6 +118,7 @@ in
       "brave-browser"
       "trex"
       "numi"
+      "postman"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
@@ -167,12 +170,14 @@ in
     NSGlobalDomain.NSWindowShouldDragOnGesture = true;
     NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;
     NSGlobalDomain.AppleInterfaceStyle = "Dark";
-    NSGlobalDomain._HIHideMenuBar = true;
+    NSGlobalDomain._HIHideMenuBar = false;
+    NSGlobalDomain.AppleShowAllFiles = true;
     NSGlobalDomain.AppleFontSmoothing = 2;
     NSGlobalDomain."com.apple.swipescrolldirection" = false;
     LaunchServices.LSQuarantine = false; # disables "Are you sure?" for new apps
     loginwindow.GuestEnabled = false;
     finder.FXPreferredViewStyle = "Nlsv";
+    # finder.AppleShowAllExtensions = true;
   };
 
   system.defaults.CustomUserPreferences = {
