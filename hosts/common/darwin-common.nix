@@ -46,6 +46,9 @@ in
     pkgs.syncthing-macos
     pkgs.talosctl
     pkgs.yq-go
+    pkgs.fluxcd
+    pkgs.kubernetes-helm
+    pkgs.yazi
   ];
 
   fonts.packages = [
@@ -119,6 +122,8 @@ in
       "trex"
       "numi"
       "postman"
+      "telegram"
+      "anki"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
