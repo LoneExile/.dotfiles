@@ -124,6 +124,7 @@ in
       "postman"
       "telegram"
       "anki"
+      "mongodb-compass"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
