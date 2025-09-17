@@ -49,6 +49,8 @@ in
     pkgs.fluxcd
     pkgs.kubernetes-helm
     pkgs.yazi
+    pkgs.aws-vault
+    pkgs.awscli2
   ];
 
   fonts.packages = [
@@ -145,6 +147,7 @@ in
 
   # Add ability to used TouchID for sudo authentication
   security.pam.services.sudo_local.touchIdAuth = true;
+  security.pam.services.sudo_local.reattach = true;
 
   # System activation scripts
   system.activationScripts.extraActivation.text = ''
