@@ -71,6 +71,7 @@
         uv = "latest";
         pnpm = "latest";
         yarn = "latest";
+        deno = "latest";
       };
       settings = {
         not_found_auto_install = true;

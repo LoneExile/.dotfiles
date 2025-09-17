@@ -125,6 +125,7 @@ in
       "telegram"
       "anki"
       "mongodb-compass"
+      "openvpn-connect"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
