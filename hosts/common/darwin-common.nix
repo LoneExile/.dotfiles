@@ -92,6 +92,7 @@ in
       "bitwarden-cli"
       "displayplacer"
       #"borders"
+      "gh"
     ];
     # taps = [
     #   #"FelixKratz/formulae" #sketchybar
@@ -128,6 +129,7 @@ in
       "anki"
       "mongodb-compass"
       "openvpn-connect"
+      "cloudflare-warp"
     ];
     masApps = {
       "Bitwarden" = 1352778147;

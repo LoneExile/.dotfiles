@@ -61,6 +61,11 @@ alias gclb='git clone --bare'
 # alias lg='lazygit'
 # alias gitu='git add . && git commit && git push'
 
+## gh auth login
+## gh extension install github/gh-copilot
+## gh extension upgrade gh-copilot
+
+eval "$(gh copilot alias -- zsh)"
 
 ## Lazygit
 lg()
