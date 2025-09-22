@@ -130,6 +130,7 @@ in
       "mongodb-compass"
       "openvpn-connect"
       "cloudflare-warp"
+      "kiro"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
