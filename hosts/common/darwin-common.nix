@@ -51,6 +51,7 @@ in
     pkgs.yazi
     pkgs.aws-vault
     pkgs.awscli2
+    pkgs.kubevirt
   ];
 
   fonts.packages = [
@@ -131,6 +132,8 @@ in
       "openvpn-connect"
       "cloudflare-warp"
       "kiro"
+      "vnc-viewer"
+      "visual-studio-code"
     ];
     masApps = {
       "Bitwarden" = 1352778147;
