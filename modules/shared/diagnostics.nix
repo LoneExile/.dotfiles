@@ -165,7 +165,7 @@ in {
             };
 
             pathParts = builtins.split \"\\.\" \"$MODULE_PATH\";
-            moduleConfig = builtins.foldl' (acc: part: acc.\${part}) config pathParts;
+            moduleConfig = builtins.foldl' (acc: p: acc.\${p}) config pathParts;
 
           in
             \"Enabled: \" + toString (moduleConfig.enable or false) + \"\n\" +

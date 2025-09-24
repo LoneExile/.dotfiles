@@ -32,7 +32,7 @@ Before installing, ensure you have:
 
 2. **Clone this repository**:
    ```bash
-   git clone https://github.com/yourusername/nix-config.git ~/.dotfiles
+   git clone https://github.com/loneexile/.dotfiles.git ~/.dotfiles
    cd ~/.dotfiles
    ```
 

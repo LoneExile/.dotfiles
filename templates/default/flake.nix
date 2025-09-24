@@ -18,7 +18,7 @@
 
     # Reference to the main configuration for library functions
     nix-config = {
-      url = "github:yourusername/nix-config"; # Update this URL
+      url = "github:loneexile/.dotfiles"; # Update this URL
     };
   };
 
