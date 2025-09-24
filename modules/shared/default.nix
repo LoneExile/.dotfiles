@@ -1,4 +1,9 @@
 {
+  lib,
+  config,
+  pkgs,
+  ...
+}: {
   # Shared module imports
   imports = [
     ./fonts.nix

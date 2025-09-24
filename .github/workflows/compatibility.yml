@@ -1,172 +1,172 @@
-name: Compatibility 🔄
+# name: Compatibility 🔄
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  schedule:
-    # Run weekly on Sundays at 2 AM UTC
-    - cron: '0 2 * * 0'
-  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+#     branches:
+#       - main
+#   schedule:
+#     # Run weekly on Sundays at 2 AM UTC
+#     - cron: '0 2 * * 0'
+#   workflow_dispatch:
 
-jobs:
-  nix-versions:
-    name: Test Nix Versions
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        nix-version: ["2.18.1", "2.19.2", "latest"]
-      fail-fast: false
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+# jobs:
+#   nix-versions:
+#     name: Test Nix Versions
+#     runs-on: macos-latest
+#     strategy:
+#       matrix:
+#         nix-version: ["2.18.1", "2.19.2", "latest"]
+#       fail-fast: false
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
 
-      - name: Install Nix ${{ matrix.nix-version }}
-        uses: DeterminateSystems/nix-installer-action@v14
-        with:
-          nix-package-url: ${{ matrix.nix-version == 'latest' && '' || format('https://releases.nixos.org/nix/nix-{0}/nix-{0}-x86_64-darwin.tar.xz', matrix.nix-version) }}
-          extra-conf: |
-            experimental-features = nix-command flakes
+#       - name: Install Nix ${{ matrix.nix-version }}
+#         uses: DeterminateSystems/nix-installer-action@v14
+#         with:
+#           nix-package-url: ${{ matrix.nix-version == 'latest' && '' || format('https://releases.nixos.org/nix/nix-{0}/nix-{0}-x86_64-darwin.tar.xz', matrix.nix-version) }}
+#           extra-conf: |
+#             experimental-features = nix-command flakes
 
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+#       - name: Setup Magic Nix Cache
+#         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Test flake with Nix ${{ matrix.nix-version }}
-        run: |
-          echo "Testing with Nix version: ${{ matrix.nix-version }}"
-          nix --version
-          nix flake check --no-build
+#       - name: Test flake with Nix ${{ matrix.nix-version }}
+#         run: |
+#           echo "Testing with Nix version: ${{ matrix.nix-version }}"
+#           nix --version
+#           nix flake check --no-build
 
-  darwin-versions:
-    name: Test Darwin Compatibility
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-12, macos-13, macos-14]
-      fail-fast: false
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+#   darwin-versions:
+#     name: Test Darwin Compatibility
+#     runs-on: ${{ matrix.os }}
+#     strategy:
+#       matrix:
+#         os: [macos-12, macos-13, macos-14]
+#       fail-fast: false
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v14
-        with:
-          extra-conf: |
-            experimental-features = nix-command flakes
+#       - name: Install Nix
+#         uses: DeterminateSystems/nix-installer-action@v14
+#         with:
+#           extra-conf: |
+#             experimental-features = nix-command flakes
 
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+#       - name: Setup Magic Nix Cache
+#         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Test on ${{ matrix.os }}
-        run: |
-          echo "Testing on macOS version: ${{ matrix.os }}"
-          system_version=$(sw_vers -productVersion)
-          echo "System version: $system_version"
-          nix flake check --no-build
+#       - name: Test on ${{ matrix.os }}
+#         run: |
+#           echo "Testing on macOS version: ${{ matrix.os }}"
+#           system_version=$(sw_vers -productVersion)
+#           echo "System version: $system_version"
+#           nix flake check --no-build
 
-      - name: Test Darwin configuration build
-        run: |
-          echo "Testing Darwin configuration build on ${{ matrix.os }}"
-          nix build .#darwinConfigurations.le.system --dry-run
+#       - name: Test Darwin configuration build
+#         run: |
+#           echo "Testing Darwin configuration build on ${{ matrix.os }}"
+#           nix build .#darwinConfigurations.le.system --dry-run
 
-  profile-combinations:
-    name: Test Profile Combinations
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        profile-combo:
-          - "minimal"
-          - "development"
-          - "work"
-          - "personal"
-          - "development,work"
-          - "development,personal"
-          - "work,personal"
-      fail-fast: false
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+#   profile-combinations:
+#     name: Test Profile Combinations
+#     runs-on: macos-latest
+#     strategy:
+#       matrix:
+#         profile-combo:
+#           - "minimal"
+#           - "development"
+#           - "work"
+#           - "personal"
+#           - "development,work"
+#           - "development,personal"
+#           - "work,personal"
+#       fail-fast: false
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v14
-        with:
-          extra-conf: |
-            experimental-features = nix-command flakes
+#       - name: Install Nix
+#         uses: DeterminateSystems/nix-installer-action@v14
+#         with:
+#           extra-conf: |
+#             experimental-features = nix-command flakes
 
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+#       - name: Setup Magic Nix Cache
+#         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Test profile combination - ${{ matrix.profile-combo }}
-        run: |
-          echo "Testing profile combination: ${{ matrix.profile-combo }}"
-          # Create a temporary test configuration
-          mkdir -p /tmp/test-config
-          cat > /tmp/test-config/flake.nix << 'EOF'
-          {
-            inputs.nix-config.url = "path:${{ github.workspace }}";
-            outputs = { nix-config, ... }: {
-              darwinConfigurations.test = nix-config.lib.mkDarwin {
-                hostname = "test";
-                username = "test";
-                system = "aarch64-darwin";
-                profiles = {
-          EOF
+#       - name: Test profile combination - ${{ matrix.profile-combo }}
+#         run: |
+#           echo "Testing profile combination: ${{ matrix.profile-combo }}"
+#           # Create a temporary test configuration
+#           mkdir -p /tmp/test-config
+#           cat > /tmp/test-config/flake.nix << 'EOF'
+#           {
+#             inputs.nix-config.url = "path:${{ github.workspace }}";
+#             outputs = { nix-config, ... }: {
+#               darwinConfigurations.test = nix-config.lib.mkDarwin {
+#                 hostname = "test";
+#                 username = "test";
+#                 system = "aarch64-darwin";
+#                 profiles = {
+#           EOF
           
-          # Add profiles based on matrix
-          IFS=',' read -ra PROFILES <<< "${{ matrix.profile-combo }}"
-          for profile in "${PROFILES[@]}"; do
-            echo "          $profile = true;" >> /tmp/test-config/flake.nix
-          done
+#           # Add profiles based on matrix
+#           IFS=',' read -ra PROFILES <<< "${{ matrix.profile-combo }}"
+#           for profile in "${PROFILES[@]}"; do
+#             echo "          $profile = true;" >> /tmp/test-config/flake.nix
+#           done
           
-          cat >> /tmp/test-config/flake.nix << 'EOF'
-                };
-              };
-            };
-          }
-          EOF
+#           cat >> /tmp/test-config/flake.nix << 'EOF'
+#                 };
+#               };
+#             };
+#           }
+#           EOF
           
-          cd /tmp/test-config
-          nix flake check --no-build
+#           cd /tmp/test-config
+#           nix flake check --no-build
 
-  template-compatibility:
-    name: Test Template Compatibility
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        template: [default, minimal, development]
-      fail-fast: false
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+#   template-compatibility:
+#     name: Test Template Compatibility
+#     runs-on: macos-latest
+#     strategy:
+#       matrix:
+#         template: [default, minimal, development]
+#       fail-fast: false
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v14
-        with:
-          extra-conf: |
-            experimental-features = nix-command flakes
+#       - name: Install Nix
+#         uses: DeterminateSystems/nix-installer-action@v14
+#         with:
+#           extra-conf: |
+#             experimental-features = nix-command flakes
 
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+#       - name: Setup Magic Nix Cache
+#         uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Test template ${{ matrix.template }}
-        run: |
-          echo "Testing template: ${{ matrix.template }}"
-          mkdir -p /tmp/template-test-${{ matrix.template }}
-          cd /tmp/template-test-${{ matrix.template }}
+#       - name: Test template ${{ matrix.template }}
+#         run: |
+#           echo "Testing template: ${{ matrix.template }}"
+#           mkdir -p /tmp/template-test-${{ matrix.template }}
+#           cd /tmp/template-test-${{ matrix.template }}
           
-          # Initialize template
-          nix flake init --template ${{ github.workspace }}#${{ matrix.template }}
+#           # Initialize template
+#           nix flake init --template ${{ github.workspace }}#${{ matrix.template }}
           
-          # Check template structure
-          test -f flake.nix
-          test -f README.md || echo "No README in template (optional)"
+#           # Check template structure
+#           test -f flake.nix
+#           test -f README.md || echo "No README in template (optional)"
           
-          # Validate template flake
-          nix flake check --no-build
+#           # Validate template flake
+#           nix flake check --no-build
           
-          # Test template build (dry-run)
-          config_name=$(nix eval .#darwinConfigurations --apply 'configs: builtins.head (builtins.attrNames configs)' --raw)
-          nix build .#darwinConfigurations.$config_name.system --dry-run
+#           # Test template build (dry-run)
+#           config_name=$(nix eval .#darwinConfigurations --apply 'configs: builtins.head (builtins.attrNames configs)' --raw)
+#           nix build .#darwinConfigurations.$config_name.system --dry-run

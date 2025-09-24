@@ -1,4 +1,9 @@
 {
+  lib,
+  config,
+  pkgs,
+  ...
+}: {
   # Darwin module imports
   imports = [
     ./system.nix

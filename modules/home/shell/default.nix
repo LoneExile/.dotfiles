@@ -1,4 +1,9 @@
 {
+  lib,
+  config,
+  pkgs,
+  ...
+}: {
   # Shell module imports
   imports = [
     ./zsh.nix
