@@ -8,97 +8,46 @@
 }: {
   home.stateVersion = "24.05";
 
+  # Import the refactored editors module
+  imports = [
+    ../modules/home/development/editors
+  ];
+
   # Development tools packages
   home.packages = with pkgs; [
     mise
     lazygit
   ];
 
-  # Neovim configuration using home-manager programs.neovim
-  programs.neovim = {
+  # Enable the refactored editors module
+  modules.home.development.editors = {
     enable = true;
-    defaultEditor = true;
-    viAlias = true;
-    vimAlias = true;
-    vimdiffAlias = true;
+    neovim = {
+      enable = true;
+      defaultEditor = true;
+      extraConfig = ''
+        " Personal Neovim configuration
+        set number
+        set relativenumber
+        set tabstop=2
+        set shiftwidth=2
+        set expandtab
 
-    extraConfig = ''
-      " Basic Neovim configuration
-      set number
-      set relativenumber
-      set tabstop=2
-      set shiftwidth=2
-      set expandtab
-      set smartindent
-      set wrap
-      set smartcase
-      set noswapfile
-      set nobackup
-      set undodir=~/.vim/undodir
-      set undofile
-      set incsearch
-      set scrolloff=8
-      set colorcolumn=80
-      set signcolumn=yes
+        " Personal preferences
+        set wrap
+        set linebreak
+        colorscheme catppuccin-mocha
+      '';
+      plugins = with pkgs.vimPlugins; [
+        # Add any personal plugins here
+        vim-airline
+        nerdtree
+      ];
+    };
 
-      " Enable mouse support
-      set mouse=a
-
-      " Better search highlighting
-      set hlsearch
-      nnoremap <Esc> :nohlsearch<CR>
-
-      " Leader key
-      let mapleader = " "
-
-      " Basic key mappings
-      nnoremap <leader>w :w<CR>
-      nnoremap <leader>q :q<CR>
-      nnoremap <leader>x :x<CR>
-
-      " Window navigation
-      nnoremap <C-h> <C-w>h
-      nnoremap <C-j> <C-w>j
-      nnoremap <C-k> <C-w>k
-      nnoremap <C-l> <C-w>l
-    '';
-
-    plugins = with pkgs.vimPlugins; [
-      # Essential plugins
-      vim-sensible
-      vim-surround
-      vim-commentary
-      vim-repeat
-
-      # File navigation
-      telescope-nvim
-      nvim-tree-lua
-
-      # Git integration
-      vim-fugitive
-      gitsigns-nvim
-
-      # Language support
-      nvim-treesitter.withAllGrammars
-      nvim-lspconfig
-
-      # Completion
-      nvim-cmp
-      cmp-nvim-lsp
-      cmp-buffer
-      cmp-path
-
-      # Snippets
-      luasnip
-      cmp_luasnip
-
-      # UI enhancements
-      lualine-nvim
-      nvim-web-devicons
-
-      # Theme
-      catppuccin-nvim
-    ];
+    # Optionally enable other editors
+    vscode.enable = false; # VS Code is installed via Homebrew cask
+    helix.enable = false; # Not needed for this setup
   };
 
   # list of programs
