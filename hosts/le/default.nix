@@ -63,6 +63,8 @@
     aws-vault
     awscli2
     kubevirt
+    statix # Nix linter
+    deadnix # Dead code detection
   ];
 
   # Host-specific fonts
@@ -96,7 +98,7 @@
     global.autoUpdate = true;
 
     brews = [
-      "bitwarden-cli"
+      # "bitwarden-cli"
       "displayplacer"
       "gh"
     ];
@@ -121,7 +123,7 @@
       "signal"
       "slack"
       "spotify"
-      "tailscale"
+      "tailscale-app"
       "nordvpn"
       "mtmr"
       "raspberry-pi-imager"
@@ -218,13 +220,13 @@
       };
 
       "com.apple.dock" = {
-        autohide = false; # Personal preference override
+        autohide = true; 
         launchanim = false;
         static-only = false;
-        show-recents = true; # Personal preference override
+        show-recents = false;
         show-process-indicators = true;
         orientation = "bottom";
-        tilesize = 48; # Larger icons for personal use
+        tilesize = 36;
         minimize-to-application = true;
         mineffect = "scale";
         enable-window-tool = false;
