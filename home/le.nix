@@ -11,9 +11,95 @@
   # Development tools packages
   home.packages = with pkgs; [
     mise
-    neovim # Neovim nightly (from overlay)
     lazygit
   ];
+
+  # Neovim configuration using home-manager programs.neovim
+  programs.neovim = {
+    enable = true;
+    defaultEditor = true;
+    viAlias = true;
+    vimAlias = true;
+    vimdiffAlias = true;
+
+    extraConfig = ''
+      " Basic Neovim configuration
+      set number
+      set relativenumber
+      set tabstop=2
+      set shiftwidth=2
+      set expandtab
+      set smartindent
+      set wrap
+      set smartcase
+      set noswapfile
+      set nobackup
+      set undodir=~/.vim/undodir
+      set undofile
+      set incsearch
+      set scrolloff=8
+      set colorcolumn=80
+      set signcolumn=yes
+
+      " Enable mouse support
+      set mouse=a
+
+      " Better search highlighting
+      set hlsearch
+      nnoremap <Esc> :nohlsearch<CR>
+
+      " Leader key
+      let mapleader = " "
+
+      " Basic key mappings
+      nnoremap <leader>w :w<CR>
+      nnoremap <leader>q :q<CR>
+      nnoremap <leader>x :x<CR>
+
+      " Window navigation
+      nnoremap <C-h> <C-w>h
+      nnoremap <C-j> <C-w>j
+      nnoremap <C-k> <C-w>k
+      nnoremap <C-l> <C-w>l
+    '';
+
+    plugins = with pkgs.vimPlugins; [
+      # Essential plugins
+      vim-sensible
+      vim-surround
+      vim-commentary
+      vim-repeat
+
+      # File navigation
+      telescope-nvim
+      nvim-tree-lua
+
+      # Git integration
+      vim-fugitive
+      gitsigns-nvim
+
+      # Language support
+      nvim-treesitter.withAllGrammars
+      nvim-lspconfig
+
+      # Completion
+      nvim-cmp
+      cmp-nvim-lsp
+      cmp-buffer
+      cmp-path
+
+      # Snippets
+      luasnip
+      cmp_luasnip
+
+      # UI enhancements
+      lualine-nvim
+      nvim-web-devicons
+
+      # Theme
+      catppuccin-nvim
+    ];
+  };
 
   # list of programs
   # https://mipmip.github.io/home-manager-option-search
