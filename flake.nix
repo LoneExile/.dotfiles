@@ -76,7 +76,7 @@
       };
   in {
     # Export our custom library for use by other flakes
-    lib = lib;
+    inherit lib;
 
     # Darwin system configurations
     darwinConfigurations = {

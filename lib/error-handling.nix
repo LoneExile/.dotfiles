@@ -92,7 +92,7 @@ in {
 
     # Group errors by category
     groupByCategory = errors:
-      lib.groupBy (error: error.category) errors;
+      builtins.groupBy (error: error.category) errors;
 
     # Format multiple errors
     formatErrors = errors: let
@@ -109,7 +109,7 @@ in {
     createSummary = errors: let
       byCategory = groupByCategory errors;
       bySeverity =
-        lib.groupBy (
+        builtins.groupBy (
           error:
             if error.severity == severity.CRITICAL
             then "critical"
@@ -162,7 +162,7 @@ in {
 
     # System information collection
     collectSystemInfo = config: system: {
-      system = system;
+      inherit system;
       hostname = config.hostname or "unknown";
       nixpkgsVersion = inputs.nixpkgs.rev or "unknown";
       flakeInputs = builtins.attrNames inputs;
@@ -206,7 +206,7 @@ in {
       in {
         module = modulePath;
         missingDependencies = missingDeps;
-        activeConflicts = activeConflicts;
+        inherit activeConflicts;
         hasIssues = missingDeps != [] || activeConflicts != [];
       };
 
@@ -273,7 +273,7 @@ in {
     in {
       score = healthScore;
       status = healthStatus;
-      systemInfo = systemInfo;
+      inherit systemInfo;
       validation = validationResult;
       dependencies = depAnalysis;
       recommendations = generateRecommendations validationResult depAnalysis;
@@ -376,9 +376,8 @@ in {
       value = lib.getAttrFromPath pathParts config;
     in
       info "config-inspect" "Inspecting ${path}" {
-        path = path;
+        inherit path value;
         type = builtins.typeOf value;
-        value = value;
       };
 
     # Module debugging
@@ -472,7 +471,7 @@ in {
         else "Review the error message and configuration documentation";
     in
       map (error: {
-        error = error;
+        inherit error;
         suggestion = findSuggestion error;
       })
       errors;
