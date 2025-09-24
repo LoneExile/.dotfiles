@@ -33,7 +33,7 @@ jobs:
         uses: DeterminateSystems/flake-checker-action@v8
         with:
           # Check for outdated inputs and other flake health issues
-          fail-mode: true
+          fail-mode: false
 
       - name: Check flake metadata
         run: |

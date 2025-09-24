@@ -1,10 +1,14 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.darwin.homebrew;
 in {
   options.modules.darwin.homebrew = {
     enable = lib.mkEnableOption "Homebrew package management";
-    
+
     brews = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
@@ -14,7 +18,7 @@ in {
       ];
       description = "List of Homebrew packages to install";
     };
-    
+
     casks = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
@@ -54,13 +58,13 @@ in {
       ];
       description = "List of Homebrew casks to install";
     };
-    
+
     taps = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [];
       description = "List of Homebrew taps to add";
     };
-    
+
     masApps = lib.mkOption {
       type = lib.types.attrsOf lib.types.int;
       default = {
@@ -75,27 +79,27 @@ in {
       };
       description = "Mac App Store applications to install";
     };
-    
+
     onActivation = {
       cleanup = lib.mkOption {
-        type = lib.types.enum [ "none" "uninstall" "zap" ];
+        type = lib.types.enum ["none" "uninstall" "zap"];
         default = "zap";
         description = "Cleanup strategy for Homebrew on activation";
       };
-      
+
       autoUpdate = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Auto-update Homebrew on activation";
       };
-      
+
       upgrade = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = "Upgrade packages on activation";
       };
     };
-    
+
     global = {
       autoUpdate = lib.mkOption {
         type = lib.types.bool;
@@ -103,30 +107,32 @@ in {
         description = "Enable global auto-update for Homebrew";
       };
     };
-    
+
     extraConfig = lib.mkOption {
       type = lib.types.attrs;
       default = {};
       description = "Additional Homebrew configuration";
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
-    homebrew = {
-      enable = true;
-      
-      brews = cfg.brews;
-      casks = cfg.casks;
-      taps = cfg.taps ++ (builtins.attrNames config.nix-homebrew.taps or {});
-      masApps = cfg.masApps;
-      
-      onActivation = {
-        cleanup = cfg.onActivation.cleanup;
-        autoUpdate = cfg.onActivation.autoUpdate;
-        upgrade = cfg.onActivation.upgrade;
-      };
-      
-      global.autoUpdate = cfg.global.autoUpdate;
-    } // cfg.extraConfig;
+    homebrew =
+      {
+        enable = true;
+
+        brews = cfg.brews;
+        casks = cfg.casks;
+        taps = cfg.taps ++ (builtins.attrNames config.nix-homebrew.taps or {});
+        masApps = cfg.masApps;
+
+        onActivation = {
+          cleanup = cfg.onActivation.cleanup;
+          autoUpdate = cfg.onActivation.autoUpdate;
+          upgrade = cfg.onActivation.upgrade;
+        };
+
+        global.autoUpdate = cfg.global.autoUpdate;
+      }
+      // cfg.extraConfig;
   };
 }

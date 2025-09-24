@@ -188,7 +188,9 @@
       # Check each enabled module's dependencies
       checkModuleDeps = modulePath: moduleConfig: let
         moduleRules =
-          rules.${modulePath}
+          rules.${
+            modulePath
+          }
           or {
             requires = [];
             conflicts = [];
@@ -240,7 +242,9 @@
     # Validate platform-specific module usage
     validatePlatformModules = config: system: let
       platformRules =
-        moduleValidation.validationRules.platformRules.${system}
+        moduleValidation.validationRules.platformRules.${
+          system
+        }
         or {
           allowedModules = [];
           requiredModules = [];

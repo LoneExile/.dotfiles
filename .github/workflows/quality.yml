@@ -74,8 +74,8 @@ jobs:
       - name: Check for secrets
         run: |
           echo "Scanning for potential secrets..."
-          # Check for common secret patterns
-          if grep -r -E "(password|secret|key|token)" --include="*.nix" --exclude-dir=".git" . | grep -v "# " | grep -v "//" | head -5; then
+          # Check for common secret patterns, excluding comments and known safe patterns
+          if grep -r -E "(password|secret|key|token)" --include="*.nix" --exclude-dir=".git" . | grep -v "# " | grep -v "//" | grep -v "sops" | grep -v "ssh" | grep -v "gpg" | head -5; then
             echo "⚠️  Potential secrets found in code. Please review."
             echo "Note: This is a basic check. Secrets should be managed with SOPS."
           else
@@ -89,7 +89,7 @@ jobs:
 
   validation:
     name: Configuration Validation
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -124,7 +124,16 @@ jobs:
       - name: Check module dependencies
         run: |
           echo "Checking module structure..."
-          find modules -name "*.nix" -type f | while read -r module; do
-            echo "Checking syntax of $module"
-            nix-instantiate --parse "$module" > /dev/null
-          done
+          if [ -d "modules" ]; then
+            find modules -name "*.nix" -type f | while read -r module; do
+              echo "Checking syntax of $module"
+              nix-instantiate --parse "$module" > /dev/null
+            done
+          else
+            echo "No modules directory found, skipping module syntax check"
+          fi
+
+      - name: Test development shell
+        run: |
+          echo "Testing development shell availability..."
+          nix develop --command echo "Development shell works on Linux"

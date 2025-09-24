@@ -1,56 +1,60 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.home.shell.aliases;
-  
+
   # Default aliases from the existing configuration
   defaultAliases = {
     # Safety aliases
     cp = "cp -i";
     mv = "mv -i";
-    
+
     # System utilities
     df = "df -h";
     free = "free -m";
     top = "btop";
     c = "clear";
     ":q" = "exit";
-    
+
     # Development tools
     v = "nvim";
     gdu = "gdu-go";
     ld = "lazydocker";
-    
+
     # Package management
     bu = "brew update && brew upgrade && brew cleanup && brew doctor";
     zu = "zap update all && zap clean";
-    
+
     # Kubernetes
     k = "kubectl";
     kx = "kubectl config use-context";
     kns = "kubectl config set-context --current --namespace";
     mk = "minikube";
-    
+
     # Terraform
     tf = "terraform";
     tg = "terragrunt";
-    
+
     # TMUX
     t = "tmux attach || tmux new-session";
     ta = "tmux attach -t";
     tl = "tmux ls";
     tk = "tmux kill-session -t";
     tka = "tmux kill-session -a";
-    
+
     # SSH
     ssha = "eval $(ssh-agent) && ssh-add";
-    
+
     # ls variants
     l = "ls -lh";
     la = "ls -A";
     lm = "ls -m";
     lr = "ls -R";
     llg = "ls -l --group-directories-first";
-    
+
     # Git aliases
     gcl = "git clone";
     gcld = "git clone --depth";
@@ -108,7 +112,7 @@ let
 in {
   options.modules.home.shell.aliases = {
     enable = lib.mkEnableOption "Shell aliases and functions";
-    
+
     customAliases = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = {};
@@ -157,22 +161,27 @@ in {
       description = "Enable GitHub Copilot CLI aliases";
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
     # Set up shell aliases
     programs.zsh.shellAliases = lib.mkMerge [
       # Base aliases (always enabled if module is enabled)
-      (lib.mkIf cfg.enableDefaultAliases (lib.filterAttrs (n: v: 
-        !(lib.hasPrefix "g" n) && # Filter out git aliases
-        !(lib.elem n ["k" "kx" "kns" "mk"]) && # Filter out k8s aliases
-        !(lib.elem n ["tf" "tg"]) && # Filter out terraform aliases
-        !(lib.elem n ["t" "ta" "tl" "tk" "tka"]) # Filter out tmux aliases
-      ) defaultAliases))
-      
+      (lib.mkIf cfg.enableDefaultAliases (lib.filterAttrs (
+          n: v:
+            !(lib.hasPrefix "g" n)
+            && # Filter out git aliases
+            !(lib.elem n ["k" "kx" "kns" "mk"])
+            && # Filter out k8s aliases
+            !(lib.elem n ["tf" "tg"])
+            && # Filter out terraform aliases
+            !(lib.elem n ["t" "ta" "tl" "tk" "tka"]) # Filter out tmux aliases
+        )
+        defaultAliases))
+
       # Git aliases
       (lib.mkIf cfg.enableGitAliases (lib.filterAttrs (n: v: lib.hasPrefix "g" n) defaultAliases))
       (lib.mkIf cfg.enableGitAliases gitLogAliases)
-      
+
       # Kubernetes aliases
       (lib.mkIf cfg.enableKubernetesAliases {
         k = defaultAliases.k;
@@ -180,13 +189,13 @@ in {
         kns = defaultAliases.kns;
         mk = defaultAliases.mk;
       })
-      
+
       # Terraform aliases
       (lib.mkIf cfg.enableTerraformAliases {
         tf = defaultAliases.tf;
         tg = defaultAliases.tg;
       })
-      
+
       # TMUX aliases
       (lib.mkIf cfg.enableTmuxAliases {
         t = defaultAliases.t;
@@ -195,7 +204,7 @@ in {
         tk = defaultAliases.tk;
         tka = defaultAliases.tka;
       })
-      
+
       # Custom user aliases (highest priority)
       cfg.customAliases
     ];
@@ -216,7 +225,7 @@ in {
       # This file is managed by the aliases.nix module
       # Aliases are configured through Home Manager programs.zsh.shellAliases
       # Functions and additional setup are in programs.zsh.initExtra
-      
+
       # Note: Individual aliases are now managed by the module configuration
       # To add custom aliases, use the modules.home.shell.aliases.customAliases option
     '';

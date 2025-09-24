@@ -17,47 +17,51 @@
     };
 
     nix-config = {
-      url = "github:yourusername/nix-config";  # Update this URL
+      url = "github:yourusername/nix-config"; # Update this URL
     };
   };
 
-  outputs = { self, nix-config, ... }@inputs:
-    let
-      lib = nix-config.lib;
-    in {
-      darwinConfigurations = {
-        dev-machine = lib.mkDarwin {
-          hostname = "dev-machine";
-          username = "developer";
-          system = "aarch64-darwin";
-          profiles = {
-            development = true;
-            work = true;
-          };
-          # Enable additional development modules
-          modules = [
-            {
-              modules.home.development = {
-                containers.enable = true;
-                languages = {
-                  python.enable = true;
-                  nodejs.enable = true;
-                  rust.enable = true;
-                  go.enable = true;
-                };
-              };
-            }
-          ];
+  outputs = {
+    self,
+    nix-config,
+    ...
+  } @ inputs: let
+    lib = nix-config.lib;
+  in {
+    darwinConfigurations = {
+      dev-machine = lib.mkDarwin {
+        hostname = "dev-machine";
+        username = "developer";
+        system = "aarch64-darwin";
+        profiles = {
+          development = true;
+          work = true;
         };
+        # Enable additional development modules
+        modules = [
+          {
+            modules.home.development = {
+              containers.enable = true;
+              languages = {
+                python.enable = true;
+                nodejs.enable = true;
+                rust.enable = true;
+                go.enable = true;
+              };
+            };
+          }
+        ];
       };
-      
-      # Development shell with extra tools
-      devShells.aarch64-darwin.default = let
-        pkgs = import inputs.nixpkgs { system = "aarch64-darwin"; };
-      in pkgs.mkShell {
+    };
+
+    # Development shell with extra tools
+    devShells.aarch64-darwin.default = let
+      pkgs = import inputs.nixpkgs {system = "aarch64-darwin";};
+    in
+      pkgs.mkShell {
         buildInputs = with pkgs; [
           # Add development-specific tools here
         ];
       };
-    };
+  };
 }

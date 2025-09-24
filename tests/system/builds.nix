@@ -1,6 +1,14 @@
 # Full system build tests
-{ inputs, outputs, system, lib, pkgs, testLib, builders, ... }:
-let
+{
+  inputs,
+  outputs,
+  system,
+  lib,
+  pkgs,
+  testLib,
+  builders,
+  ...
+}: let
   # Example configurations that should build successfully
   exampleConfigurations = {
     # Minimal server-like configuration
@@ -17,7 +25,7 @@ let
         home.development.git.enable = true;
       };
     };
-    
+
     # Development workstation
     development-workstation = {
       hostname = "dev-workstation";
@@ -32,7 +40,7 @@ let
         home.desktop.terminal.enable = true;
       };
     };
-    
+
     # Work laptop
     work-laptop = {
       hostname = "work-laptop";
@@ -48,7 +56,7 @@ let
         home.security.ssh.enable = true;
       };
     };
-    
+
     # Personal MacBook
     personal-macbook = {
       hostname = "personal-macbook";
@@ -64,7 +72,7 @@ let
         home.desktop.window-manager.enable = true;
       };
     };
-    
+
     # Multi-user workstation
     multi-user-workstation = {
       hostname = "multi-user";
@@ -81,43 +89,48 @@ let
       };
     };
   };
-  
+
   # Create build tests for each example configuration
-  buildConfigurationTests = lib.mapAttrsToList (configName: config:
-    testLib.mkTest {
-      name = "build-${configName}";
-      assertions = [
-        # Test that the configuration builds without errors
-        (let
-          buildResult = testLib.try (builders.mkDarwin config) null;
-        in
-          testLib.assertions.assertNotNull 
-            "Configuration ${configName} builds successfully" 
-            buildResult)
-        
-        # Test that the build result has expected structure
-        (let
-          buildResult = testLib.try (builders.mkDarwin config) null;
-          hasConfig = buildResult != null && (buildResult ? config);
-        in
-          testLib.assertions.assertTrue 
-            "Build result for ${configName} has config" 
-            hasConfig)
-        
-        # Test that the build result has system configuration
-        (let
-          buildResult = testLib.try (builders.mkDarwin config) null;
-          hasSystem = buildResult != null && 
-                     (buildResult ? config) && 
-                     (buildResult.config ? system);
-        in
-          testLib.assertions.assertTrue 
-            "Build result for ${configName} has system config" 
-            hasSystem)
-      ];
-    }
-  ) exampleConfigurations;
-  
+  buildConfigurationTests =
+    lib.mapAttrsToList (
+      configName: config:
+        testLib.mkTest {
+          name = "build-${configName}";
+          assertions = [
+            # Test that the configuration builds without errors
+            (let
+              buildResult = testLib.try (builders.mkDarwin config) null;
+            in
+              testLib.assertions.assertNotNull
+              "Configuration ${configName} builds successfully"
+              buildResult)
+
+            # Test that the build result has expected structure
+            (let
+              buildResult = testLib.try (builders.mkDarwin config) null;
+              hasConfig = buildResult != null && (buildResult ? config);
+            in
+              testLib.assertions.assertTrue
+              "Build result for ${configName} has config"
+              hasConfig)
+
+            # Test that the build result has system configuration
+            (let
+              buildResult = testLib.try (builders.mkDarwin config) null;
+              hasSystem =
+                buildResult
+                != null
+                && (buildResult ? config)
+                && (buildResult.config ? system);
+            in
+              testLib.assertions.assertTrue
+              "Build result for ${configName} has system config"
+              hasSystem)
+          ];
+        }
+    )
+    exampleConfigurations;
+
   # Test build with different architectures
   architectureBuildTests = [
     (testLib.mkTest {
@@ -135,10 +148,10 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin aarch64Config) null;
         in
-          testLib.assertions.assertNotNull 
-            "aarch64-darwin configuration builds" 
-            buildResult)
-        
+          testLib.assertions.assertNotNull
+          "aarch64-darwin configuration builds"
+          buildResult)
+
         # Test x86_64-darwin build
         (let
           x86Config = {
@@ -151,13 +164,13 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin x86Config) null;
         in
-          testLib.assertions.assertNotNull 
-            "x86_64-darwin configuration builds" 
-            buildResult)
+          testLib.assertions.assertNotNull
+          "x86_64-darwin configuration builds"
+          buildResult)
       ];
     })
   ];
-  
+
   # Test build with various module combinations
   moduleCombinationBuildTests = [
     (testLib.mkTest {
@@ -178,10 +191,10 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin darwinOnlyConfig) null;
         in
-          testLib.assertions.assertNotNull 
-            "Darwin-only module combination builds" 
-            buildResult)
-        
+          testLib.assertions.assertNotNull
+          "Darwin-only module combination builds"
+          buildResult)
+
         # Test Home Manager-only modules
         (let
           homeOnlyConfig = {
@@ -189,7 +202,7 @@ let
             username = "test-user";
             system = "aarch64-darwin";
             modules = {
-              darwin.system.enable = true;  # Required base
+              darwin.system.enable = true; # Required base
               home.shell.zsh.enable = true;
               home.development.git.enable = true;
               home.security.ssh.enable = true;
@@ -197,10 +210,10 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin homeOnlyConfig) null;
         in
-          testLib.assertions.assertNotNull 
-            "Home Manager-only module combination builds" 
-            buildResult)
-        
+          testLib.assertions.assertNotNull
+          "Home Manager-only module combination builds"
+          buildResult)
+
         # Test mixed Darwin and Home Manager modules
         (let
           mixedConfig = {
@@ -217,13 +230,13 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin mixedConfig) null;
         in
-          testLib.assertions.assertNotNull 
-            "Mixed Darwin and Home Manager modules build" 
-            buildResult)
+          testLib.assertions.assertNotNull
+          "Mixed Darwin and Home Manager modules build"
+          buildResult)
       ];
     })
   ];
-  
+
   # Test build performance and resource usage
   buildPerformanceTests = [
     (testLib.mkTest {
@@ -244,7 +257,7 @@ let
             buildResult = testLib.try (builders.mkDarwin simpleConfig) null;
           in
             buildResult != null))
-        
+
         # Test that complex builds don't fail due to resource constraints
         (testLib.assertions.assertTrue "complex builds handle resources well"
           (let
@@ -270,7 +283,7 @@ let
       ];
     })
   ];
-  
+
   # Test build error handling
   buildErrorHandlingTests = [
     (testLib.mkTest {
@@ -291,8 +304,8 @@ let
             # Should not crash, even if it fails to build
             buildResult = testLib.try (builders.mkDarwin invalidConfig) "handled";
           in
-            true))  # Just check it doesn't crash the test runner
-        
+            true)) # Just check it doesn't crash the test runner
+
         # Test that missing required fields are handled
         (testLib.assertions.assertTrue "missing fields handled gracefully"
           (let
@@ -304,9 +317,9 @@ let
             };
             buildResult = testLib.try (builders.mkDarwin incompleteConfig) "handled";
           in
-            true))  # Just check it doesn't crash the test runner
+            true)) # Just check it doesn't crash the test runner
       ];
     })
   ];
-  
-in buildConfigurationTests ++ architectureBuildTests ++ moduleCombinationBuildTests ++ buildPerformanceTests ++ buildErrorHandlingTests
+in
+  buildConfigurationTests ++ architectureBuildTests ++ moduleCombinationBuildTests ++ buildPerformanceTests ++ buildErrorHandlingTests

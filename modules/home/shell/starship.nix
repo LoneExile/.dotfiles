@@ -1,7 +1,11 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.home.shell.starship;
-  
+
   # Default starship configuration optimized for development
   defaultSettings = {
     format = lib.concatStrings [
@@ -193,7 +197,7 @@ let
 in {
   options.modules.home.shell.starship = {
     enable = lib.mkEnableOption "Starship prompt configuration";
-    
+
     settings = lib.mkOption {
       type = lib.types.attrs;
       default = defaultSettings;
@@ -212,7 +216,7 @@ in {
       description = "Enable Starship integration with Bash";
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
     programs.starship = {
       enable = true;

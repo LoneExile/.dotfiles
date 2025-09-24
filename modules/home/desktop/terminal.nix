@@ -1,7 +1,11 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.home.desktop.terminal;
-  
+
   # WezTerm configuration
   weztermConfig = ''
     -- Pull in the wezterm API
@@ -57,7 +61,7 @@ let
 in {
   options.modules.home.desktop.terminal = {
     enable = lib.mkEnableOption "Terminal emulator configuration";
-    
+
     wezterm = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -124,7 +128,7 @@ in {
       };
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
     # WezTerm configuration
     home.file.".config/wezterm/wezterm.lua" = lib.mkIf cfg.wezterm.enable {
@@ -187,7 +191,7 @@ in {
     programs.alacritty = lib.mkIf cfg.alacritty.enable {
       enable = true;
       package = cfg.alacritty.package;
-      
+
       settings = {
         window = {
           opacity = 0.9;
@@ -196,7 +200,7 @@ in {
             y = 2;
           };
         };
-        
+
         font = {
           normal = {
             family = "JetBrains Mono";
@@ -204,7 +208,7 @@ in {
           };
           size = 14.0;
         };
-        
+
         colors = {
           primary = {
             background = "#1a1b26";
@@ -218,26 +222,26 @@ in {
     programs.kitty = lib.mkIf cfg.kitty.enable {
       enable = true;
       package = cfg.kitty.package;
-      
+
       font = {
         name = "JetBrains Mono";
         size = 14;
       };
-      
+
       settings = {
         background_opacity = "0.9";
         window_padding_width = 2;
-        
+
         # Tokyo Night theme colors
         foreground = "#c0caf5";
         background = "#1a1b26";
         selection_foreground = "#1a1b26";
         selection_background = "#c0caf5";
-        
+
         # Cursor colors
         cursor = "#c0caf5";
         cursor_text_color = "#1a1b26";
-        
+
         # URL underline color when hovering with mouse
         url_color = "#73daca";
       };
@@ -245,9 +249,9 @@ in {
 
     # Add terminal packages to home.packages
     home.packages = lib.mkMerge [
-      (lib.mkIf cfg.wezterm.enable [ cfg.wezterm.package ])
-      (lib.mkIf cfg.alacritty.enable [ cfg.alacritty.package ])
-      (lib.mkIf cfg.kitty.enable [ cfg.kitty.package ])
+      (lib.mkIf cfg.wezterm.enable [cfg.wezterm.package])
+      (lib.mkIf cfg.alacritty.enable [cfg.alacritty.package])
+      (lib.mkIf cfg.kitty.enable [cfg.kitty.package])
     ];
   };
 }

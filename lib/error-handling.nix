@@ -182,7 +182,9 @@ in {
       # Analyze each enabled module
       analyzeModule = modulePath: let
         rules =
-          dependencyRules.${modulePath}
+          dependencyRules.${
+            modulePath
+          }
           or {
             requires = [];
             conflicts = [];

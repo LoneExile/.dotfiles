@@ -1,10 +1,14 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.home.development.editors;
 in {
   options.modules.home.development.editors = {
     enable = lib.mkEnableOption "Development editors configuration";
-    
+
     neovim = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -71,14 +75,14 @@ in {
       };
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
     # Neovim configuration
     programs.neovim = lib.mkIf cfg.neovim.enable {
       enable = true;
       package = cfg.neovim.package;
       defaultEditor = cfg.neovim.defaultEditor;
-      
+
       viAlias = true;
       vimAlias = true;
       vimdiffAlias = true;
@@ -101,67 +105,69 @@ in {
         set scrolloff=8
         set colorcolumn=80
         set signcolumn=yes
-        
+
         " Enable mouse support
         set mouse=a
-        
+
         " Better search highlighting
         set hlsearch
         nnoremap <Esc> :nohlsearch<CR>
-        
+
         " Leader key
         let mapleader = " "
-        
+
         " Basic key mappings
         nnoremap <leader>w :w<CR>
         nnoremap <leader>q :q<CR>
         nnoremap <leader>x :x<CR>
-        
+
         " Window navigation
         nnoremap <C-h> <C-w>h
         nnoremap <C-j> <C-w>j
         nnoremap <C-k> <C-w>k
         nnoremap <C-l> <C-w>l
-        
+
         ${cfg.neovim.extraConfig}
       '';
 
-      plugins = with pkgs.vimPlugins; [
-        # Essential plugins
-        vim-sensible
-        vim-surround
-        vim-commentary
-        vim-repeat
-        
-        # File navigation
-        telescope-nvim
-        nvim-tree-lua
-        
-        # Git integration
-        vim-fugitive
-        gitsigns-nvim
-        
-        # Language support
-        nvim-treesitter.withAllGrammars
-        nvim-lspconfig
-        
-        # Completion
-        nvim-cmp
-        cmp-nvim-lsp
-        cmp-buffer
-        cmp-path
-        
-        # Snippets
-        luasnip
-        cmp_luasnip
-        
-        # UI enhancements
-        lualine-nvim
-        nvim-web-devicons
-        
-        # Theme
-        catppuccin-nvim
-      ] ++ cfg.neovim.plugins;
+      plugins = with pkgs.vimPlugins;
+        [
+          # Essential plugins
+          vim-sensible
+          vim-surround
+          vim-commentary
+          vim-repeat
+
+          # File navigation
+          telescope-nvim
+          nvim-tree-lua
+
+          # Git integration
+          vim-fugitive
+          gitsigns-nvim
+
+          # Language support
+          nvim-treesitter.withAllGrammars
+          nvim-lspconfig
+
+          # Completion
+          nvim-cmp
+          cmp-nvim-lsp
+          cmp-buffer
+          cmp-path
+
+          # Snippets
+          luasnip
+          cmp_luasnip
+
+          # UI enhancements
+          lualine-nvim
+          nvim-web-devicons
+
+          # Theme
+          catppuccin-nvim
+        ]
+        ++ cfg.neovim.plugins;
     };
 
     # VS Code configuration
@@ -169,7 +175,7 @@ in {
       enable = true;
       package = cfg.vscode.package;
       extensions = cfg.vscode.extensions;
-      
+
       userSettings = {
         "editor.fontSize" = 14;
         "editor.fontFamily" = "'JetBrains Mono', 'Fira Code', monospace";
@@ -189,10 +195,10 @@ in {
     programs.helix = lib.mkIf cfg.helix.enable {
       enable = true;
       package = cfg.helix.package;
-      
+
       settings = {
         theme = "catppuccin_mocha";
-        
+
         editor = {
           line-number = "relative";
           mouse = true;
@@ -201,19 +207,19 @@ in {
             normal = "block";
             select = "underline";
           };
-          
+
           file-picker = {
             hidden = false;
           };
-          
+
           auto-save = true;
-          
+
           indent-guides = {
             render = true;
             character = "┊";
           };
         };
-        
+
         keys.normal = {
           space.w = ":w";
           space.q = ":q";
@@ -224,9 +230,9 @@ in {
 
     # Add editor packages to home.packages
     home.packages = lib.mkMerge [
-      (lib.mkIf cfg.neovim.enable [ cfg.neovim.package ])
-      (lib.mkIf cfg.vscode.enable [ cfg.vscode.package ])
-      (lib.mkIf cfg.helix.enable [ cfg.helix.package ])
+      (lib.mkIf cfg.neovim.enable [cfg.neovim.package])
+      (lib.mkIf cfg.vscode.enable [cfg.vscode.package])
+      (lib.mkIf cfg.helix.enable [cfg.helix.package])
     ];
   };
 }

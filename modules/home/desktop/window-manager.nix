@@ -1,7 +1,11 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.home.desktop.windowManager;
-  
+
   # Default Aerospace configuration
   defaultAerospaceConfig = ''
     # Start AeroSpace at login
@@ -98,7 +102,7 @@ let
         j = ['join-with down', 'mode main']
         k = ['join-with up', 'mode main']
         l = ['join-with right', 'mode main']
-        
+
         # Alternative stacking
         alt-shift-h = ['join-with left', 'mode main']
         alt-shift-j = ['join-with down', 'mode main']
@@ -113,7 +117,7 @@ let
 in {
   options.modules.home.desktop.windowManager = {
     enable = lib.mkEnableOption "Window manager configuration";
-    
+
     aerospace = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -142,7 +146,7 @@ in {
       };
 
       defaultLayout = lib.mkOption {
-        type = lib.types.enum [ "tiles" "accordion" ];
+        type = lib.types.enum ["tiles" "accordion"];
         default = "tiles";
         description = "Default root container layout";
       };
@@ -182,7 +186,7 @@ in {
       };
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
     # Aerospace configuration
     home.file.".config/aerospace/aerospace.toml" = lib.mkIf cfg.aerospace.enable {
@@ -281,7 +285,7 @@ in {
             j = ['join-with down', 'mode main']
             k = ['join-with up', 'mode main']
             l = ['join-with right', 'mode main']
-            
+
             # Alternative stacking
             alt-shift-h = ['join-with left', 'mode main']
             alt-shift-j = ['join-with down', 'mode main']
@@ -301,7 +305,7 @@ in {
     services.yabai = lib.mkIf cfg.yabai.enable {
       enable = true;
       package = cfg.yabai.package;
-      
+
       config = {
         layout = "bsp";
         auto_balance = "off";
@@ -320,7 +324,7 @@ in {
     services.skhd = lib.mkIf cfg.skhd.enable {
       enable = true;
       package = cfg.skhd.package;
-      
+
       skhdConfig = ''
         # Focus window
         alt - h : yabai -m window --focus west
@@ -367,8 +371,8 @@ in {
 
     # Add window manager packages to home.packages if needed
     home.packages = lib.mkMerge [
-      (lib.mkIf cfg.yabai.enable [ cfg.yabai.package ])
-      (lib.mkIf cfg.skhd.enable [ cfg.skhd.package ])
+      (lib.mkIf cfg.yabai.enable [cfg.yabai.package])
+      (lib.mkIf cfg.skhd.enable [cfg.skhd.package])
     ];
   };
 }

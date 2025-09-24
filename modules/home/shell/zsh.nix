@@ -1,16 +1,20 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.home.shell.zsh;
 in {
   options.modules.home.shell.zsh = {
     enable = lib.mkEnableOption "Zsh shell configuration";
-    
+
     enableAutosuggestions = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Enable zsh autosuggestions";
     };
-    
+
     enableSyntaxHighlighting = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -41,14 +45,14 @@ in {
       description = "Extra configuration to add to zshrc";
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
     programs.zsh = {
       enable = true;
       enableCompletion = cfg.enableCompletion;
       autosuggestion.enable = cfg.enableAutosuggestions;
       syntaxHighlighting.enable = cfg.enableSyntaxHighlighting;
-      
+
       history = {
         size = cfg.historySize;
         save = cfg.historySize;
@@ -59,18 +63,18 @@ in {
 
       # Zsh options for better UX
       setOptions = [
-        "CORRECT"                    # Auto correct mistakes
-        "EXTENDED_GLOB"              # Extended globbing with regular expressions
-        "NO_CASE_GLOB"              # Case insensitive globbing
-        "RC_EXPAND_PARAM"           # Array expansion with parameters
-        "NO_CHECK_JOBS"             # Don't warn about running processes when exiting
-        "NUMERIC_GLOB_SORT"         # Sort filenames numerically when it makes sense
-        "NO_BEEP"                   # No beep
-        "APPEND_HISTORY"            # Immediately append history instead of overwriting
-        "HIST_IGNORE_ALL_DUPS"      # If a new command is a duplicate, remove the older one
-        "AUTO_CD"                   # If only directory path is entered, cd there
-        "INC_APPEND_HISTORY"        # Save commands immediately to history
-        "HIST_IGNORE_SPACE"         # Don't save commands that start with space
+        "CORRECT" # Auto correct mistakes
+        "EXTENDED_GLOB" # Extended globbing with regular expressions
+        "NO_CASE_GLOB" # Case insensitive globbing
+        "RC_EXPAND_PARAM" # Array expansion with parameters
+        "NO_CHECK_JOBS" # Don't warn about running processes when exiting
+        "NUMERIC_GLOB_SORT" # Sort filenames numerically when it makes sense
+        "NO_BEEP" # No beep
+        "APPEND_HISTORY" # Immediately append history instead of overwriting
+        "HIST_IGNORE_ALL_DUPS" # If a new command is a duplicate, remove the older one
+        "AUTO_CD" # If only directory path is entered, cd there
+        "INC_APPEND_HISTORY" # Save commands immediately to history
+        "HIST_IGNORE_SPACE" # Don't save commands that start with space
       ];
 
       # Key bindings for better navigation
@@ -163,19 +167,19 @@ in {
         esac
 
         ${lib.optionalString cfg.enableZap ''
-        # Zap plugin manager setup
-        if [ ! -f "''${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ]; then
-          zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1 --keep
-        fi
-        [ -f "''${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "''${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
+          # Zap plugin manager setup
+          if [ ! -f "''${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ]; then
+            zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1 --keep
+          fi
+          [ -f "''${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "''${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
 
-        # Zap plugins
-        plug "zsh-users/zsh-syntax-highlighting"
-        plug "zsh-users/zsh-autosuggestions"
-        plug "zsh-users/zsh-completions"
-        plug "zsh-users/zsh-history-substring-search"
-        plug "Aloxaf/fzf-tab"
-        plug "Freed-Wu/fzf-tab-source"
+          # Zap plugins
+          plug "zsh-users/zsh-syntax-highlighting"
+          plug "zsh-users/zsh-autosuggestions"
+          plug "zsh-users/zsh-completions"
+          plug "zsh-users/zsh-history-substring-search"
+          plug "Aloxaf/fzf-tab"
+          plug "Freed-Wu/fzf-tab-source"
         ''}
 
         ${cfg.extraConfig}
@@ -211,11 +215,11 @@ in {
 
     # Create config files for zsh plugins
     home.file = {
-      ".config/zsh/aliases.zsh".text = 
-        if config.modules.home.shell.aliases.enable 
+      ".config/zsh/aliases.zsh".text =
+        if config.modules.home.shell.aliases.enable
         then "# Aliases managed by aliases.nix module"
         else builtins.readFile ../../../home/zsh/config/aliases.zsh;
-      
+
       ".config/zsh/keybindings.zsh".text = builtins.readFile ../../../home/zsh/config/keybindings.zsh;
       ".config/zsh/options.zsh".text = builtins.readFile ../../../home/zsh/config/options.zsh;
     };

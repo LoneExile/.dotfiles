@@ -1,16 +1,20 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.home.development.git;
 in {
   options.modules.home.development.git = {
     enable = lib.mkEnableOption "Git configuration";
-    
+
     userName = lib.mkOption {
       type = lib.types.str;
       default = "Apinant U-suwantim";
       description = "Git user name";
     };
-    
+
     userEmail = lib.mkOption {
       type = lib.types.str;
       default = "Hello@Apinant.dev";
@@ -67,13 +71,13 @@ in {
       };
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
     programs.git = {
       enable = true;
       userName = cfg.userName;
       userEmail = cfg.userEmail;
-      
+
       diff-so-fancy.enable = cfg.enableDiffSoFancy;
       lfs.enable = cfg.enableLfs;
 
@@ -82,12 +86,12 @@ in {
           init = {
             defaultBranch = cfg.defaultBranch;
           };
-          
+
           merge = {
             conflictStyle = "diff3";
             tool = "meld";
           };
-          
+
           pull = {
             rebase = true;
           };
@@ -120,13 +124,13 @@ in {
             autosetuprebase = "always";
           };
         }
-        
+
         (lib.mkIf cfg.signing.enable {
           user.signingkey = cfg.signing.key;
           commit.gpgsign = cfg.signing.signByDefault;
           tag.gpgsign = cfg.signing.signByDefault;
         })
-        
+
         cfg.extraConfig
       ];
 
@@ -137,25 +141,25 @@ in {
         br = "branch";
         co = "checkout";
         ci = "commit";
-        
+
         # Logging
         lg = "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
         lol = "log --graph --decorate --pretty=oneline --abbrev-commit";
         lola = "log --graph --decorate --pretty=oneline --abbrev-commit --all";
-        
+
         # Shortcuts
         unstage = "reset HEAD --";
         last = "log -1 HEAD";
         visual = "!gitk";
-        
+
         # Workflow helpers
         wip = "commit -am 'WIP'";
         unwip = "reset HEAD~1";
         amend = "commit --amend --no-edit";
-        
+
         # Branch management
         cleanup = "!git branch --merged | grep -v '\\*\\|main\\|master\\|develop' | xargs -n 1 git branch -d";
-        
+
         # Diff helpers
         diffc = "diff --cached";
         diffstat = "diff --stat";
@@ -183,7 +187,7 @@ in {
             cherryPickedCommitFgColor = ["#a6e3a1"];
           };
         };
-        
+
         git = {
           paging = {
             colorArg = "always";

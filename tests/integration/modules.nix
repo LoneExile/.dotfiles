@@ -1,6 +1,14 @@
 # Module combination integration tests
-{ inputs, outputs, system, lib, pkgs, testLib, builders, ... }:
-let
+{
+  inputs,
+  outputs,
+  system,
+  lib,
+  pkgs,
+  testLib,
+  builders,
+  ...
+}: let
   # Test different module combinations
   moduleCombinations = {
     # Basic shell setup
@@ -12,7 +20,7 @@ let
       };
       description = "Basic shell configuration";
     };
-    
+
     # Development environment
     development-env = {
       modules = {
@@ -24,7 +32,7 @@ let
       };
       description = "Development environment setup";
     };
-    
+
     # Security-focused setup
     security-setup = {
       modules = {
@@ -35,7 +43,7 @@ let
       };
       description = "Security-focused configuration";
     };
-    
+
     # Desktop productivity
     desktop-productivity = {
       modules = {
@@ -47,7 +55,7 @@ let
       };
       description = "Desktop productivity setup";
     };
-    
+
     # Full development workstation
     full-workstation = {
       modules = {
@@ -67,7 +75,7 @@ let
       };
       description = "Full development workstation";
     };
-    
+
     # Minimal server-like setup
     minimal-server = {
       modules = {
@@ -79,49 +87,54 @@ let
       description = "Minimal server-like configuration";
     };
   };
-  
+
   # Create tests for each module combination
-  moduleCombinationTests = lib.mapAttrsToList (combName: combConfig:
-    testLib.mkTest {
-      name = "module-combination-${combName}";
-      assertions = [
-        # Test that the module combination builds successfully
-        (let
-          testConfig = {
-            hostname = "test-${combName}";
-            username = "test-user";
-            system = "aarch64-darwin";
-            modules = combConfig.modules;
-          };
-          
-          buildResult = testLib.try (builders.mkDarwin testConfig) null;
-        in
-          testLib.assertions.assertNotNull 
-            "Module combination ${combName} builds successfully" 
-            buildResult)
-        
-        # Test that all modules in combination are properly structured
-        (testLib.assertions.assertTrue 
-          "Module combination ${combName} has valid module structure"
-          (let
-            checkModuleStructure = path: moduleConfig:
-              lib.isAttrs moduleConfig && 
-              lib.hasAttr "enable" moduleConfig && 
-              lib.isBool moduleConfig.enable;
-            
-            checkNestedModules = modules:
-              lib.all (name: 
-                let value = modules.${name}; in
-                if lib.isAttrs value && !(lib.hasAttr "enable" value)
-                then checkNestedModules value  # Nested module category
-                else checkModuleStructure name value  # Actual module
-              ) (lib.attrNames modules);
-          in
-            checkNestedModules combConfig.modules))
-      ];
-    }
-  ) moduleCombinations;
-  
+  moduleCombinationTests =
+    lib.mapAttrsToList (
+      combName: combConfig:
+        testLib.mkTest {
+          name = "module-combination-${combName}";
+          assertions = [
+            # Test that the module combination builds successfully
+            (let
+              testConfig = {
+                hostname = "test-${combName}";
+                username = "test-user";
+                system = "aarch64-darwin";
+                modules = combConfig.modules;
+              };
+
+              buildResult = testLib.try (builders.mkDarwin testConfig) null;
+            in
+              testLib.assertions.assertNotNull
+              "Module combination ${combName} builds successfully"
+              buildResult)
+
+            # Test that all modules in combination are properly structured
+            (testLib.assertions.assertTrue
+              "Module combination ${combName} has valid module structure"
+              (let
+                checkModuleStructure = path: moduleConfig:
+                  lib.isAttrs moduleConfig
+                  && lib.hasAttr "enable" moduleConfig
+                  && lib.isBool moduleConfig.enable;
+
+                checkNestedModules = modules:
+                  lib.all (
+                    name: let
+                      value = modules.${name};
+                    in
+                      if lib.isAttrs value && !(lib.hasAttr "enable" value)
+                      then checkNestedModules value # Nested module category
+                      else checkModuleStructure name value # Actual module
+                  ) (lib.attrNames modules);
+              in
+                checkNestedModules combConfig.modules))
+          ];
+        }
+    )
+    moduleCombinations;
+
   # Test module dependency resolution
   moduleDependencyTests = [
     (testLib.mkTest {
@@ -141,10 +154,10 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin testConfig) null;
         in
-          testLib.assertions.assertNotNull 
-            "Terminal module works with shell dependencies" 
-            buildResult)
-        
+          testLib.assertions.assertNotNull
+          "Terminal module works with shell dependencies"
+          buildResult)
+
         # Test that development modules work together
         (let
           testConfig = {
@@ -160,10 +173,10 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin testConfig) null;
         in
-          testLib.assertions.assertNotNull 
-            "Development modules work together" 
-            buildResult)
-        
+          testLib.assertions.assertNotNull
+          "Development modules work together"
+          buildResult)
+
         # Test that security modules work together
         (let
           testConfig = {
@@ -179,13 +192,13 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin testConfig) null;
         in
-          testLib.assertions.assertNotNull 
-            "Security modules work together" 
-            buildResult)
+          testLib.assertions.assertNotNull
+          "Security modules work together"
+          buildResult)
       ];
     })
   ];
-  
+
   # Test module conflict detection
   moduleConflictTests = [
     (testLib.mkTest {
@@ -212,7 +225,7 @@ let
       ];
     })
   ];
-  
+
   # Test module platform compatibility
   modulePlatformTests = [
     (testLib.mkTest {
@@ -232,10 +245,10 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin testConfig) null;
         in
-          testLib.assertions.assertNotNull 
-            "Darwin modules work on Darwin platform" 
-            buildResult)
-        
+          testLib.assertions.assertNotNull
+          "Darwin modules work on Darwin platform"
+          buildResult)
+
         # Test that Home Manager modules work cross-platform
         (let
           testConfig = {
@@ -251,13 +264,13 @@ let
           };
           buildResult = testLib.try (builders.mkDarwin testConfig) null;
         in
-          testLib.assertions.assertNotNull 
-            "Home Manager modules work cross-platform" 
-            buildResult)
+          testLib.assertions.assertNotNull
+          "Home Manager modules work cross-platform"
+          buildResult)
       ];
     })
   ];
-  
+
   # Test module configuration validation
   moduleValidationTests = [
     (testLib.mkTest {
@@ -272,14 +285,14 @@ let
               username = "test-user";
               system = "aarch64-darwin";
               modules = {
-                darwin.system.enable = "invalid";  # Should be boolean
+                darwin.system.enable = "invalid"; # Should be boolean
               };
             };
             # This should fail validation, but we'll check it doesn't crash
             buildResult = testLib.try (builders.mkDarwin invalidConfig) null;
           in
-            true))  # For now, just check it doesn't crash
-        
+            true)) # For now, just check it doesn't crash
+
         # Test that missing required options are handled
         (testLib.assertions.assertTrue "missing options are handled"
           (let
@@ -294,9 +307,9 @@ let
             };
             buildResult = testLib.try (builders.mkDarwin incompleteConfig) null;
           in
-            true))  # For now, just check it doesn't crash
+            true)) # For now, just check it doesn't crash
       ];
     })
   ];
-  
-in moduleCombinationTests ++ moduleDependencyTests ++ moduleConflictTests ++ modulePlatformTests ++ moduleValidationTests
+in
+  moduleCombinationTests ++ moduleDependencyTests ++ moduleConflictTests ++ modulePlatformTests ++ moduleValidationTests

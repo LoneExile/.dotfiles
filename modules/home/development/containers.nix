@@ -1,10 +1,14 @@
-{ config, lib, pkgs, ... }:
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.modules.home.development.containers;
 in {
   options.modules.home.development.containers = {
     enable = lib.mkEnableOption "Container development tools";
-    
+
     docker = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -119,40 +123,41 @@ in {
       };
     };
   };
-  
+
   config = lib.mkIf cfg.enable {
     # Docker tools
-    home.packages = with pkgs; lib.mkMerge [
-      # Docker CLI and tools
-      (lib.mkIf cfg.docker.enable [
-        docker
-        (lib.mkIf cfg.docker.enableCompose docker-compose)
-        (lib.mkIf cfg.docker.enableBuildx docker-buildx)
-      ])
-      
-      # Colima for Docker runtime on macOS
-      (lib.mkIf cfg.colima.enable [
-        colima
-      ])
-      
-      # Kubernetes tools
-      (lib.mkIf cfg.kubernetes.enable (lib.mkMerge [
-        (lib.mkIf cfg.kubernetes.enableKubectl [ kubectl ])
-        (lib.mkIf cfg.kubernetes.enableHelm [ kubernetes-helm ])
-        (lib.mkIf cfg.kubernetes.enableK9s [ k9s ])
-        (lib.mkIf cfg.kubernetes.enableMinikube [ minikube ])
-      ]))
-      
-      # Podman
-      (lib.mkIf cfg.podman.enable [
-        podman
-        (lib.mkIf cfg.podman.enableCompose podman-compose)
-      ])
-      
-      # Container management TUIs
-      (lib.mkIf cfg.lazydocker.enable [ lazydocker ])
-      (lib.mkIf cfg.dive.enable [ dive ])
-    ];
+    home.packages = with pkgs;
+      lib.mkMerge [
+        # Docker CLI and tools
+        (lib.mkIf cfg.docker.enable [
+          docker
+          (lib.mkIf cfg.docker.enableCompose docker-compose)
+          (lib.mkIf cfg.docker.enableBuildx docker-buildx)
+        ])
+
+        # Colima for Docker runtime on macOS
+        (lib.mkIf cfg.colima.enable [
+          colima
+        ])
+
+        # Kubernetes tools
+        (lib.mkIf cfg.kubernetes.enable (lib.mkMerge [
+          (lib.mkIf cfg.kubernetes.enableKubectl [kubectl])
+          (lib.mkIf cfg.kubernetes.enableHelm [kubernetes-helm])
+          (lib.mkIf cfg.kubernetes.enableK9s [k9s])
+          (lib.mkIf cfg.kubernetes.enableMinikube [minikube])
+        ]))
+
+        # Podman
+        (lib.mkIf cfg.podman.enable [
+          podman
+          (lib.mkIf cfg.podman.enableCompose podman-compose)
+        ])
+
+        # Container management TUIs
+        (lib.mkIf cfg.lazydocker.enable [lazydocker])
+        (lib.mkIf cfg.dive.enable [dive])
+      ];
 
     # Shell aliases for container management (integrated with aliases module)
     programs.zsh.shellAliases = lib.mkMerge [
@@ -169,7 +174,7 @@ in {
         drmi = "docker rmi $(docker images -q)";
         dprune = "docker system prune -af";
       })
-      
+
       (lib.mkIf cfg.kubernetes.enable {
         k = "kubectl";
         kgp = "kubectl get pods";
@@ -182,7 +187,7 @@ in {
         kctx = "kubectl config use-context";
         kns = "kubectl config set-context --current --namespace";
       })
-      
+
       (lib.mkIf cfg.podman.enable {
         p = "podman";
         pc = "podman-compose";
@@ -198,27 +203,27 @@ in {
         cpu: ${toString cfg.colima.cpu}
         memory: ${toString cfg.colima.memory}
         disk: ${toString cfg.colima.disk}
-        
+
         # Auto-start on system boot
         auto_activate: ${lib.boolToString cfg.colima.autoStart}
-        
+
         # Docker runtime
         runtime: docker
-        
+
         # Network configuration
         network:
           address: true
-          
+
         # Volume mounts
         mounts:
           - location: ~/
             writable: true
           - location: /tmp/colima
             writable: true
-            
+
         # Provision scripts
         provision: []
-        
+
         # SSH configuration
         ssh:
           config: true
@@ -247,7 +252,7 @@ in {
         DOCKER_BUILDKIT = "1";
         COMPOSE_DOCKER_CLI_BUILD = "1";
       })
-      
+
       (lib.mkIf cfg.kubernetes.enable {
         KUBECONFIG = "$HOME/.kube/config";
       })

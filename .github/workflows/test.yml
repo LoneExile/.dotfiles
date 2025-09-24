@@ -150,7 +150,7 @@ jobs:
       - name: Check justfile commands
         run: |
           echo "Validating justfile..."
-          grep -q "check:" justfile
-          grep -q "build:" justfile
-          grep -q "switch:" justfile
-          grep -q "update:" justfile
+          grep -q "^check:" justfile
+          grep -q "^build" justfile
+          grep -q "^switch" justfile
+          grep -q "^update:" justfile
