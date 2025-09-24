@@ -65,6 +65,7 @@
     kubevirt
     statix # Nix linter
     deadnix # Dead code detection
+    alejandra
   ];
 
   # Host-specific fonts
