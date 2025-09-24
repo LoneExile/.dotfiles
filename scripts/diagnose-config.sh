@@ -386,7 +386,7 @@ debug_module() {
       pathParts = builtins.filter (x: x != \"\") (builtins.split \"\\.\" \"$module_path\");
       moduleConfig = builtins.foldl' (acc: part: 
         if builtins.hasAttr part acc 
-        then acc.\${part} 
+        then builtins.getAttr part acc 
         else throw \"Path '$module_path' not found in configuration\"
       ) config pathParts;
       

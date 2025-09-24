@@ -171,7 +171,7 @@ in {
             enabledModules = builtins.filter (path:
               let
                 parts = builtins.split "\\." path;
-                moduleConfig = builtins.foldl (acc: part: acc.${part}) config parts;
+                moduleConfig = builtins.foldl (acc: p: builtins.getAttr p acc) config parts;
               in moduleConfig.enable or false
             ) (builtins.attrNames (config.modules or {}));
           in builtins.concatStringsSep "\n" enabledModules
