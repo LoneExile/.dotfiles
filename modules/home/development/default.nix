@@ -7,7 +7,7 @@
   # Development module imports
   imports = [
     ./git.nix
-    ./editors.nix
+    ./editors
     ./languages.nix
     ./containers.nix
   ];

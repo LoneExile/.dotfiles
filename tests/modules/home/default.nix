@@ -17,7 +17,7 @@
     };
     development = {
       git = ../../modules/home/development/git.nix;
-      editors = ../../modules/home/development/editors.nix;
+      editors = ../../modules/home/development/editors;
       languages = ../../modules/home/development/languages.nix;
       containers = ../../modules/home/development/containers.nix;
     };
@@ -118,14 +118,35 @@
         };
     })
 
-    # Editors module tests
+    # Editors module tests (refactored)
     (testLib.mkTest {
       name = "home-development-editors-module";
       assertions =
         testLib.moduleUtils.testModuleStructure "modules.home.development.editors" {
           enable = true;
         }
-        ++ testLib.moduleUtils.testModuleEvaluation "modules.home.development.editors" homeModules.development.editors;
+        ++ testLib.moduleUtils.testModuleEvaluation "modules.home.development.editors" homeModules.development.editors
+        ++ testLib.moduleUtils.testModuleConfigurations "modules.home.development.editors" homeModules.development.editors {
+          allEditors = {
+            neovim.enable = true;
+            vscode.enable = true;
+            helix.enable = true;
+          };
+
+          onlyNeovim = {
+            neovim.enable = true;
+            vscode.enable = false;
+            helix.enable = false;
+          };
+
+          customNeovim = {
+            neovim = {
+              enable = true;
+              defaultEditor = false;
+              extraConfig = "set number";
+            };
+          };
+        };
     })
 
     # Languages module tests
@@ -204,5 +225,9 @@
         ++ testLib.moduleUtils.testModuleEvaluation "modules.home.security.ssh" homeModules.security.ssh;
     })
   ];
+  # Import comprehensive editors refactor tests
+  editorsRefactorTests = import ./editors-refactor.nix {
+    inherit inputs outputs system lib pkgs testLib;
+  };
 in
-  shellTests ++ developmentTests ++ desktopTests ++ securityTests
+  shellTests ++ developmentTests ++ desktopTests ++ securityTests ++ editorsRefactorTests
