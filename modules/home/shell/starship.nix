@@ -60,15 +60,15 @@
       format = "([$all_status$ahead_behind]($style) )";
       style = "bold red";
       conflicted = "⚡";
-      ahead = "⇡''${count}";
-      behind = "⇣''${count}";
-      diverged = "⇕⇡''${ahead_count}⇣''${behind_count}";
-      untracked = "?''${count}";
-      stashed = "$''${count}";
-      modified = "!''${count}";
-      staged = "+''${count}";
-      renamed = "»''${count}";
-      deleted = "✘''${count}";
+      ahead = "⇡$count";
+      behind = "⇣$count";
+      diverged = "⇕⇡$ahead_count⇣$behind_count";
+      untracked = "?$count";
+      stashed = "$$count";
+      modified = "!$count";
+      staged = "+$count";
+      renamed = "»$count";
+      deleted = "✘$count";
     };
 
     # Command duration
