@@ -1,0 +1,130 @@
+name: Code Quality 🔍
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  formatting:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Check Nix formatting
+        run: |
+          echo "Checking Nix file formatting with alejandra..."
+          nix develop --command alejandra --check **/*.nix
+
+      - name: Check for formatting issues
+        if: failure()
+        run: |
+          echo "❌ Formatting issues found!"
+          echo "Run 'nix develop --command alejandra **/*.nix' to fix formatting."
+          exit 1
+
+  linting:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run statix linter
+        run: |
+          echo "Running statix linter..."
+          nix develop --command statix check .
+
+      - name: Check for dead code
+        run: |
+          echo "Checking for dead code with deadnix..."
+          nix develop --command deadnix .
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for secrets
+        run: |
+          echo "Scanning for potential secrets..."
+          # Check for common secret patterns
+          if grep -r -E "(password|secret|key|token)" --include="*.nix" --exclude-dir=".git" . | grep -v "# " | grep -v "//" | head -5; then
+            echo "⚠️  Potential secrets found in code. Please review."
+            echo "Note: This is a basic check. Secrets should be managed with SOPS."
+          else
+            echo "✅ No obvious secrets found in Nix files."
+          fi
+
+      - name: Check file permissions
+        run: |
+          echo "Checking for files with overly permissive permissions..."
+          find . -type f -perm /o+w -not -path "./.git/*" | head -10 || echo "✅ No world-writable files found."
+
+  validation:
+    name: Configuration Validation
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Validate flake structure
+        run: |
+          echo "Validating flake structure..."
+          nix flake show
+
+      - name: Check for evaluation errors
+        run: |
+          echo "Checking for evaluation errors..."
+          nix eval .#lib --apply 'lib: builtins.length (builtins.attrNames lib)'
+
+      - name: Validate Darwin configurations
+        run: |
+          echo "Validating Darwin configurations..."
+          for config in $(nix eval .#darwinConfigurations --apply 'configs: builtins.attrNames configs' --json | jq -r '.[]'); do
+            echo "Validating configuration: $config"
+            nix eval .#darwinConfigurations.$config.config --apply 'config: "valid"' > /dev/null
+          done
+
+      - name: Check module dependencies
+        run: |
+          echo "Checking module structure..."
+          find modules -name "*.nix" -type f | while read -r module; do
+            echo "Checking syntax of $module"
+            nix-instantiate --parse "$module" > /dev/null
+          done

@@ -1,11 +1,17 @@
-{ config, inputs, pkgs, lib, unstablePkgs, ... }:
 {
-  home.stateVersion = "23.11";
+  config,
+  inputs,
+  pkgs,
+  lib,
+  unstablePkgs,
+  ...
+}: {
+  home.stateVersion = "24.05";
 
   # Development tools packages
   home.packages = with pkgs; [
     mise
-    neovim             # Neovim nightly (from overlay)
+    neovim # Neovim nightly (from overlay)
     lazygit
   ];
 
@@ -79,7 +85,6 @@
       };
     };
   };
-
 
   programs.eza = {
     enable = true;
@@ -233,7 +238,7 @@
   programs.ssh = {
     enable = true;
     extraConfig = ''
-  StrictHostKeyChecking no
+      StrictHostKeyChecking no
     '';
     matchBlocks = {
       # ~/.ssh/config

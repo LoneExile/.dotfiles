@@ -1,0 +1,156 @@
+name: Test 🧪
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test Configuration
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Check flake syntax
+        run: nix flake check --no-build
+
+      - name: Test library functions
+        run: |
+          echo "Testing mkDarwin function..."
+          nix eval .#lib.mkDarwin --apply 'f: builtins.isFunction f'
+
+      - name: Test Darwin configuration build
+        run: |
+          echo "Testing Darwin configuration build..."
+          nix build .#darwinConfigurations.le.system --dry-run
+
+      - name: Test development shell
+        run: |
+          echo "Testing development shell..."
+          nix develop --command echo "Development shell works"
+
+      - name: Test packages
+        run: |
+          echo "Testing validation package..."
+          nix eval .#packages.aarch64-darwin.validate-config --apply 'p: p.name or "validate-config"'
+
+      - name: Test templates
+        run: |
+          echo "Testing templates..."
+          nix eval .#templates.default.description --raw
+
+      - name: Run validation script
+        run: |
+          echo "Running comprehensive validation..."
+          chmod +x scripts/final-validation.sh
+          ./scripts/final-validation.sh
+
+      - name: Test formatting
+        run: |
+          echo "Testing code formatting..."
+          nix develop --command alejandra --check **/*.nix
+
+      - name: Test linting
+        run: |
+          echo "Testing code linting..."
+          nix develop --command statix check .
+
+  build-test:
+    name: Build Test
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        config: [le]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Build Darwin configuration
+        run: |
+          echo "Building Darwin configuration: ${{ matrix.config }}"
+          nix build .#darwinConfigurations.${{ matrix.config }}.system --dry-run
+
+  template-test:
+    name: Template Test
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        template: [default, minimal, development]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Test template initialization
+        run: |
+          echo "Testing template: ${{ matrix.template }}"
+          mkdir -p /tmp/test-${{ matrix.template }}
+          cd /tmp/test-${{ matrix.template }}
+          nix flake init --template ${{ github.workspace }}#${{ matrix.template }}
+          nix flake check --no-build
+
+  documentation-test:
+    name: Documentation Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check documentation files
+        run: |
+          echo "Checking documentation structure..."
+          test -f README.md
+          test -f docs/SETUP.md
+          test -f docs/MODULES.md
+          test -f docs/TROUBLESHOOTING.md
+          test -f justfile
+
+      - name: Validate README links
+        run: |
+          echo "Checking README structure..."
+          grep -q "Quick Start" README.md
+          grep -q "Structure" README.md
+          grep -q "Profiles" README.md
+          grep -q "Common Tasks" README.md
+
+      - name: Check justfile commands
+        run: |
+          echo "Validating justfile..."
+          grep -q "check:" justfile
+          grep -q "build:" justfile
+          grep -q "switch:" justfile
+          grep -q "update:" justfile
