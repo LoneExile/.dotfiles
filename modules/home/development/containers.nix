@@ -230,21 +230,21 @@ in {
       '';
     };
 
-    # Kubernetes configuration
-    programs.zsh.initExtra = lib.mkIf cfg.kubernetes.enableKubectl ''
-      # Kubectl completion
-      if command -v kubectl >/dev/null 2>&1; then
-        source <(kubectl completion zsh)
-      fi
-    '';
-
-    # Docker completion
-    programs.zsh.initExtra = lib.mkIf cfg.docker.enable ''
-      # Docker completion
-      if command -v docker >/dev/null 2>&1; then
-        # Docker CLI completion is built-in for zsh
-      fi
-    '';
+    # Shell completions for containers
+    programs.zsh.initExtra = lib.mkMerge [
+      (lib.mkIf cfg.kubernetes.enableKubectl ''
+        # Kubectl completion
+        if command -v kubectl >/dev/null 2>&1; then
+          source <(kubectl completion zsh)
+        fi
+      '')
+      (lib.mkIf cfg.docker.enable ''
+        # Docker completion
+        if command -v docker >/dev/null 2>&1; then
+          # Docker CLI completion is built-in for zsh
+        fi
+      '')
+    ];
 
     # Environment variables
     home.sessionVariables = lib.mkMerge [

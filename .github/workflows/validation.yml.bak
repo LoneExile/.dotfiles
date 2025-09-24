@@ -1,0 +1,145 @@
+# name: Validation 🧪
+
+# on:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+#     branches:
+#       - main
+#   workflow_dispatch:
+#   workflow_call:
+
+# jobs:
+#   comprehensive-validation:
+#     name: Comprehensive Validation
+#     runs-on: macos-latest
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+
+#       - name: Install Nix
+#         uses: DeterminateSystems/nix-installer-action@v14
+#         with:
+#           extra-conf: |
+#             experimental-features = nix-command flakes
+
+#       - name: Setup Magic Nix Cache
+#         uses: DeterminateSystems/magic-nix-cache-action@v8
+
+#       - name: Run comprehensive validation script
+#         run: |
+#           echo "Running comprehensive validation..."
+#           chmod +x scripts/final-validation.sh
+#           ./scripts/final-validation.sh
+
+#       - name: Test system integration
+#         run: |
+#           echo "Testing system integration..."
+          
+#           # Test that all expected outputs exist
+#           echo "Checking flake outputs..."
+#           nix flake show
+          
+#           # Test library functions
+#           echo "Testing library functions..."
+#           nix eval .#lib.mkDarwin --apply 'f: builtins.isFunction f'
+#           nix eval .#lib.mkProfile --apply 'f: builtins.isFunction f'
+#           nix eval .#lib.mkModule --apply 'f: builtins.isFunction f'
+          
+#           # Test packages
+#           echo "Testing packages..."
+#           nix eval .#packages.aarch64-darwin --apply 'pkgs: builtins.length (builtins.attrNames pkgs)'
+          
+#           # Test development shells
+#           echo "Testing development shells..."
+#           nix develop --command echo "Default shell works"
+#           nix develop .#minimal --command echo "Minimal shell works"
+#           nix develop .#docs --command echo "Docs shell works"
+
+#       - name: Test module system
+#         run: |
+#           echo "Testing module system..."
+          
+#           # Check that modules can be imported (test a few key modules)
+#           for module in "modules/home/default.nix" "modules/darwin/default.nix" "modules/shared/default.nix"; do
+#             if [ -f "$module" ]; then
+#               echo "Testing module: $module"
+#               nix-instantiate --eval --expr "import ./$module { lib = (import <nixpkgs> {}).lib; config = {}; pkgs = (import <nixpkgs> {}); }" > /dev/null || echo "⚠️ Module $module failed to import (non-blocking)"
+#             fi
+#           done
+
+#       - name: Test profile system
+#         run: |
+#           echo "Testing profile system..."
+          
+#           # Test each profile (if they exist)
+#           for profile in minimal development work personal; do
+#             echo "Testing profile: $profile"
+#             nix eval .#profiles.$profile --apply 'p: builtins.isAttrs p' 2>/dev/null || echo "⚠️ Profile $profile not found (non-blocking)"
+#           done
+
+#       - name: Test configuration validation
+#         run: |
+#           echo "Testing configuration validation..."
+          
+#           # Test that Darwin configuration can be evaluated
+#           nix eval .#darwinConfigurations.le.config --apply 'config: "Configuration is valid"'
+          
+#           # Test that the system can be built (dry-run)
+#           nix build .#darwinConfigurations.le.system --dry-run
+
+#       - name: Generate validation report
+#         if: always()
+#         run: |
+#           echo "Generating validation report..."
+          
+#           cat > validation-report.md << 'EOF'
+#           # Validation Report
+          
+#           ## System Information
+#           - **Date**: $(date)
+#           - **Nix Version**: $(nix --version)
+#           - **System**: $(uname -a)
+#           - **Hostname**: $(hostname)
+          
+#           ## Test Results
+          
+#           ### Flake Check
+#           ```
+#           $(nix flake check --no-build 2>&1 || echo "Flake check failed")
+#           ```
+          
+#           ### Available Outputs
+#           ```
+#           $(nix flake show 2>&1)
+#           ```
+          
+#           ### Library Functions
+#           - mkDarwin: $(nix eval .#lib.mkDarwin --apply 'f: if builtins.isFunction f then "✅ Available" else "❌ Missing"' 2>/dev/null || echo "❌ Error")
+#           - mkProfile: $(nix eval .#lib.mkProfile --apply 'f: if builtins.isFunction f then "✅ Available" else "❌ Missing"' 2>/dev/null || echo "❌ Error")
+#           - mkModule: $(nix eval .#lib.mkModule --apply 'f: if builtins.isFunction f then "✅ Available" else "❌ Missing"' 2>/dev/null || echo "❌ Error")
+          
+#           ### Profiles
+#           - minimal: $(nix eval .#profiles.minimal --apply 'p: if builtins.isAttrs p then "✅ Valid" else "❌ Invalid"' 2>/dev/null || echo "❌ Error")
+#           - development: $(nix eval .#profiles.development --apply 'p: if builtins.isAttrs p then "✅ Valid" else "❌ Invalid"' 2>/dev/null || echo "❌ Error")
+#           - work: $(nix eval .#profiles.work --apply 'p: if builtins.isAttrs p then "✅ Valid" else "❌ Invalid"' 2>/dev/null || echo "❌ Error")
+#           - personal: $(nix eval .#profiles.personal --apply 'p: if builtins.isAttrs p then "✅ Valid" else "❌ Invalid"' 2>/dev/null || echo "❌ Error")
+          
+#           ### Darwin Configuration
+#           - Build Test: $(nix build .#darwinConfigurations.le.system --dry-run >/dev/null 2>&1 && echo "✅ Builds successfully" || echo "❌ Build failed")
+          
+#           EOF
+          
+#           echo "Validation report generated:"
+#           cat validation-report.md
+
+#       - name: Upload validation report
+#         if: always()
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: validation-report
+#           path: validation-report.md
+#           retention-days: 30
