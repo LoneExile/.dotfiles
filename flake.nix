@@ -100,30 +100,32 @@
         default = pkgs.mkShell {
           name = "nix-config-dev";
 
-          buildInputs = with pkgs; [
-            # Nix development tools
-            nixd # Nix language server
-            alejandra # Nix formatter
-            statix # Nix linter
-            deadnix # Dead code detection
+          buildInputs = with pkgs;
+            [
+              # Nix development tools
+              nixd # Nix language server
+              alejandra # Nix formatter
+              statix # Nix linter
+              deadnix # Dead code detection
 
-            # Documentation tools
-            mdbook # Documentation generation
+              # Documentation tools
+              mdbook # Documentation generation
 
-            # Git and development utilities
-            git
-            just # Command runner
+              # Git and development utilities
+              git
+              just # Command runner
 
-            # SOPS for secrets management
-            sops
-            age
+              # SOPS for secrets management
+              sops
+              age
 
-            # Shell utilities
-            direnv
-
-            # Optional: Darwin rebuild for testing
-            inputs.nix-darwin.packages.${system}.darwin-rebuild
-          ];
+              # Shell utilities
+              direnv
+            ]
+            ++ pkgs.lib.optionals (system == "aarch64-darwin" || system == "x86_64-darwin") [
+              # Darwin rebuild for testing (Darwin systems only)
+              inputs.nix-darwin.packages.${system}.darwin-rebuild
+            ];
 
           shellHook = ''
             echo "🚀 Welcome to the Nix Configuration Development Environment!"

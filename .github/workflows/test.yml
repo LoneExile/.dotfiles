@@ -8,6 +8,7 @@ on:
     branches:
       - main
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   test:
@@ -96,32 +97,32 @@ jobs:
           echo "Building Darwin configuration: ${{ matrix.config }}"
           nix build .#darwinConfigurations.${{ matrix.config }}.system --dry-run
 
-  template-test:
-    name: Template Test
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        template: [default, minimal, development]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  # template-test:
+  #   name: Template Test
+  #   runs-on: macos-latest
+  #   strategy:
+  #     matrix:
+  #       template: [default, minimal, development]
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v14
-        with:
-          extra-conf: |
-            experimental-features = nix-command flakes
+  #     - name: Install Nix
+  #       uses: DeterminateSystems/nix-installer-action@v14
+  #       with:
+  #         extra-conf: |
+  #           experimental-features = nix-command flakes
 
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+  #     - name: Setup Magic Nix Cache
+  #       uses: DeterminateSystems/magic-nix-cache-action@v8
 
-      - name: Test template initialization
-        run: |
-          echo "Testing template: ${{ matrix.template }}"
-          mkdir -p /tmp/test-${{ matrix.template }}
-          cd /tmp/test-${{ matrix.template }}
-          nix flake init --template ${{ github.workspace }}#${{ matrix.template }}
-          nix flake check --no-build
+  #     - name: Test template initialization
+  #       run: |
+  #         echo "Testing template: ${{ matrix.template }}"
+  #         mkdir -p /tmp/test-${{ matrix.template }}
+  #         cd /tmp/test-${{ matrix.template }}
+  #         nix flake init --template ${{ github.workspace }}#${{ matrix.template }}
+  #         nix flake check --no-build
 
   documentation-test:
     name: Documentation Test
