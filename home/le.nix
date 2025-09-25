@@ -8,9 +8,9 @@
 }: {
   home.stateVersion = "24.05";
 
-  # Import the refactored editors module
+  # Import nixCats home module
   imports = [
-    ../modules/home/development/editors
+    inputs.nixCats.homeModule
   ];
 
   # Development tools packages
@@ -19,36 +19,43 @@
     lazygit
   ];
 
-  # Enable the refactored editors module
-  modules.home.development.editors = {
-    enable = true;
-    neovim = {
-      enable = true;
-      defaultEditor = true;
-      extraConfig = ''
-        " Personal Neovim configuration
-        set number
-        set relativenumber
-        set tabstop=2
-        set shiftwidth=2
-        set expandtab
-
-        " Personal preferences
-        set wrap
-        set linebreak
-        colorscheme catppuccin-mocha
-      '';
-      plugins = with pkgs.vimPlugins; [
-        # Add any personal plugins here
-        vim-airline
-        nerdtree
-      ];
-    };
-
-    # Optionally enable other editors
-    vscode.enable = false; # VS Code is installed via Homebrew cask
-    helix.enable = false; # Not needed for this setup
-  };
+  # Previous editors module configuration (commented out for nixCats migration)
+  # Custom settings preserved for migration to nixCats:
+  # - number, relativenumber, tabstop=2, shiftwidth=2, expandtab
+  # - wrap, linebreak
+  # - colorscheme catppuccin-mocha
+  # - plugins: vim-airline, nerdtree
+  # - defaultEditor = true
+  #
+  # modules.home.development.editors = {
+  #   enable = true;
+  #   neovim = {
+  #     enable = true;
+  #     defaultEditor = true;
+  #     extraConfig = ''
+  #       " Personal Neovim configuration
+  #       set number
+  #       set relativenumber
+  #       set tabstop=2
+  #       set shiftwidth=2
+  #       set expandtab
+  #
+  #       " Personal preferences
+  #       set wrap
+  #       set linebreak
+  #       colorscheme catppuccin-mocha
+  #     '';
+  #     plugins = with pkgs.vimPlugins; [
+  #       # Add any personal plugins here
+  #       vim-airline
+  #       nerdtree
+  #     ];
+  #   };
+  #
+  #   # Optionally enable other editors
+  #   vscode.enable = false; # VS Code is installed via Homebrew cask
+  #   helix.enable = false; # Not needed for this setup
+  # };
 
   # list of programs
   # https://mipmip.github.io/home-manager-option-search
@@ -284,6 +291,119 @@
       };
       "*" = {
         user = "root";
+      };
+    };
+  };
+
+  # nixCats configuration
+  nixCats = {
+    enable = true;
+    addOverlays = [ (inputs.nixCats.utils.standardPluginOverlay inputs) ];
+    packageNames = [ "leNvim" ];
+    luaPath = ./nvim-config;
+
+    categoryDefinitions.replace = { pkgs, settings, categories, name, ... }: {
+      # LSPs, formatters, linters, and runtime dependencies
+      lspsAndRuntimeDeps = with pkgs; {
+        general = [
+          # Essential tools
+          lazygit
+          ripgrep
+          fd
+          tree-sitter
+        ];
+        lua = [
+          lua-language-server
+          stylua
+        ];
+        nix = [
+          nixd
+          alejandra
+        ];
+        go = [
+          gopls
+          golangci-lint
+          delve
+        ];
+      };
+
+      # Essential plugins loaded at startup
+      startupPlugins = with pkgs.vimPlugins; {
+        general = [
+          # Core functionality
+          plenary-nvim
+          nvim-treesitter.withAllGrammars
+          nvim-treesitter-textobjects
+          
+          # Plugin loader and extras
+          lze
+          lzextras
+          snacks-nvim
+          
+          # UI and navigation
+          lualine-nvim
+          lualine-lsp-progress
+          mini-nvim
+          which-key-nvim
+          
+          # Colorscheme
+          onedark-nvim
+          
+          # Git integration
+          gitsigns-nvim
+          
+          # Completion
+          blink-cmp
+          
+          # Development tools
+          vim-startuptime
+        ];
+      };
+
+      # Language-specific and optional plugins
+      optionalPlugins = with pkgs.vimPlugins; {
+        general = [
+          # LSP and development tools
+          nvim-lspconfig
+          nvim-lint
+          conform-nvim
+          
+          # Debugging
+          nvim-dap
+          nvim-dap-ui
+          nvim-dap-virtual-text
+        ];
+        lua = [
+          lazydev-nvim
+        ];
+        nix = [
+          # Nix-specific plugins if needed
+        ];
+        go = [
+          nvim-dap-go
+        ];
+      };
+    };
+
+    packageDefinitions.replace = {
+      leNvim = { pkgs, name, ... }: {
+        settings = {
+          suffix-path = true;
+          suffix-LD = true;
+          wrapRc = true;
+          aliases = [ "vim" "nvim" ];
+          hosts.python3.enable = true;
+          hosts.node.enable = true;
+        };
+        categories = {
+          general = true;
+          lua = true;
+          nix = true;
+          go = true;  # Enable Go support based on mise configuration
+        };
+        extra = {
+          nixdExtras.nixpkgs = ''import ${pkgs.path} {}'';
+        };
       };
     };
   };
