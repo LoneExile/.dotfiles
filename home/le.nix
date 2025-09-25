@@ -351,7 +351,7 @@
         ];
       };
 
-      # Essential plugins loaded at startup  
+      # Essential plugins loaded at startup
       startupPlugins = with unstablePkgs.vimPlugins; {
         general = [
           # Core functionality
