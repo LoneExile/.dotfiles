@@ -66,6 +66,7 @@
     statix # Nix linter
     deadnix # Dead code detection
     alejandra
+    kubectl
   ];
 
   # Host-specific fonts
