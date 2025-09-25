@@ -27,6 +27,27 @@ update:
 # Update system configuration (flake update + rebuild)
 update-system target_host=hostname: update (switch target_host)
 
+# Build and activate home configuration only  
+home target_host=hostname:
+  @echo "Building home config for {{target_host}}..."
+  nix build ".#darwinConfigurations.{{target_host}}.config.home-manager.users.le.home.activationPackage"
+  @echo "Activating home configuration..."
+  ./result/activate
+
+# Quick nixCats reload (forces Lua config reload)
+nixcats target_host=hostname:
+  @echo "Forcing nixCats Lua config reload..."
+  @touch home/le.nix
+  @just home {{target_host}}
+
+# Force reload nixCats with Lua changes
+nvim-reload target_host=hostname:
+  @echo "🔄 Reloading Neovim configuration..."
+  @echo "Touching nix file to force rebuild..."
+  @touch home/le.nix
+  @just home {{target_host}}
+  @echo "✅ Neovim configuration reloaded!"
+
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc:
   nix-collect-garbage -d

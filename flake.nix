@@ -57,6 +57,12 @@
     nixCats = {
       url = "github:BirdeeHub/nixCats-nvim";
     };
+
+    # Tokyo Night theme - always latest
+    tokyonight-nvim = {
+      url = "github:folke/tokyonight.nvim";
+      flake = false;
+    };
   };
 
   outputs = {self, ...} @ inputs: let

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Neovim wrapper for development config
+
+# Ensure the config directory exists and is properly linked
+if [ ! -L "$HOME/.config/nvim-dev" ]; then
+    ln -sf "$HOME/.dotfiles/home/nvim-config" "$HOME/.config/nvim-dev"
+fi
+
+# Set environment variables for this session
+export NVIM_APPNAME="nvim-dev"
+export XDG_CONFIG_HOME="$HOME/.config"
+
+# Use nvim-nix with explicit config path and runtime path
+exec nvim-nix \
+    --cmd "set runtimepath^=$HOME/.config/nvim-dev" \
+    --cmd "set runtimepath+=$HOME/.config/nvim-dev/after" \
+    -u "$HOME/.config/nvim-dev/init.lua" \
+    "$@"

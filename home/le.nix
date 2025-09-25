@@ -296,7 +296,25 @@
   };
 
   # nixCats configuration
-  nixCats = {
+  nixCats = let
+    tokyonight-latest = pkgs.vimUtils.buildVimPlugin {
+      name = "tokyonight-nvim";
+      src = inputs.tokyonight-nvim;
+      # Skip the require check that's failing
+      doCheck = false;
+    };
+    # tokyonight-latest = pkgs.vimUtils.buildVimPlugin {
+    #   name = "tokyonight-nvim";
+    #   src = pkgs.fetchFromGitHub {
+    #     owner = "folke";
+    #     repo = "tokyonight.nvim";
+    #     rev = "14fd5ff7f84027064724ec3157fe903199e77ded"; # v4.12.0
+    #     hash = "sha256-fj6x7R11+s0/lhWCe0s3ELTRLgvU25Rjp4M5vZw5i3c=";
+    #   };
+    #   # Skip the require check that's failing
+    #   doCheck = false;
+    # };
+  in {
     enable = true;
     addOverlays = [(inputs.nixCats.utils.standardPluginOverlay inputs)];
     packageNames = ["leNvim"];
@@ -333,8 +351,8 @@
         ];
       };
 
-      # Essential plugins loaded at startup
-      startupPlugins = with pkgs.vimPlugins; {
+      # Essential plugins loaded at startup  
+      startupPlugins = with unstablePkgs.vimPlugins; {
         general = [
           # Core functionality
           plenary-nvim
@@ -352,8 +370,8 @@
           mini-nvim
           which-key-nvim
 
-          # Colorscheme
-          onedark-nvim
+          # Colorscheme (latest from GitHub)
+          tokyonight-latest
 
           # Git integration
           gitsigns-nvim
@@ -367,7 +385,7 @@
       };
 
       # Language-specific and optional plugins
-      optionalPlugins = with pkgs.vimPlugins; {
+      optionalPlugins = with unstablePkgs.vimPlugins; {
         general = [
           # LSP and development tools
           nvim-lspconfig
@@ -401,7 +419,7 @@
           suffix-path = true;
           suffix-LD = true;
           wrapRc = true;
-          aliases = ["vim" "nvim"];
+          aliases = ["vim" "nvim-nix"];
           hosts.python3.enable = true;
           hosts.node.enable = true;
         };

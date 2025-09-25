@@ -46,18 +46,19 @@ require('lze').load {
           },
         })
 
-        vim.keymap.set({ "n", "v" }, "<leader>FF", function()
-          conform.format({
-            lsp_fallback = true,
-            async = false,
-            timeout_ms = 1000,
-          })
-        end, { desc = "[F]ormat [F]ile" })
+        -- vim.keymap.set({ "n", "v" }, "<leader>FF", function()
+        --   conform.format({
+        --     lsp_fallback = true,
+        --     async = false,
+        --     timeout_ms = 1000,
+        --   })
+        -- end, { desc = "[F]ormat [F]ile" })
       end,
     },
     {
       "nvim-dap",
-      enabled = nixCats('general') or false,
+      -- enabled = nixCats('general') or false,
+      enabled = false,
       keys = {
         { "<F5>", desc = "Debug: Start/Continue" },
         { "<F1>", desc = "Debug: Step Into" },
@@ -116,7 +117,7 @@ require('lze').load {
         }
 
         require("nvim-dap-virtual-text").setup {
-          enabled = true,                       -- enable this plugin (the default)
+          enabled = false,                       -- enable this plugin (the default)
           enabled_commands = true,              -- create commands DapVirtualTextEnable, DapVirtualTextDisable, DapVirtualTextToggle, (DapVirtualTextForceRefresh for refreshing when debug adapter did not notify its termination)
           highlight_changed_variables = true,   -- highlight changed values with NvimDapVirtualTextChanged, else always NvimDapVirtualText
           highlight_new_as_changed = false,     -- highlight new variables in the same way as changed variables (if highlight_changed_variables)
@@ -155,7 +156,8 @@ require('lze').load {
     },
     {
       "nvim-dap-go",
-      enabled = nixCats('go') or false,
+      -- enabled = nixCats('go') or false,
+      enabled = false,
       on_plugin = { "nvim-dap", },
       after = function(plugin)
         require("dap-go").setup()

@@ -60,15 +60,15 @@
                 ['[]'] = '@class.outer',
               },
             },
-            swap = {
-              enable = true,
-              swap_next = {
-                ['<leader>a'] = '@parameter.inner',
-              },
-              swap_previous = {
-                ['<leader>A'] = '@parameter.inner',
-              },
-            },
+            -- swap = {
+            --   enable = true,
+            --   swap_next = {
+            --     ['<leader>a'] = '@parameter.inner',
+            --   },
+            --   swap_previous = {
+            --     ['<leader>A'] = '@parameter.inner',
+            --   },
+            -- },
           },
         }
       end,
@@ -104,31 +104,34 @@
       after = function (plugin)
         require('lualine').setup({
           options = {
-            icons_enabled = false,
-            theme = 'onedark',
+            icons_enabled = true,
+            theme = 'tokyonight',
             component_separators = '|',
             section_separators = '',
           },
-          sections = {
-            lualine_c = {
-              {
-                'filename', path = 1, status = true,
-              },
-            },
-          },
-          inactive_sections = {
-            lualine_b = {
-              {
-                'filename', path = 3, status = true,
-              },
-            },
-            lualine_x = {'filetype'},
-          },
-          tabline = {
-            lualine_a = { 'buffers' },
-            lualine_b = { 'lsp_progress', },
-            lualine_z = { 'tabs' }
-          },
+          -- sections = {
+          --   lualine_c = {
+          --     {
+          --       'filename', path = 1, status = true,
+          --     },
+          --   },
+          -- },
+          -- inactive_sections = {
+          --   lualine_b = {
+          --     {
+          --       'filename', path = 3, status = true,
+          --     },
+          --   },
+          --   lualine_x = {'filetype'},
+          -- },
+          -- tabline = {
+          --   lualine_a = { 'buffers' },
+          --   lualine_b = { 'lsp_progress', },
+          --   lualine_z = { 'tabs' }
+          -- },
+          winbar = nil,
+          inactive_sections = nil,
+          sections = nil,
         })
       end,
     },
@@ -156,55 +159,55 @@
             end
 
             -- Navigation
-            map({ 'n', 'v' }, ']c', function()
-              if vim.wo.diff then
-                return ']c'
-              end
-              vim.schedule(function()
-                gs.next_hunk()
-              end)
-              return '<Ignore>'
-            end, { expr = true, desc = 'Jump to next hunk' })
+            -- map({ 'n', 'v' }, ']c', function()
+            --   if vim.wo.diff then
+            --     return ']c'
+            --   end
+            --   vim.schedule(function()
+            --     gs.next_hunk()
+            --   end)
+            --   return '<Ignore>'
+            -- end, { expr = true, desc = 'Jump to next hunk' })
 
-            map({ 'n', 'v' }, '[c', function()
-              if vim.wo.diff then
-                return '[c'
-              end
-              vim.schedule(function()
-                gs.prev_hunk()
-              end)
-              return '<Ignore>'
-            end, { expr = true, desc = 'Jump to previous hunk' })
+            -- map({ 'n', 'v' }, '[c', function()
+            --   if vim.wo.diff then
+            --     return '[c'
+            --   end
+            --   vim.schedule(function()
+            --     gs.prev_hunk()
+            --   end)
+            --   return '<Ignore>'
+            -- end, { expr = true, desc = 'Jump to previous hunk' })
 
-            -- Actions
-            -- visual mode
-            map('v', '<leader>hs', function()
-              gs.stage_hunk { vim.fn.line '.', vim.fn.line 'v' }
-            end, { desc = 'stage git hunk' })
-            map('v', '<leader>hr', function()
-              gs.reset_hunk { vim.fn.line '.', vim.fn.line 'v' }
-            end, { desc = 'reset git hunk' })
-            -- normal mode
-            map('n', '<leader>gs', gs.stage_hunk, { desc = 'git stage hunk' })
-            map('n', '<leader>gr', gs.reset_hunk, { desc = 'git reset hunk' })
-            map('n', '<leader>gS', gs.stage_buffer, { desc = 'git Stage buffer' })
-            map('n', '<leader>gu', gs.undo_stage_hunk, { desc = 'undo stage hunk' })
-            map('n', '<leader>gR', gs.reset_buffer, { desc = 'git Reset buffer' })
-            map('n', '<leader>gp', gs.preview_hunk, { desc = 'preview git hunk' })
-            map('n', '<leader>gb', function()
-              gs.blame_line { full = false }
-            end, { desc = 'git blame line' })
-            map('n', '<leader>gd', gs.diffthis, { desc = 'git diff against index' })
-            map('n', '<leader>gD', function()
-              gs.diffthis '~'
-            end, { desc = 'git diff against last commit' })
+            -- -- Actions
+            -- -- visual mode
+            -- map('v', '<leader>hs', function()
+            --   gs.stage_hunk { vim.fn.line '.', vim.fn.line 'v' }
+            -- end, { desc = 'stage git hunk' })
+            -- map('v', '<leader>hr', function()
+            --   gs.reset_hunk { vim.fn.line '.', vim.fn.line 'v' }
+            -- end, { desc = 'reset git hunk' })
+            -- -- normal mode
+            -- map('n', '<leader>gs', gs.stage_hunk, { desc = 'git stage hunk' })
+            -- map('n', '<leader>gr', gs.reset_hunk, { desc = 'git reset hunk' })
+            -- map('n', '<leader>gS', gs.stage_buffer, { desc = 'git Stage buffer' })
+            -- map('n', '<leader>gu', gs.undo_stage_hunk, { desc = 'undo stage hunk' })
+            -- map('n', '<leader>gR', gs.reset_buffer, { desc = 'git Reset buffer' })
+            -- map('n', '<leader>gp', gs.preview_hunk, { desc = 'preview git hunk' })
+            -- map('n', '<leader>gb', function()
+            --   gs.blame_line { full = false }
+            -- end, { desc = 'git blame line' })
+            -- map('n', '<leader>gd', gs.diffthis, { desc = 'git diff against index' })
+            -- map('n', '<leader>gD', function()
+            --   gs.diffthis '~'
+            -- end, { desc = 'git diff against last commit' })
 
-            -- Toggles
-            map('n', '<leader>gtb', gs.toggle_current_line_blame, { desc = 'toggle git blame line' })
-            map('n', '<leader>gtd', gs.toggle_deleted, { desc = 'toggle git show deleted' })
+            -- -- Toggles
+            -- map('n', '<leader>gtb', gs.toggle_current_line_blame, { desc = 'toggle git blame line' })
+            -- map('n', '<leader>gtd', gs.toggle_deleted, { desc = 'toggle git show deleted' })
 
-            -- Text object
-            map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', { desc = 'select git hunk' })
+            -- -- Text object
+            -- map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', { desc = 'select git hunk' })
           end,
         })
         vim.cmd([[hi GitSignsAdd guifg=#04de21]])
@@ -218,26 +221,26 @@
       event = "DeferredUIEnter",
       after = function (plugin)
         require('which-key').setup({})
-        require('which-key').add {
-          { "<leader><leader>", group = "buffer commands" },
-          { "<leader><leader>_", hidden = true },
-          { "<leader>c", group = "[c]ode" },
-          { "<leader>c_", hidden = true },
-          { "<leader>d", group = "[d]ocument" },
-          { "<leader>d_", hidden = true },
-          { "<leader>g", group = "[g]it" },
-          { "<leader>g_", hidden = true },
-          { "<leader>r", group = "[r]ename" },
-          { "<leader>r_", hidden = true },
-          { "<leader>f", group = "[f]ind" },
-          { "<leader>f_", hidden = true },
-          { "<leader>s", group = "[s]earch" },
-          { "<leader>s_", hidden = true },
-          { "<leader>t", group = "[t]oggles" },
-          { "<leader>t_", hidden = true },
-          { "<leader>w", group = "[w]orkspace" },
-          { "<leader>w_", hidden = true },
-        }
+        -- require('which-key').add {
+        --   { "<leader><leader>", group = "buffer commands" },
+        --   { "<leader><leader>_", hidden = true },
+        --   { "<leader>c", group = "[c]ode" },
+        --   { "<leader>c_", hidden = true },
+        --   { "<leader>d", group = "[d]ocument" },
+        --   { "<leader>d_", hidden = true },
+        --   { "<leader>g", group = "[g]it" },
+        --   { "<leader>g_", hidden = true },
+        --   { "<leader>r", group = "[r]ename" },
+        --   { "<leader>r_", hidden = true },
+        --   { "<leader>f", group = "[f]ind" },
+        --   { "<leader>f_", hidden = true },
+        --   { "<leader>s", group = "[s]earch" },
+        --   { "<leader>s_", hidden = true },
+        --   { "<leader>t", group = "[t]oggles" },
+        --   { "<leader>t_", hidden = true },
+        --   { "<leader>w", group = "[w]orkspace" },
+        --   { "<leader>w_", hidden = true },
+        -- }
       end,
     },
   }

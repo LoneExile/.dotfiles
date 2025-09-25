@@ -378,7 +378,8 @@
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "sops-nix": "sops-nix"
+        "sops-nix": "sops-nix",
+        "tokyonight-nvim": "tokyonight-nvim"
       }
     },
     "sops-nix": {
@@ -398,6 +399,22 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
+        "type": "github"
+      }
+    },
+    "tokyonight-nvim": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1758142373,
+        "narHash": "sha256-fj6x7R11+s0/lhWCe0s3ELTRLgvU25Rjp4M5vZw5i3c=",
+        "owner": "folke",
+        "repo": "tokyonight.nvim",
+        "rev": "14fd5ff7f84027064724ec3157fe903199e77ded",
+        "type": "github"
+      },
+      "original": {
+        "owner": "folke",
+        "repo": "tokyonight.nvim",
         "type": "github"
       }
     },
