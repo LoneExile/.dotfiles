@@ -298,11 +298,17 @@
   # nixCats configuration
   nixCats = {
     enable = true;
-    addOverlays = [ (inputs.nixCats.utils.standardPluginOverlay inputs) ];
-    packageNames = [ "leNvim" ];
+    addOverlays = [(inputs.nixCats.utils.standardPluginOverlay inputs)];
+    packageNames = ["leNvim"];
     luaPath = ./nvim-config;
 
-    categoryDefinitions.replace = { pkgs, settings, categories, name, ... }: {
+    categoryDefinitions.replace = {
+      pkgs,
+      settings,
+      categories,
+      name,
+      ...
+    }: {
       # LSPs, formatters, linters, and runtime dependencies
       lspsAndRuntimeDeps = with pkgs; {
         general = [
@@ -334,27 +340,27 @@
           plenary-nvim
           nvim-treesitter.withAllGrammars
           nvim-treesitter-textobjects
-          
+
           # Plugin loader and extras
           lze
           lzextras
           snacks-nvim
-          
+
           # UI and navigation
           lualine-nvim
           lualine-lsp-progress
           mini-nvim
           which-key-nvim
-          
+
           # Colorscheme
           onedark-nvim
-          
+
           # Git integration
           gitsigns-nvim
-          
+
           # Completion
           blink-cmp
-          
+
           # Development tools
           vim-startuptime
         ];
@@ -367,7 +373,7 @@
           nvim-lspconfig
           nvim-lint
           conform-nvim
-          
+
           # Debugging
           nvim-dap
           nvim-dap-ui
@@ -386,12 +392,16 @@
     };
 
     packageDefinitions.replace = {
-      leNvim = { pkgs, name, ... }: {
+      leNvim = {
+        pkgs,
+        name,
+        ...
+      }: {
         settings = {
           suffix-path = true;
           suffix-LD = true;
           wrapRc = true;
-          aliases = [ "vim" "nvim" ];
+          aliases = ["vim" "nvim"];
           hosts.python3.enable = true;
           hosts.node.enable = true;
         };
@@ -399,7 +409,7 @@
           general = true;
           lua = true;
           nix = true;
-          go = true;  # Enable Go support based on mise configuration
+          go = true; # Enable Go support based on mise configuration
         };
         extra = {
           nixdExtras.nixpkgs = ''import ${pkgs.path} {}'';
