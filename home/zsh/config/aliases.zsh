@@ -7,7 +7,7 @@ alias top="btop"
 alias :q="exit"
 alias c="clear"
 alias v="nvim"
-alias nvim="$HOME/.dotfiles/nvim-wrapper"
+alias vx="$HOME/.dotfiles/nvim-wrapper"
 alias gdu="gdu-go"
 alias ld="lazydocker"
 

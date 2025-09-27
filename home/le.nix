@@ -17,6 +17,19 @@
   home.packages = with pkgs; [
     mise
     lazygit
+    neovim
+    pgformatter
+    pngpaste
+    tree-sitter
+    #julia
+    ripgrep
+    ripgrep-all
+    lynx
+    terraform
+    xmlformat
+    terragrunt
+    nixpkgs-fmt
+    wget
   ];
 
   # Previous editors module configuration (commented out for nixCats migration)
@@ -222,6 +235,8 @@
       set-option -g default-terminal "screen-256color"
       set -g default-terminal "screen-256color"
       set-option -sa terminal-features ',xterm-256color:RGB'
+      set-option -g focus-events on
+      set-option -sg escape-time 10
 
       unbind-key n
       unbind-key e
@@ -419,7 +434,7 @@
           suffix-path = true;
           suffix-LD = true;
           wrapRc = true;
-          aliases = ["vim" "nvim-nix"];
+          aliases = ["nvim-nix"];
           hosts.python3.enable = true;
           hosts.node.enable = true;
         };
