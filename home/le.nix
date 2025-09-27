@@ -223,6 +223,7 @@
       continuum
       cpu
       battery
+      vim-tmux-navigator
     ];
     extraConfig = ''
       new-session -s main
@@ -242,6 +243,12 @@
       unbind-key e
       unbind-key y
       unbind-key o
+
+      set-window-option -g mode-keys vi
+      bind-key -T copy-mode-vi v send -X begin-selection
+      bind-key -T copy-mode-vi V send -X select-line
+      set -s copy-command 'pbcopy'
+      bind-key -T copy-mode-vi y send -X copy-pipe-and-cancel 'pbcopy'
 
       set -g status-justify "left"
       set -g status "on"
@@ -268,18 +275,6 @@
       set -g default-shell /bin/zsh
     '';
   };
-
-  # programs.tmux = {
-  #   enable = true;
-  #   #keyMode = "vi";
-  #   clock24 = true;
-  #   historyLimit = 10000;
-  #   prefix = "C-a";
-  #   plugins = with pkgs.tmuxPlugins; [
-  #     gruvbox
-  #     vim-tmux-navigator
-  #   ];
-  # };
 
   programs.home-manager.enable = true;
   programs.nix-index.enable = true;
