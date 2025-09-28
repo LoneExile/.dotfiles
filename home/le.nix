@@ -15,21 +15,22 @@
 
   # Development tools packages
   home.packages = with pkgs; [
-    mise
-    lazygit
-    neovim
-    pgformatter
-    pngpaste
-    tree-sitter
-    #julia
-    ripgrep
-    ripgrep-all
-    lynx
     terraform
-    xmlformat
-    terragrunt
-    nixpkgs-fmt
-    wget
+    neovim
+
+    unstablePkgs.mise
+    unstablePkgs.lazygit
+    unstablePkgs.pgformatter
+    unstablePkgs.pngpaste
+    unstablePkgs.tree-sitter
+    #julia
+    unstablePkgs.ripgrep
+    unstablePkgs.ripgrep-all
+    unstablePkgs.lynx
+    unstablePkgs.xmlformat
+    unstablePkgs.terragrunt
+    unstablePkgs.nixpkgs-fmt
+    unstablePkgs.wget
   ];
 
   # Previous editors module configuration (commented out for nixCats migration)

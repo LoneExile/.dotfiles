@@ -15,7 +15,7 @@
 
   imports = [
     ../common/default.nix
-    ../common/profiles/personal.nix # Select personal profile for this host
+    # ../common/profiles/personal.nix # Select personal profile for this host
   ];
 
   # Host identification
@@ -40,33 +40,33 @@
     unstablePkgs.yt-dlp
     unstablePkgs.get_iplayer
     unstablePkgs.colmena
+    unstablePkgs.aerospace
+    unstablePkgs.colima
+
+    unstablePkgs.comma
+    unstablePkgs.hcloud
+    unstablePkgs.just
+    unstablePkgs.lima
+    unstablePkgs.docker
+    unstablePkgs.lazydocker
+    unstablePkgs.wezterm
+    unstablePkgs.k9s
+    unstablePkgs.syncthing-macos
+    unstablePkgs.talosctl
+    unstablePkgs.yq-go
+    unstablePkgs.fluxcd
+    unstablePkgs.kubernetes-helm
+    unstablePkgs.yazi
+    unstablePkgs.aws-vault
+    unstablePkgs.awscli2
+    unstablePkgs.kubevirt
+    unstablePkgs.statix # Nix linter
+    unstablePkgs.deadnix # Dead code detection
+    unstablePkgs.alejandra
+    unstablePkgs.kubectl
+    unstablePkgs.btop
 
     # Stable CLI tools
-    comma
-    hcloud
-    just
-    lima
-    aerospace
-    colima
-    docker
-    lazydocker
-    wezterm
-    k9s
-    logseq
-    obsidian
-    syncthing-macos
-    talosctl
-    yq-go
-    fluxcd
-    kubernetes-helm
-    yazi
-    aws-vault
-    awscli2
-    kubevirt
-    statix # Nix linter
-    deadnix # Dead code detection
-    alejandra
-    kubectl
   ];
 
   # Host-specific fonts
