@@ -67,6 +67,7 @@ alias gclb='git clone --bare'
 ## gh extension upgrade gh-copilot
 
 eval "$(gh copilot alias -- zsh)"
+alias avante='nvim -c "lua vim.defer_fn(function()require(\"avante.api\").zen_mode()end, 100)"'
 
 ## Lazygit
 lg()
