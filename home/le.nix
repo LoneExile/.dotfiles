@@ -138,6 +138,7 @@
       settings = {
         not_found_auto_install = true;
         plugin_autoupdate_last_check_duration = "0";
+        idiomatic_version_file_enable_tools = [];
       };
     };
   };
