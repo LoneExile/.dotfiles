@@ -69,7 +69,7 @@
     inherit (self) outputs;
 
     # Configuration constants
-    stateVersion = "24.05";
+    stateVersion = "24.11";
     defaultSystem = "aarch64-darwin";
     supportedSystems = ["aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux"];
 
