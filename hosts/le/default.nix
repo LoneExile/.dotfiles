@@ -65,8 +65,11 @@
     unstablePkgs.alejandra
     unstablePkgs.kubectl
     unstablePkgs.btop
+    unstablePkgs.logseq
 
     # Stable CLI tools
+    packer
+    obsidian
   ];
 
   # Host-specific fonts
@@ -103,12 +106,14 @@
       # "bitwarden-cli"
       "displayplacer"
       "gh"
+      "watch"
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;
 
     casks = [
-      "audacity"
+      "audacity" # Audio editing software
+      "kdenlive" # Video editing software
       "discord"
       "firefox"
       "flameshot"
@@ -141,6 +146,7 @@
       "kiro"
       "vnc-viewer"
       "visual-studio-code"
+      "audacity"
     ];
 
     masApps = {

@@ -97,3 +97,9 @@ dk() {
         echo "Usage: d [start|stop|restart|status]"
     fi
 }
+
+pkgup() {
+    pnpm self-update
+    pnpm update -g --latest
+    # zu
+}

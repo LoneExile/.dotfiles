@@ -31,6 +31,7 @@
     unstablePkgs.terragrunt
     unstablePkgs.nixpkgs-fmt
     unstablePkgs.wget
+    unstablePkgs.nmap
   ];
 
   # Previous editors module configuration (commented out for nixCats migration)
