@@ -66,6 +66,7 @@
     unstablePkgs.kubectl
     unstablePkgs.btop
     unstablePkgs.logseq
+    unstablePkgs.skopeo # For copying container images
 
     # Stable CLI tools
     packer
@@ -146,7 +147,7 @@
       "kiro"
       "vnc-viewer"
       "visual-studio-code"
-      "audacity"
+      "cap"
     ];
 
     masApps = {
@@ -236,13 +237,15 @@
       };
 
       "com.apple.dock" = {
-        autohide = true; 
+        autohide = true;
         launchanim = false;
         static-only = false;
         show-recents = false;
         show-process-indicators = true;
         orientation = "bottom";
-        tilesize = 36;
+        tilesize = 26;
+        magnification = true; # Enable hover zoom/magnification
+        largesize = 34; # Magnified tile size when hovering (16-128)
         minimize-to-application = true;
         mineffect = "scale";
         enable-window-tool = false;
