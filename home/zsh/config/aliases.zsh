@@ -99,7 +99,7 @@ dk() {
 }
 
 pkgup() {
-    pnpm self-update
+    # pnpm self-update
     pnpm update -g --latest
     # zu
 }
