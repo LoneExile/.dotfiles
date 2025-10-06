@@ -32,6 +32,7 @@
     unstablePkgs.nixpkgs-fmt
     unstablePkgs.wget
     unstablePkgs.nmap
+    unstablePkgs.cloudflared
   ];
 
   # Previous editors module configuration (commented out for nixCats migration)

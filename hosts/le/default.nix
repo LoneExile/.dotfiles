@@ -148,6 +148,8 @@
       "vnc-viewer"
       "visual-studio-code"
       "cap"
+      "figma"
+      "framer"
     ];
 
     masApps = {
