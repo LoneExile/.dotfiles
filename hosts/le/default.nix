@@ -150,6 +150,8 @@
       "cap"
       "figma"
       "framer"
+      "webull"
+      "tradingview"
     ];
 
     masApps = {
