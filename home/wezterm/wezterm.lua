@@ -10,6 +10,10 @@ if wezterm.config_builder then
   config = wezterm.config_builder()
 end
 
+config.keys = {
+  {key="Enter", mods="SHIFT", action=wezterm.action{SendString="\x1b\r"}},
+}
+
 -- This is where you actually apply your config choices
 
 -- For example, changing the color scheme:
