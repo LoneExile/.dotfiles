@@ -33,6 +33,10 @@
     unstablePkgs.wget
     unstablePkgs.nmap
     unstablePkgs.cloudflared
+    unstablePkgs.gnutar
+    unstablePkgs.gnused
+    unstablePkgs.gawk
+    unstablePkgs.gnugrep
   ];
 
   # Previous editors module configuration (commented out for nixCats migration)

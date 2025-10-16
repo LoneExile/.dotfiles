@@ -67,6 +67,8 @@
     unstablePkgs.btop
     unstablePkgs.logseq
     unstablePkgs.skopeo # For copying container images
+    unstablePkgs.lsof
+    unstablePkgs.bandwhich
 
     # Stable CLI tools
     packer
@@ -108,6 +110,7 @@
       "displayplacer"
       "gh"
       "watch"
+      "rover"
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;
