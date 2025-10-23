@@ -65,7 +65,7 @@
     unstablePkgs.alejandra
     unstablePkgs.kubectl
     unstablePkgs.btop
-    unstablePkgs.logseq
+    # unstablePkgs.logseq
     unstablePkgs.skopeo # For copying container images
     unstablePkgs.lsof
     unstablePkgs.bandwhich
@@ -111,6 +111,7 @@
       "gh"
       "watch"
       "rover"
+      "doctl"
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;
@@ -152,9 +153,12 @@
       "visual-studio-code"
       "cap"
       "figma"
-      "framer"
-      "webull"
+      # "framer"
+      # "webull"
       "tradingview"
+      "gimp"
+      "logseq"
+      "dbeaver-community"
     ];
 
     masApps = {
@@ -167,6 +171,7 @@
       "Dropover" = 1355679052;
       "Runcat" = 1429033973;
       "WhatsApp" = 310633997;
+      # "Webull" = 1334590352;
     };
   };
   # Keyboard

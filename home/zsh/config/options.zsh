@@ -63,3 +63,5 @@ source_env_file() {
 # See special `chpwd` hook function: https://zsh.sourceforge.io/Doc/Release/Functions.html
 autoload -U add-zsh-hook
 add-zsh-hook chpwd source_env_file
+
+setopt INTERACTIVE_COMMENTS

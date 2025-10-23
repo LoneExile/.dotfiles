@@ -23,7 +23,7 @@ in {
         lazydocker
         wezterm
         k9s
-        logseq
+        # logseq
         obsidian
         syncthing-macos
         talosctl
