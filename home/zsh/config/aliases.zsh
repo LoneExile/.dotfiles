@@ -99,6 +99,16 @@ dk() {
 }
 
 pkgup() {
+    # pnpm install -g @gsong/ccmcp
+    # pnpm install -g @anthropic-ai/claude-code
+    # pnpm install -g @dbml/cli
+    # pnpm install -g @fission-ai/openspec
+    # pnpm install -g @github/copilot
+    # pnpm install -g @google/gemini-cli
+    # pnpm install -g get-graphql-schema
+    # pnpm install -g mcp-hub
+    # pnpm install -g neovim
+
     # pnpm self-update
     pnpm update -g --latest
     # zu

@@ -160,6 +160,7 @@
       "gimp"
       "logseq"
       "dbeaver-community"
+      "claude"
     ];
 
     masApps = {
