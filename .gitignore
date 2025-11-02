@@ -5,3 +5,6 @@ com.googlecode.iterm2.plist
 .DS_Store
 
 test-results
+
+*.md
+!README.md

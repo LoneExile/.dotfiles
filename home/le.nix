@@ -17,6 +17,8 @@
   home.packages = with pkgs; [
     terraform
     neovim
+    dua
+    unstablePkgs.duf
 
     unstablePkgs.mise
     unstablePkgs.lazygit
@@ -37,6 +39,7 @@
     unstablePkgs.gnused
     unstablePkgs.gawk
     unstablePkgs.gnugrep
+    unstablePkgs.git-filter-repo
   ];
 
   # Previous editors module configuration (commented out for nixCats migration)

@@ -73,6 +73,10 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    packages = lib.mkIf cfg.enableDiffSoFancy [
+      pkgs.diff-so-fancy
+    ];
+
     programs.git = {
       enable = true;
       userName = cfg.userName;

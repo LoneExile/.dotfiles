@@ -70,6 +70,7 @@
     unstablePkgs.lsof
     unstablePkgs.bandwhich
     unstablePkgs.qbittorrent-enhanced
+    unstablePkgs.dust
 
     # Stable CLI tools
     packer
