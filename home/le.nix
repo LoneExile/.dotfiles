@@ -176,11 +176,17 @@
 
   programs.git = {
     enable = true;
-    userEmail = "Hello@Apinant.dev";
-    userName = "Apinant U-suwantim";
-    diff-so-fancy.enable = true;
-    lfs.enable = true;
-    extraConfig = {
+    settings = {
+      user = {
+        email = "Hello@Apinant.dev";
+        name = "Apinant U-suwantim";
+      };
+      diff-so-fancy = {
+        enable = true;
+      };
+      lfs = {
+        enable = true;
+      };
       init = {
         defaultBranch = "main";
       };

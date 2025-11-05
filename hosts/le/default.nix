@@ -175,6 +175,7 @@
       "Runcat" = 1429033973;
       "WhatsApp" = 310633997;
       # "Webull" = 1334590352;
+      "WireGuard" = 1451685025;
     };
   };
   # Keyboard
