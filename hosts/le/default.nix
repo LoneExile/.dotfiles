@@ -71,6 +71,10 @@
     unstablePkgs.bandwhich
     unstablePkgs.qbittorrent-enhanced
     unstablePkgs.dust
+    # unstablePkgs.flameshot
+    unstablePkgs.harbor-cli
+    unstablePkgs.gettext
+    unstablePkgs.parallel
 
     # Stable CLI tools
     packer
@@ -114,6 +118,8 @@
       "watch"
       "rover"
       "doctl"
+      "wireguard-tools"
+      # "git-cola"
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;
@@ -123,7 +129,7 @@
       "kdenlive" # Video editing software
       "discord"
       "firefox"
-      "flameshot"
+      # "flameshot"
       "font-fira-code"
       "font-fira-code-nerd-font"
       "font-fira-mono-for-powerline"
@@ -162,6 +168,8 @@
       "logseq"
       "dbeaver-community"
       "claude"
+      # "ksnip"
+      "github"
     ];
 
     masApps = {

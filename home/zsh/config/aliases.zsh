@@ -111,5 +111,6 @@ pkgup() {
 
     # pnpm self-update
     pnpm update -g --latest
+    gh extension upgrade --all
     # zu
 }
