@@ -66,7 +66,6 @@ alias gclb='git clone --bare'
 ## gh extension install github/gh-copilot
 ## gh extension upgrade gh-copilot
 
-eval "$(gh copilot alias -- zsh)"
 alias avante='nvim -c "lua vim.defer_fn(function()require(\"avante.api\").zen_mode()end, 100)"'
 
 ## Lazygit
@@ -108,6 +107,7 @@ pkgup() {
     # pnpm install -g get-graphql-schema
     # pnpm install -g mcp-hub
     # pnpm install -g neovim
+    # pnpm i -g opencode-ai@latest
 
     # pnpm self-update
     pnpm update -g --latest
