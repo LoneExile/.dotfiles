@@ -97,7 +97,7 @@
     mkTestConfig = moduleConfig: {
       modules = moduleConfig;
       system.stateVersion = 5;
-      home.stateVersion = "25.05";
+      home.stateVersion = "25.11";
     };
 
     # Test module structure and options

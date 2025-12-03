@@ -3,7 +3,7 @@
 
   inputs = {
     # Core Nixpkgs - using Darwin-specific branch for macOS compatibility
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.05-darwin";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
 
     # Unstable packages for latest software
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -69,7 +69,7 @@
     inherit (self) outputs;
 
     # Configuration constants
-    stateVersion = "25.05";
+    stateVersion = "25.11";
     defaultSystem = "aarch64-darwin";
     supportedSystems = ["aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux"];
 

@@ -19,7 +19,7 @@
     imports = [editorsModule];
     modules.home.development.editors = moduleConfig;
     system.stateVersion = 5;
-    home.stateVersion = "25.05";
+    home.stateVersion = "25.11";
   };
 
   # Helper function to evaluate a configuration

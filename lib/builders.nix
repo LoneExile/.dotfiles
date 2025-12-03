@@ -87,7 +87,7 @@ in {
               imports = [../home/${username}.nix];
 
               # Home Manager state version
-              home.stateVersion = "25.05";
+              home.stateVersion = "25.11";
             };
           };
         }
