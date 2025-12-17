@@ -75,6 +75,11 @@
     unstablePkgs.harbor-cli
     unstablePkgs.gettext
     unstablePkgs.parallel
+    unstablePkgs.gh
+    unstablePkgs.freerdp
+    unstablePkgs.sqlcmd
+    unstablePkgs.sshpass
+    unstablePkgs.jellyfin-ffmpeg
 
     # Stable CLI tools
     packer
@@ -114,12 +119,18 @@
     brews = [
       # "bitwarden-cli"
       "displayplacer"
-      "gh"
+      # "gh"
       "watch"
       "rover"
       "doctl"
       "wireguard-tools"
       # "git-cola"
+      "huggingface-cli"
+      "libpq"
+      "postgresql"
+      "git-lfs"
+      "k3sup"
+      "tw93/tap/mole"
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;
@@ -170,6 +181,8 @@
       "claude"
       # "ksnip"
       "github"
+      "tigervnc-viewer"
+      "firefox"
     ];
 
     masApps = {
@@ -184,6 +197,7 @@
       "WhatsApp" = 310633997;
       # "Webull" = 1334590352;
       "WireGuard" = 1451685025;
+      "Windows App" = 1295203466;
     };
   };
   # Keyboard

@@ -6,7 +6,7 @@
   unstablePkgs,
   ...
 }: {
-  home.stateVersion = "25.05";
+  home.stateVersion = "25.11";
 
   # Import nixCats home module
   imports = [

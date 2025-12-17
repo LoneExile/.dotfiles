@@ -212,12 +212,12 @@ in {
     # Add shell functions and GitHub Copilot setup
     programs.zsh.initExtra = lib.mkMerge [
       (lib.mkIf cfg.enableShellFunctions shellFunctions)
-      (lib.mkIf cfg.enableGithubCopilot ''
-        # GitHub Copilot CLI setup
-        if command -v gh >/dev/null 2>&1; then
-          eval "$(gh copilot alias -- zsh)"
-        fi
-      '')
+      # (lib.mkIf cfg.enableGithubCopilot ''
+      #   # GitHub Copilot CLI setup
+      #   if command -v gh >/dev/null 2>&1; then
+      #     eval "$(gh copilot alias -- zsh)"
+      #   fi
+      # '')
     ];
 
     # Create aliases config file for compatibility with existing setup

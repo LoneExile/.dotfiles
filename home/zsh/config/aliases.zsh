@@ -67,6 +67,10 @@ alias gclb='git clone --bare'
 ## gh extension upgrade gh-copilot
 
 alias avante='nvim -c "lua vim.defer_fn(function()require(\"avante.api\").zen_mode()end, 100)"'
+alias y='yazi'
+alias mrdp='sdl-freerdp'
+
+eval "$(gh copilot alias -- zsh)"
 
 ## Lazygit
 lg()
@@ -111,6 +115,6 @@ pkgup() {
 
     # pnpm self-update
     pnpm update -g --latest
-    gh extension upgrade --all
+    # gh extension upgrade --all
     # zu
 }

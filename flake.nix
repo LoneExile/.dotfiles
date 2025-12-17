@@ -41,6 +41,10 @@
       url = "github:homebrew/homebrew-bundle";
       flake = false;
     };
+    homebrew-tw93-tap = {
+      url = "github:tw93/homebrew-tap";
+      flake = false;
+    };
 
     # SOPS for secrets management
     sops-nix = {

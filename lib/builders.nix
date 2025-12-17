@@ -105,6 +105,7 @@ in {
               "homebrew/homebrew-core" = homebrew-core;
               "homebrew/homebrew-cask" = homebrew-cask;
               "homebrew/homebrew-bundle" = homebrew-bundle;
+              "tw93/homebrew-tap" = homebrew-tw93-tap;
             };
           };
         }
