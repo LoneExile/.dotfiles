@@ -30,7 +30,7 @@
     unstablePkgs.ripgrep-all
     unstablePkgs.lynx
     unstablePkgs.xmlformat
-    unstablePkgs.terragrunt
+    # unstablePkgs.terragrunt
     unstablePkgs.nixpkgs-fmt
     unstablePkgs.wget
     unstablePkgs.nmap
@@ -40,6 +40,8 @@
     unstablePkgs.gawk
     unstablePkgs.gnugrep
     unstablePkgs.git-filter-repo
+
+    # terragrunt
   ];
 
   # Previous editors module configuration (commented out for nixCats migration)

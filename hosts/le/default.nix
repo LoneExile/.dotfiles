@@ -80,6 +80,7 @@
     unstablePkgs.sqlcmd
     unstablePkgs.sshpass
     unstablePkgs.jellyfin-ffmpeg
+    unstablePkgs.poetry
 
     # Stable CLI tools
     packer
@@ -131,6 +132,10 @@
       "git-lfs"
       "k3sup"
       "tw93/tap/mole"
+      "pango"
+      "gdk-pixbuf"
+      "libffi"
+      "terragrunt"
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;
