@@ -333,6 +333,10 @@
       # Skip the require check that's failing
       doCheck = false;
     };
+    # Override to skip require check (needs nvim-treesitter at check time)
+    nvim-treesitter-textobjects-fixed = unstablePkgs.vimPlugins.nvim-treesitter-textobjects.overrideAttrs {
+      doCheck = false;
+    };
     # tokyonight-latest = pkgs.vimUtils.buildVimPlugin {
     #   name = "tokyonight-nvim";
     #   src = pkgs.fetchFromGitHub {
@@ -387,7 +391,7 @@
           # Core functionality
           plenary-nvim
           nvim-treesitter.withAllGrammars
-          nvim-treesitter-textobjects
+          nvim-treesitter-textobjects-fixed
 
           # Plugin loader and extras
           lze
