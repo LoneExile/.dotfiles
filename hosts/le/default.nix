@@ -136,6 +136,7 @@
       "gdk-pixbuf"
       "libffi"
       "terragrunt"
+      "steveyegge/beads/bd"
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;
@@ -188,6 +189,7 @@
       "github"
       "tigervnc-viewer"
       "firefox"
+      "wifiman"
     ];
 
     masApps = {

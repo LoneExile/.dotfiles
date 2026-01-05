@@ -106,6 +106,7 @@ in {
               "homebrew/homebrew-cask" = homebrew-cask;
               "homebrew/homebrew-bundle" = homebrew-bundle;
               "tw93/homebrew-tap" = homebrew-tw93-tap;
+              "steveyegge/homebrew-beads" = homebrew-steveyegge-beads;
             };
           };
         }

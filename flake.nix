@@ -45,6 +45,10 @@
       url = "github:tw93/homebrew-tap";
       flake = false;
     };
+    homebrew-steveyegge-beads = {
+      url = "github:steveyegge/homebrew-beads";
+      flake = false;
+    };
 
     # SOPS for secrets management
     sops-nix = {

@@ -145,6 +145,7 @@
         pnpm = "latest";
         yarn = "latest";
         deno = "latest";
+        bun = "latest";
       };
       settings = {
         not_found_auto_install = true;
