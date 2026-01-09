@@ -131,7 +131,7 @@
       "postgresql"
       "git-lfs"
       "k3sup"
-      "tw93/tap/mole"
+      "mole"
       "pango"
       "gdk-pixbuf"
       "libffi"
@@ -173,7 +173,7 @@
       "mongodb-compass"
       "openvpn-connect"
       "cloudflare-warp"
-      "kiro"
+      # "kiro"
       "vnc-viewer"
       "visual-studio-code"
       "cap"
@@ -190,6 +190,7 @@
       "tigervnc-viewer"
       "firefox"
       "wifiman"
+      "zoom"
     ];
 
     masApps = {

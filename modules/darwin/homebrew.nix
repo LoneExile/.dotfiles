@@ -52,7 +52,7 @@ in {
         "mongodb-compass"
         "openvpn-connect"
         "cloudflare-warp"
-        "kiro"
+        # "kiro"
         "vnc-viewer"
         "visual-studio-code"
       ];

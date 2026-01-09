@@ -41,10 +41,6 @@
       url = "github:homebrew/homebrew-bundle";
       flake = false;
     };
-    homebrew-tw93-tap = {
-      url = "github:tw93/homebrew-tap";
-      flake = false;
-    };
     homebrew-steveyegge-beads = {
       url = "github:steveyegge/homebrew-beads";
       flake = false;
