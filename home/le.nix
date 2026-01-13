@@ -20,7 +20,6 @@
     dua
     unstablePkgs.duf
 
-    unstablePkgs.mise
     unstablePkgs.lazygit
     unstablePkgs.pgformatter
     unstablePkgs.pngpaste
