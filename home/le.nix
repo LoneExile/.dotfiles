@@ -306,6 +306,64 @@
 
   programs.zoxide.enable = true;
 
+  programs.k9s = {
+    enable = true;
+    settings = {
+      k9s = {
+        ui = {
+          headless = true;
+          logoless = true;
+          skin = "transparent";
+        };
+      };
+    };
+    skins = {
+      transparent = {
+        k9s = {
+          body.bgColor = "default";
+          prompt.bgColor = "default";
+          info.sectionColor = "default";
+          dialog = {
+            bgColor = "default";
+            labelFgColor = "default";
+            fieldFgColor = "default";
+          };
+          frame = {
+            crumbs.bgColor = "default";
+            title = {
+              bgColor = "default";
+              counterColor = "default";
+            };
+            menu.fgColor = "default";
+          };
+          views = {
+            charts.bgColor = "default";
+            table = {
+              bgColor = "default";
+              header = {
+                fgColor = "default";
+                bgColor = "default";
+              };
+            };
+            xray.bgColor = "default";
+            logs = {
+              bgColor = "default";
+              indicator = {
+                bgColor = "default";
+                toggleOnColor = "default";
+                toggleOffColor = "default";
+              };
+            };
+            yaml = {
+              colonColor = "default";
+              valueColor = "default";
+            };
+          };
+        };
+      };
+    };
+  };
+
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;

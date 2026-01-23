@@ -131,7 +131,12 @@
       "postgresql"
       "git-lfs"
       "k3sup"
-      "mole"
+      {
+        name = "mole";
+        args = [ "HEAD" ];
+      }
+      "tokei"
+      "skaffold"
       "pango"
       "gdk-pixbuf"
       "libffi"
