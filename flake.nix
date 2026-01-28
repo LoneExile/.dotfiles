@@ -45,6 +45,10 @@
       url = "github:steveyegge/homebrew-beads";
       flake = false;
     };
+    homebrew-telepresenceio-telepresence = {
+      url = "github:telepresenceio/homebrew-telepresence";
+      flake = false;
+    };
 
     # SOPS for secrets management
     sops-nix = {

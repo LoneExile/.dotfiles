@@ -142,6 +142,7 @@
       "libffi"
       "terragrunt"
       "steveyegge/beads/bd"
+      "telepresenceio/telepresence/telepresence-oss"
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;

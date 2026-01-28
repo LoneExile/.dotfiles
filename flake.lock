@@ -122,6 +122,22 @@
         "type": "github"
       }
     },
+    "homebrew-telepresenceio-telepresence": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769466470,
+        "narHash": "sha256-VparQeDN656OrZjT1YtSvXxlUuwHI0izh20PsXON5mE=",
+        "owner": "telepresenceio",
+        "repo": "homebrew-telepresence",
+        "rev": "8f296b60a99a4b1b3301e1560ce9c16c26c74604",
+        "type": "github"
+      },
+      "original": {
+        "owner": "telepresenceio",
+        "repo": "homebrew-telepresence",
+        "type": "github"
+      }
+    },
     "neovim-nightly-overlay": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -282,6 +298,7 @@
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",
         "homebrew-steveyegge-beads": "homebrew-steveyegge-beads",
+        "homebrew-telepresenceio-telepresence": "homebrew-telepresenceio-telepresence",
         "neovim-nightly-overlay": "neovim-nightly-overlay",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
