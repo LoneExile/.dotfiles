@@ -111,9 +111,11 @@ pkgup() {
     # pnpm install -g get-graphql-schema
     # pnpm install -g mcp-hub
     # pnpm install -g neovim
+    # npm install -g @playwright/cli@latest
     # pnpm i -g opencode-ai@latest
 
     # pnpm self-update
+    claude update
     pnpm update -g --latest
     uv tool upgrade --all
     # gh extension upgrade --all

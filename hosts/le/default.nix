@@ -131,18 +131,25 @@
       "postgresql"
       "git-lfs"
       "k3sup"
-      {
-        name = "mole";
-        args = [ "HEAD" ];
-      }
       "tokei"
       "skaffold"
       "pango"
       "gdk-pixbuf"
       "libffi"
       "terragrunt"
-      "steveyegge/beads/bd"
+      "mongosh"
+      "protobuf"
+      "protoc-gen-go"
+      "protoc-gen-go-grpc"
       "telepresenceio/telepresence/telepresence-oss"
+      "cdrtools"
+      "webp"
+      "poppler"
+      # "steveyegge/beads/bd"
+      # {
+      #   name = "mole";
+      #   args = [ "HEAD" ];
+      # }
     ];
 
     taps = builtins.attrNames config.nix-homebrew.taps;
@@ -212,6 +219,7 @@
       # "Webull" = 1334590352;
       "WireGuard" = 1451685025;
       "Windows App" = 1295203466;
+      "WeChat" = 836500024;
     };
   };
   # Keyboard
