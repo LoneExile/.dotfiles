@@ -49,6 +49,10 @@
       url = "github:telepresenceio/homebrew-telepresence";
       flake = false;
     };
+    homebrew-alexsjones-llmfit = {
+      url = "github:AlexsJones/homebrew-llmfit";
+      flake = false;
+    };
 
     # SOPS for secrets management
     sops-nix = {

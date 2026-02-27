@@ -107,6 +107,7 @@ in {
               "homebrew/homebrew-bundle" = homebrew-bundle;
               "steveyegge/homebrew-beads" = homebrew-steveyegge-beads;
               "telepresenceio/homebrew-telepresence" = homebrew-telepresenceio-telepresence;
+              "AlexsJones/homebrew-llmfit" = homebrew-alexsjones-llmfit;
             };
           };
         }

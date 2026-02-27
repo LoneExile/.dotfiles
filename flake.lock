@@ -58,6 +58,22 @@
         "type": "github"
       }
     },
+    "homebrew-alexsjones-llmfit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1771856414,
+        "narHash": "sha256-pcJTApffwuRiI9/VPrLLxL9EqpvwBhSmt12ygOXS3ns=",
+        "owner": "AlexsJones",
+        "repo": "homebrew-llmfit",
+        "rev": "76a1960aa55fed7b0828f861c6dc9386a647dfc9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "AlexsJones",
+        "repo": "homebrew-llmfit",
+        "type": "github"
+      }
+    },
     "homebrew-bundle": {
       "flake": false,
       "locked": {
@@ -294,6 +310,7 @@
     "root": {
       "inputs": {
         "home-manager": "home-manager",
+        "homebrew-alexsjones-llmfit": "homebrew-alexsjones-llmfit",
         "homebrew-bundle": "homebrew-bundle",
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",

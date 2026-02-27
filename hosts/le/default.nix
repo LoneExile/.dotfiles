@@ -142,9 +142,12 @@
       "protoc-gen-go"
       "protoc-gen-go-grpc"
       "telepresenceio/telepresence/telepresence-oss"
+      "AlexsJones/llmfit/llmfit"
       "cdrtools"
       "webp"
       "poppler"
+      "strongswan"
+      "redis"
       # "steveyegge/beads/bd"
       # {
       #   name = "mole";
