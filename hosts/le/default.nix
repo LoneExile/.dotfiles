@@ -148,6 +148,8 @@
       "poppler"
       "strongswan"
       "redis"
+      "tea"
+      "krew"
       # "steveyegge/beads/bd"
       # {
       #   name = "mole";
