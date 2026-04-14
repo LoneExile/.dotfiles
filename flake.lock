@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "aerospace-sticky-meta": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1776095469,
+        "narHash": "sha256-QFZlXfmjz126CV6tXkqWL7Om5hnM7yzZYGcvDm6e1W0=",
+        "owner": "LoneExile",
+        "repo": "AeroSpace",
+        "rev": "9d62d9ebd374ed678f1f62186f5285f644d2e526",
+        "type": "github"
+      },
+      "original": {
+        "owner": "LoneExile",
+        "ref": "nix-release-meta",
+        "repo": "AeroSpace",
+        "type": "github"
+      }
+    },
     "brew-src": {
       "flake": false,
       "locked": {
@@ -122,6 +139,22 @@
         "type": "github"
       }
     },
+    "homebrew-jolehuit-tap": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774392334,
+        "narHash": "sha256-qKGFf+jvS9GMPUIEHOLFkyt1r7kIMb7t8YRa6wphWfQ=",
+        "owner": "jolehuit",
+        "repo": "homebrew-tap",
+        "rev": "02797d4ae6464304f3d6ee7107b5669689813081",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jolehuit",
+        "repo": "homebrew-tap",
+        "type": "github"
+      }
+    },
     "homebrew-steveyegge-beads": {
       "flake": false,
       "locked": {
@@ -151,6 +184,22 @@
       "original": {
         "owner": "telepresenceio",
         "repo": "homebrew-telepresence",
+        "type": "github"
+      }
+    },
+    "homebrew-xykong-tap": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1775716219,
+        "narHash": "sha256-6UyJ3pwQnlnrwBMCTCKoqGAb8VoZHdJLjSBGoBkM8jc=",
+        "owner": "xykong",
+        "repo": "homebrew-tap",
+        "rev": "d3a5c7a13c5648937c1643b598a5d269d60f264b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "xykong",
+        "repo": "homebrew-tap",
         "type": "github"
       }
     },
@@ -309,13 +358,16 @@
     },
     "root": {
       "inputs": {
+        "aerospace-sticky-meta": "aerospace-sticky-meta",
         "home-manager": "home-manager",
         "homebrew-alexsjones-llmfit": "homebrew-alexsjones-llmfit",
         "homebrew-bundle": "homebrew-bundle",
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",
+        "homebrew-jolehuit-tap": "homebrew-jolehuit-tap",
         "homebrew-steveyegge-beads": "homebrew-steveyegge-beads",
         "homebrew-telepresenceio-telepresence": "homebrew-telepresenceio-telepresence",
+        "homebrew-xykong-tap": "homebrew-xykong-tap",
         "neovim-nightly-overlay": "neovim-nightly-overlay",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",

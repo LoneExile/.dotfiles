@@ -225,6 +225,11 @@ if.window-title-regex-substring = 'Picture in Picture'
 run = ['layout floating']
 check-further-callbacks = true
 
+# Antinote follows across all workspaces (requires sticky-windows fork)
+[[on-window-detected]]
+if.app-id = 'com.chabomakers.Antinote'
+run = 'layout sticky'
+
 [[on-window-detected]]
 if.app-id = 'com.brave.Browser'
 run = "move-node-to-workspace 4"

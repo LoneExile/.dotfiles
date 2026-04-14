@@ -1,5 +1,5 @@
 ## Options section
-setopt correct                                                  # Auto correct mistakes
+unsetopt correct                                                # Disabled: interferes with forge's :commands
 setopt extendedglob                                             # Extended globbing. Allows using regular expressions with *
 setopt nocaseglob                                               # Case insensitive globbing
 setopt rcexpandparam                                            # Array expension with parameters

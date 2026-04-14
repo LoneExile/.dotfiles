@@ -21,6 +21,7 @@ alias tf='terraform'
 alias tg='terragrunt'
 
 alias mk='minikube'
+alias fm='open -a "FluxMarkdown"'
 
 ## TMUX
 alias t='tmux attach || tmux new-session'
@@ -111,6 +112,8 @@ pkgup() {
     # pnpm install -g get-graphql-schema
     # pnpm install -g mcp-hub
     # pnpm install -g neovim
+    # pnpm install -g @googleworkspace/cli
+    # npx skills add https://github.com/googleworkspace/cli
     # npm install -g @playwright/cli@latest
     # pnpm i -g opencode-ai@latest
 

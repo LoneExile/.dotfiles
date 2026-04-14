@@ -108,6 +108,8 @@ in {
               "steveyegge/homebrew-beads" = homebrew-steveyegge-beads;
               "telepresenceio/homebrew-telepresence" = homebrew-telepresenceio-telepresence;
               "AlexsJones/homebrew-llmfit" = homebrew-alexsjones-llmfit;
+              "jolehuit/homebrew-tap" = homebrew-jolehuit-tap;
+              "xykong/homebrew-tap" = homebrew-xykong-tap;
             };
           };
         }

@@ -8,6 +8,7 @@ fi
 plug "$HOME/.config/zsh/aliases.zsh"
 plug "$HOME/.config/zsh/options.zsh"
 plug "$HOME/.config/zsh/keybindings.zsh"
+plug "$HOME/.config/zsh/tmp.zsh"
 
 #plug "zap-zsh/supercharge"
 #plug "zap-zsh/zap-prompt"
@@ -47,6 +48,7 @@ complete -C 'aws_completer' aws
 [[ ${commands[kubectl]} ]] && source <(kubectl completion zsh)
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="/Users/le/.bun/bin:$PATH"
 
 # pnpm
 export PNPM_HOME="$HOME/Library/pnpm"
@@ -60,13 +62,13 @@ esac
 # !! Contents within this block are managed by 'forge zsh setup' !!
 # !! Do not edit manually - changes will be overwritten !!
 
-# # Add required zsh plugins if not already present
-# if [[ ! " ${plugins[@]} " =~ " zsh-autosuggestions " ]]; then
-#     plugins+=(zsh-autosuggestions)
-# fi
-# if [[ ! " ${plugins[@]} " =~ " zsh-syntax-highlighting " ]]; then
-#     plugins+=(zsh-syntax-highlighting)
-# fi
+# Add required zsh plugins if not already present
+if [[ ! " ${plugins[@]} " =~ " zsh-autosuggestions " ]]; then
+    plugins+=(zsh-autosuggestions)
+fi
+if [[ ! " ${plugins[@]} " =~ " zsh-syntax-highlighting " ]]; then
+    plugins+=(zsh-syntax-highlighting)
+fi
 
 # Load forge shell plugin (commands, completions, keybindings) if not already loaded
 if [[ -z "$_FORGE_PLUGIN_LOADED" ]]; then

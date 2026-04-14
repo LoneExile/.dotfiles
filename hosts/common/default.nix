@@ -48,7 +48,7 @@
 
   # Common programs
   programs = {
-    nix-index.enable = true;
+    nix-index.enable = false;
     zsh = {
       enable = true;
       # enableCompletion = true;

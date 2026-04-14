@@ -40,7 +40,17 @@
     unstablePkgs.yt-dlp
     unstablePkgs.get_iplayer
     unstablePkgs.colmena
-    unstablePkgs.aerospace
+    # AeroSpace with sticky-windows patch (see LoneExile/AeroSpace fork).
+    # Metadata is published by CI to the nix-release-meta branch.
+    (unstablePkgs.aerospace.overrideAttrs (_: let
+      meta = import "${inputs.aerospace-sticky-meta}/release.nix";
+    in {
+      version = meta.version;
+      src = unstablePkgs.fetchzip {
+        url = meta.url;
+        sha256 = meta.sha256;
+      };
+    }))
     unstablePkgs.colima
 
     unstablePkgs.comma
@@ -119,6 +129,7 @@
 
     brews = [
       # "bitwarden-cli"
+      "mas"
       "displayplacer"
       # "gh"
       "watch"
@@ -150,6 +161,9 @@
       "redis"
       "tea"
       "krew"
+      "argocd"
+      "jolehuit/tap/clother"
+      "rsync"
       # "steveyegge/beads/bd"
       # {
       #   name = "mole";
@@ -209,23 +223,35 @@
       "firefox"
       "wifiman"
       "zoom"
+      "gcloud-cli"
+      "mitmproxy"
+      "flux-markdown"
     ];
 
-    masApps = {
-      "Bitwarden" = 1352778147;
-      "Keynote" = 409183694;
-      "Numbers" = 409203825;
-      "Pages" = 409201541;
-      "Line" = 539883307;
-      "Amphetamine" = 937984704;
-      "Dropover" = 1355679052;
-      "Runcat" = 1429033973;
-      "WhatsApp" = 310633997;
-      # "Webull" = 1334590352;
-      "WireGuard" = 1451685025;
-      "Windows App" = 1295203466;
-      "WeChat" = 836500024;
-    };
+    # masApps removed: brew bundle re-prompts on every switch because
+    # `mas list` can't see installed MAS apps on macOS 26 (Spotlight firmlink
+    # on /Applications). Install these from the App Store manually:
+    #   Bitwarden (1352778147), Keynote (409183694), Numbers (409203825),
+    #   Pages (409201541), Line (539883307), Amphetamine (937984704),
+    #   Dropover (1355679052), Runcat (1429033973), WhatsApp (310633997),
+    #   WireGuard (1451685025), Windows App (1295203466), WeChat (836500024)
+
+    # masApps = {
+    #   "Bitwarden" = 1352778147;
+    #   "Keynote" = 409183694;
+    #   "Numbers" = 409203825;
+    #   "Pages" = 409201541;
+    #   "Line" = 539883307;
+    #   "Amphetamine" = 937984704;
+    #   "Dropover" = 1355679052;
+    #   "Runcat" = 1429033973;
+    #   "WhatsApp" = 310633997;
+    #   # "Webull" = 1334590352;
+    #   "WireGuard" = 1451685025;
+    #   "Windows App" = 1295203466;
+    #   "WeChat" = 836500024;
+    #   # "Curiota" = 1038088531;
+    # };
   };
   # Keyboard
   system.keyboard.enableKeyMapping = true;

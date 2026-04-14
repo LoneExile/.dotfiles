@@ -53,6 +53,14 @@
       url = "github:AlexsJones/homebrew-llmfit";
       flake = false;
     };
+    homebrew-jolehuit-tap = {
+      url = "github:jolehuit/homebrew-tap";
+      flake = false;
+    };
+    homebrew-xykong-tap = {
+      url = "github:xykong/homebrew-tap";
+      flake = false;
+    };
 
     # SOPS for secrets management
     sops-nix = {
@@ -73,6 +81,13 @@
     # Tokyo Night theme - always latest
     tokyonight-nvim = {
       url = "github:folke/tokyonight.nvim";
+      flake = false;
+    };
+
+    # AeroSpace sticky-windows fork: build metadata (url + sha256) is published
+    # by CI in the nix-release-meta branch of LoneExile/AeroSpace.
+    aerospace-sticky-meta = {
+      url = "github:LoneExile/AeroSpace/nix-release-meta";
       flake = false;
     };
   };

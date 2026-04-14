@@ -86,6 +86,10 @@
 
   # aerospace config and nvim config
   home.file = lib.mkMerge [
+    {
+      # Symlink oh-my-zsh so forge can find it at ~/.oh-my-zsh
+      ".oh-my-zsh".source = "${pkgs.oh-my-zsh}/share/oh-my-zsh";
+    }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
@@ -223,6 +227,11 @@
     # enableCompletion = true;
     # autosuggestion.enable = true;
     initContent = builtins.readFile ./zsh/zshrc;
+    oh-my-zsh = {
+      enable = true;
+      plugins = [];
+      theme = ""; # Starship handles the prompt
+    };
   };
 
   programs.tmux = {
@@ -296,7 +305,7 @@
   };
 
   programs.home-manager.enable = true;
-  programs.nix-index.enable = true;
+  programs.nix-index.enable = false;
 
   # programs.alacritty.enable = true;
 
