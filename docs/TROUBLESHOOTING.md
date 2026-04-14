@@ -8,6 +8,7 @@ This guide helps you diagnose and resolve common issues with the modular Nix con
 - [Installation Issues](#installation-issues)
 - [Build and Configuration Issues](#build-and-configuration-issues)
 - [Module-Specific Issues](#module-specific-issues)
+- [Python Tool Issues](#python-tool-issues)
 - [Performance Issues](#performance-issues)
 - [Debug Mode](#debug-mode)
 - [Getting Help](#getting-help)
@@ -245,6 +246,35 @@ echo "test" | gpg --clearsign
 git config --global gpg.program $(which gpg)
 ```
 
+### Neovim Plugin Issues
+
+#### Issue: nvim-treesitter-textobjects fails require check during build
+
+**Error:**
+```
+error: Cannot build '.../vimplugin-nvim-treesitter-textobjects-...'
+Require check failed for the following modules:
+  - nvim-treesitter-textobjects
+  - nvim-treesitter.textobjects.shared
+  - nvim-treesitter.textobjects.move
+  ...
+```
+
+**Cause:** The plugin requires `nvim-treesitter` to be available during the Nix require check, but it's not present at build time.
+
+**Solution:** Override the plugin to skip the require check:
+```nix
+nixCats = let
+  nvim-treesitter-textobjects-fixed = unstablePkgs.vimPlugins.nvim-treesitter-textobjects.overrideAttrs {
+    doCheck = false;
+  };
+in {
+  # ... use nvim-treesitter-textobjects-fixed instead of nvim-treesitter-textobjects
+};
+```
+
+This pattern applies to other vim plugins that fail require checks due to missing dependencies at build time.
+
 ### Shell Module Issues
 
 #### Issue: Zsh configuration not loading
@@ -263,6 +293,27 @@ source ~/.zshrc
 # Check for syntax errors in zsh config
 zsh -n ~/.zshrc
 ```
+
+## 🐍 Python Tool Issues
+
+### UV Tool Dependency Issues
+
+#### Issue: beads-mcp fails with "ModuleNotFoundError: No module named 'packaging'"
+
+**Error:**
+```
+ModuleNotFoundError: No module named 'packaging'
+```
+
+**Cause:** The `fastmcp` dependency doesn't properly declare `packaging` as a required dependency.
+
+**Solution:**
+```bash
+# Install with the missing dependency injected
+uv tool install beads-mcp --with packaging --force
+```
+
+This pattern applies to other uv tools that have missing transitive dependencies. Use `--with <package>` to inject the missing package.
 
 ## ⚡ Performance Issues
 
