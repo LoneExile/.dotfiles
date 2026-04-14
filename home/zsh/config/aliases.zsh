@@ -71,7 +71,9 @@ alias avante='nvim -c "lua vim.defer_fn(function()require(\"avante.api\").zen_mo
 alias y='yazi'
 alias mrdp='sdl-freerdp'
 
-eval "$(gh copilot alias -- zsh)"
+# Removed: `gh copilot` now forwards to the standalone @github/copilot CLI,
+# which has no `alias` subcommand. Use `copilot -i` or `copilot -p "..."`.
+# eval "$(gh copilot alias -- zsh)"
 
 ## Lazygit
 lg()

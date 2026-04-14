@@ -216,7 +216,7 @@
       "raspberry-pi-imager"
       "brave-browser"
       "trex"
-      "numi"
+      # "numi"
       "postman"
       "telegram"
       "anki"
@@ -245,6 +245,7 @@
       "mitmproxy"
       "flux-markdown"
       "thaw" # Menu bar manager 
+      ### https://antinote.io/ ###
 
     ];
 
