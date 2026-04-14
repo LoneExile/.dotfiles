@@ -41,15 +41,33 @@
     unstablePkgs.get_iplayer
     unstablePkgs.colmena
     # AeroSpace with sticky-windows patch (see LoneExile/AeroSpace fork).
-    # Metadata is published by CI to the nix-release-meta branch.
-    (unstablePkgs.aerospace.overrideAttrs (_: let
+    # Metadata (url + raw-bytes sha256) is published by CI to the
+    # nix-release-meta branch. We use fetchurl (not fetchzip) so the hash is
+    # over the raw .zip bytes — deterministic, no NAR surprises from macOS
+    # vs Nix sandbox unzip differences.
+    (unstablePkgs.aerospace.overrideAttrs (old: let
       meta = import "${inputs.aerospace-sticky-meta}/release.nix";
     in {
       version = meta.version;
-      src = unstablePkgs.fetchzip {
+      src = unstablePkgs.fetchurl {
         url = meta.url;
         sha256 = meta.sha256;
       };
+      nativeBuildInputs = (old.nativeBuildInputs or []) ++ [unstablePkgs.unzip];
+      # fetchurl gives us the raw zip as $src. Our CI zip contains a top-level
+      # dir `AeroSpace-v.../` wrapping AeroSpace.app, bin/, manpage/, etc.
+      # Skip default unpackPhase, then unzip + cd into that dir so
+      # install/postInstall (which use relative paths like `manpage/*`) work.
+      dontUnpack = true;
+      installPhase = ''
+        runHook preInstall
+        unzip -q "$src"
+        cd AeroSpace-v*/
+        mkdir -p $out/Applications $out/share
+        mv AeroSpace.app $out/Applications
+        cp -R bin $out
+        runHook postInstall
+      '';
     }))
     unstablePkgs.colima
 
@@ -219,13 +237,15 @@
       "claude"
       # "ksnip"
       "github"
-      "tigervnc-viewer"
+      "tigervnc"
       "firefox"
       "wifiman"
       "zoom"
       "gcloud-cli"
       "mitmproxy"
       "flux-markdown"
+      "thaw" # Menu bar manager 
+
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
