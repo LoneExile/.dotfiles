@@ -34,7 +34,11 @@
       flake = false;
     };
     homebrew-cask = {
-      url = "github:homebrew/homebrew-cask";
+      # Pinned: revs after 2026-04-14 add `depends_on :macos` (positional symbol)
+      # to many casks. brew 5.1.1's DSL only accepts keyword args, so loading any
+      # such cask fails with "wrong number of arguments". Unpin once upstream
+      # either fixes the cask migration or brew restores positional support.
+      url = "github:homebrew/homebrew-cask/dbbf7699db6ad627178e80a925f740d3e684f453";
       flake = false;
     };
     homebrew-bundle = {

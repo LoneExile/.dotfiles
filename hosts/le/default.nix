@@ -182,6 +182,9 @@
       "argocd"
       "jolehuit/tap/clother"
       "rsync"
+      "crane"
+      "coreutils"
+      # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it. Add `homebrew-powershell-tap` input to flake.nix to re-enable.
       # "steveyegge/beads/bd"
       # {
       #   name = "mole";
@@ -237,7 +240,7 @@
       "claude"
       # "ksnip"
       "github"
-      "tigervnc"
+      # "tigervnc"
       "firefox"
       "wifiman"
       "zoom"

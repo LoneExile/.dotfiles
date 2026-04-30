@@ -15,7 +15,41 @@ in {
     profiles ? {},
     extraSpecialArgs ? {},
   }: let
-    unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
+    # Darwin build workarounds.
+    #   - libcdio-paranoia 2.0.2: bundled src/getopt.{h,c} declare K&R-style
+    #     `extern int getopt ();` / `extern char *getenv ();` which under clang's
+    #     default -std=gnu23 mean `(void)` and conflict with the macOS SDK
+    #     prototypes. Drop the stray declarations; unistd.h/stdlib.h provide them.
+    #   - kvazaar / chromaprint: CTest invokes ffmpeg helpers that get SIGKILL'd
+    #     inside the Darwin sandbox. Skip the check phase.
+    #   - direnv: its `make test-go test-bash test-fish test-zsh` check phase
+    #     runs `test/direnv-test.zsh` which hangs forever inside the Nix sandbox
+    #     (no terminal/PROMPT_COMMAND). Skip checks.
+    darwinBuildFixes = final: prev: {
+      libcdio-paranoia = prev.libcdio-paranoia.overrideAttrs (old: {
+        postPatch =
+          (old.postPatch or "")
+          + ''
+            sed -i '/^extern int getopt ();$/d' src/getopt.h
+            sed -i '/^extern char \*getenv ();$/d' src/getopt.c
+          '';
+      });
+      kvazaar = prev.kvazaar.overrideAttrs (_: {
+        doCheck = !prev.stdenv.hostPlatform.isDarwin;
+      });
+      chromaprint = prev.chromaprint.overrideAttrs (_: {
+        doCheck = !prev.stdenv.hostPlatform.isDarwin;
+      });
+      direnv = prev.direnv.overrideAttrs (_: {
+        doCheck = !prev.stdenv.hostPlatform.isDarwin;
+      });
+    };
+
+    unstablePkgs = import inputs.nixpkgs-unstable {
+      inherit system;
+      config.allowUnfree = true;
+      overlays = [darwinBuildFixes];
+    };
 
     # Load host-specific configuration if it exists
     hostConfigPath = ../hosts/${hostname};
@@ -55,6 +89,7 @@ in {
               nodejs = prev.nodejs_22;
               nodejs-slim = prev.nodejs-slim_22;
             })
+            darwinBuildFixes
             inputs.neovim-nightly-overlay.overlays.default
           ];
 

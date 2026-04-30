@@ -121,6 +121,7 @@ pkgup() {
 
     # pnpm self-update
     claude update
+    omc update
     pnpm update -g --latest
     uv tool upgrade --all
     # gh extension upgrade --all
