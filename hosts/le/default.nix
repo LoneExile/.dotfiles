@@ -246,9 +246,8 @@
       "gcloud-cli"
       "mitmproxy"
       "flux-markdown"
-      "thaw" # Menu bar manager 
+      "thaw" # Menu bar manager
       ### https://antinote.io/ ###
-
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
