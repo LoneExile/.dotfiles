@@ -15,7 +15,6 @@
 
   imports = [
     ../common/default.nix
-    # ../common/profiles/personal.nix # Select personal profile for this host
   ];
 
   # Host identification

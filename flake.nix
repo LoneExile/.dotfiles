@@ -282,31 +282,6 @@
           echo "✅ System update complete!"
         '';
 
-        # Test runner script
-        run-tests = pkgs.writeShellScriptBin "run-tests" ''
-          set -euo pipefail
-
-          # Simple test runner for modular Nix configuration
-          echo "🧪 Running Nix configuration tests..."
-
-          # Run flake check
-          echo "Running flake check..."
-          nix flake check --no-build
-
-          # Run unit tests if available
-          if nix eval .#tests.${system}.unit --apply "x: x ? runTests" 2>/dev/null; then
-            echo "Running unit tests..."
-            nix run .#tests.${system}.unit.runTests
-          fi
-
-          # Run integration tests if available
-          if nix eval .#tests.${system}.integration --apply "x: x ? runTests" 2>/dev/null; then
-            echo "Running integration tests..."
-            nix run .#tests.${system}.integration.runTests
-          fi
-
-          echo "✅ All tests completed!"
-        '';
       }
     );
 
@@ -334,17 +309,10 @@
       };
     };
 
-    # Testing infrastructure
-    tests = forAllSystems (
-      system:
-        import ./tests {inherit inputs outputs system lib;}
-    );
-
     # Checks for CI/CD
     checks = forAllSystems (
       system: let
         pkgs = nixpkgsFor system;
-        testSuite = self.tests.${system};
       in {
         # Flake check
         flake-check = pkgs.runCommand "flake-check" {} ''
@@ -364,20 +332,6 @@
         lint-check = pkgs.runCommand "lint-check" {} ''
           cd ${./.}
           ${pkgs.statix}/bin/statix check .
-          touch $out
-        '';
-
-        # Unit tests - simplified for now
-        unit-tests = pkgs.runCommand "unit-tests" {} ''
-          echo "Unit tests would run here"
-          echo "Test infrastructure is available"
-          touch $out
-        '';
-
-        # Integration tests - simplified for now
-        integration-tests = pkgs.runCommand "integration-tests" {} ''
-          echo "Integration tests would run here"
-          echo "Test infrastructure is available"
           touch $out
         '';
       }
