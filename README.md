@@ -36,16 +36,25 @@ Before installing, ensure you have:
    cd ~/.dotfiles
    ```
 
-3. **Review and customize** the configuration:
+3. **Add your host**:
    ```bash
-   # Copy the example host configuration
-   cp hosts/_template/default.nix hosts/$(hostname)/default.nix
-   
-   # Edit the new host configuration
+   # Copy the host template
+   cp -r hosts/_template hosts/$(hostname)
+
+   # Replace HOSTNAME / USERNAME / "Full Name" with your values
    $EDITOR hosts/$(hostname)/default.nix
-   
-   # Update flake.nix to include your host
-   # Add your hostname to darwinConfigurations
+   ```
+
+   Then register the host in `flake.nix` under `darwinConfigurations`:
+   ```nix
+   darwinConfigurations = {
+     "${YOUR_HOSTNAME}" = lib.mkDarwin {
+       hostname = "${YOUR_HOSTNAME}";
+       username = "${YOUR_USERNAME}";
+       system   = "aarch64-darwin";   # or "x86_64-darwin"
+       profiles = { development = true; personal = true; };
+     };
+   };
    ```
 
 4. **Build and activate** the configuration:
@@ -60,123 +69,54 @@ Before installing, ensure you have:
    just switch
    ```
 
-### Quick Configuration Examples
+### Configuration Pattern
 
-#### Minimal Setup
-```nix
-# hosts/your-hostname/default.nix
-{
-  modules = {
-    darwin.system.enable = true;
-    home.shell.zsh.enable = true;
-  };
-  
-  profiles = {
-    minimal = true;
-  };
-}
-```
-
-#### Development Environment
-```nix
-# hosts/your-hostname/default.nix
-{
-  modules = {
-    darwin = {
-      system.enable = true;
-      homebrew.enable = true;
-    };
-    home = {
-      shell.zsh.enable = true;
-      development = {
-        git.enable = true;
-        editors.enable = true;
-        languages.enable = true;
-      };
-    };
-  };
-  
-  profiles = {
-    development = true;
-    personal = true;
-  };
-}
-```
-
-#### Work Environment
-```nix
-# hosts/your-hostname/default.nix
-{
-  modules = {
-    darwin = {
-      system.enable = true;
-      homebrew.enable = true;
-      security.enable = true;
-    };
-    home = {
-      shell.zsh.enable = true;
-      development.git.enable = true;
-      desktop.productivity.enable = true;
-    };
-  };
-  
-  profiles = {
-    work = true;
-    development = true;
-  };
-}
-```
+Each host file (`hosts/<name>/default.nix`) contains the actual customization
+(packages, Homebrew brews/casks, macOS defaults, activation scripts). Profiles
+are passed as boolean toggles to `lib.mkDarwin` in `flake.nix`. See
+`hosts/le/default.nix` for a working example with Homebrew, fonts, and macOS
+preferences.
 
 ## 📁 Structure
 
 This configuration is organized into the following directories:
 
 ```
-├── README.md                     # This file
-├── flake.nix                     # Main flake configuration
-├── flake.lock                    # Locked dependencies
-├── lib/                          # Reusable library functions
-│   ├── default.nix              # Main library exports
-│   ├── builders.nix             # System builders (mkDarwin, etc.)
-│   └── utils.nix                # Utility functions
-├── modules/                      # Feature modules organized by category
-│   ├── darwin/                  # macOS-specific modules
-│   │   ├── system.nix          # Core system settings
-│   │   ├── homebrew.nix        # Homebrew configuration
-│   │   ├── security.nix        # Security settings
-│   │   └── defaults.nix        # macOS preferences
-│   ├── home/                   # Home Manager modules
-│   │   ├── shell/              # Shell configuration
-│   │   ├── development/        # Development tools
-│   │   ├── desktop/            # Desktop applications
-│   │   └── security/           # Security tools
-│   └── shared/                 # Cross-platform modules
-├── profiles/                   # Predefined configuration profiles
-│   ├── minimal.nix            # Essential tools only
-│   ├── development.nix        # Full development environment
-│   ├── work.nix              # Work-specific configuration
-│   └── personal.nix          # Personal use optimization
-├── hosts/                     # Host-specific configurations
-│   ├── common/               # Shared host configuration
-│   └── your-hostname/        # Host-specific overrides
-├── config/                   # Configuration files
-├── docs/                     # Documentation
-├── scripts/                  # Utility scripts
-└── secrets/                  # SOPS encrypted secrets
+├── README.md          # This file
+├── flake.nix          # Main flake configuration; darwinConfigurations live here
+├── flake.lock         # Locked dependencies
+├── justfile           # Common commands (just build, just switch, just home, ...)
+├── lib/               # Reusable library functions
+│   ├── default.nix    # Main library exports (mkDarwin, utils, ...)
+│   ├── builders.nix   # System builders
+│   └── utils.nix      # Utility functions
+├── profiles/          # Profile toggles consumed by lib.mkDarwin
+│   ├── development.nix
+│   └── personal.nix
+├── hosts/             # Host-specific configurations
+│   ├── _template/     # Starter template for new hosts
+│   ├── common/        # Shared base config imported by every host
+│   └── le/            # Personal MacBook host
+├── home/              # Home Manager config (default.nix used by every user)
+├── config/            # Auxiliary configuration files
+├── docs/              # Documentation
+├── scripts/           # Utility scripts
+├── secrets/           # SOPS-encrypted secrets
+└── templates/         # Independent flake templates for new projects
 ```
 
 ## 🎯 Profiles
 
-Choose from predefined profiles that suit your use case:
+Profile toggles enable curated bundles of settings via `lib.mkDarwin`.
 
-| Profile | Description | Includes |
-|---------|-------------|----------|
-| **minimal** | Essential tools only | Basic shell, core utilities |
-| **development** | Full development environment | Git, editors, languages, containers |
-| **work** | Work-specific configuration | Productivity apps, security tools |
-| **personal** | Personal use optimization | Media tools, personal apps |
+| Profile | Description |
+|---------|-------------|
+| **development** | Full development environment |
+| **personal** | Personal use optimization |
 
-Profiles can be combined - for example, you can enable both `development` and `work` profiles.
+Profiles can be combined — see `flake.nix` for how `darwinConfigurations.le`
+enables `development` and `personal` together. Add new profiles as `.nix`
+files under `profiles/` to expose new toggles.
 
 ## 🔧 Common Tasks
 
@@ -221,7 +161,8 @@ nix develop .#docs      # Documentation tools
 ## 📚 Documentation
 
 - **[Setup Instructions](docs/SETUP.md)** - Detailed installation and configuration guide
-- **[Module Documentation](docs/MODULES.md)** - Complete module reference and examples
+- **[Host Template README](hosts/_template/README.md)** - Adding a new MacBook
+- **[Lint Exemptions](docs/EXEMPTIONS.md)** - Documented baseline lint warnings
 - **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Contributing](docs/CONTRIBUTING.md)** - Development workflows and guidelines
 
