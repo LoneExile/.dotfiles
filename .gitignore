@@ -5,6 +5,8 @@ com.googlecode.iterm2.plist
 .DS_Store
 
 test-results
+.kiro
+.playwright
 
 *.md
 !README.md
