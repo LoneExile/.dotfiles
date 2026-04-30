@@ -6,9 +6,6 @@
 }: let
   builders = import ./builders.nix {inherit inputs outputs stateVersion;};
   utils = import ./utils.nix {inherit inputs outputs stateVersion;};
-  validation = import ./validation.nix {inherit inputs outputs stateVersion;};
-  errorHandling = import ./error-handling.nix {inherit inputs outputs stateVersion;};
-  integration = import ./integration.nix {inherit inputs outputs stateVersion;};
 in {
   # Enhanced builders (using the new modular system)
   inherit
@@ -29,34 +26,4 @@ in {
     debugUtils
     moduleUtils
     ;
-
-  # Enhanced validation system
-  inherit
-    (validation)
-    moduleValidation
-    configValidation
-    validationAssertions
-    ;
-
-  # Error handling and diagnostics
-  inherit
-    (errorHandling)
-    errorHandling
-    diagnostics
-    debug
-    recovery
-    ;
-
-  # Integration utilities
-  inherit
-    (integration)
-    mkValidatedDarwin
-    withValidation
-    safeImportModule
-    checkConfigHealth
-    devUtils
-    ;
-
-  # Integration recovery utilities (renamed to avoid conflict)
-  integrationRecovery = integration.recovery;
 }

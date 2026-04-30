@@ -7,13 +7,6 @@
   # Common configuration shared across all hosts
   # This file contains base settings that apply to all machines
 
-  # Import all module categories
-  imports = [
-    # Temporarily disabled to fix circular dependency
-    # ../../modules/darwin
-    # ../../modules/shared
-  ];
-
   # Common system settings
   system = {
     stateVersion = lib.mkDefault 5;
