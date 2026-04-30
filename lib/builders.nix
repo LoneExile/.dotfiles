@@ -9,7 +9,7 @@ in {
   # Enhanced mkDarwin function with modular system support
   mkDarwin = {
     hostname,
-    username ? "le",
+    username,
     system ? "aarch64-darwin",
     modules ? [],
     profiles ? {},
@@ -119,7 +119,7 @@ in {
               }
               // extraSpecialArgs;
             users.${username} = {
-              imports = [../home/${username}.nix];
+              imports = [../home/default.nix];
 
               # Home Manager state version
               home.stateVersion = "25.11";

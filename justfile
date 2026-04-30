@@ -27,10 +27,13 @@ update:
 # Update system configuration (flake update + rebuild)
 update-system target_host=hostname: update (switch target_host)
 
-# Build and activate home configuration only  
+# Build and activate home configuration only.
+# Convention: host name = primary username (e.g. host `le` → user `le`).
+# If a future host needs a different username, override target_host with the
+# username, or replace this recipe with one that reads system.primaryUser.
 home target_host=hostname:
   @echo "Building home config for {{target_host}}..."
-  nix build ".#darwinConfigurations.{{target_host}}.config.home-manager.users.le.home.activationPackage"
+  nix build ".#darwinConfigurations.{{target_host}}.config.home-manager.users.{{target_host}}.home.activationPackage"
   @echo "Activating home configuration..."
   ./result/activate
 
