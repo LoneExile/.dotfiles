@@ -113,8 +113,8 @@
       "slack"
       "spotify"
       "tailscale-app"
-      "nordvpn"
-      "mtmr"
+      # "nordvpn"  # cask URL stale/blocked (NordVPN-OpenVPN/10.0.3 404s); install manually if needed
+      # "mtmr"     # cask URL stale (mtmr.app DMG); install manually if needed
       "raspberry-pi-imager"
       "brave-browser"
       "trex"
