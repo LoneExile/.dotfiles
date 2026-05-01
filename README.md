@@ -27,7 +27,9 @@ Before installing, ensure you have:
 
 1. **Install Nix** (if not already installed):
    ```bash
-   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --prefer-upstream-nix
+
+   ## and then check system update
    ```
 
 2. **Clone this repository**:
@@ -67,6 +69,8 @@ Before installing, ensure you have:
    
    # Or use the convenient just command
    just switch
+
+   mise install
    ```
 
 ### Configuration Pattern
