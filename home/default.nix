@@ -145,7 +145,7 @@
         python = "3";
         rust = "latest";
         uv = "latest";
-        pnpm = "latest";
+        "npm:pnpm" = "latest";
         yarn = "latest";
         deno = "latest";
         bun = "latest";

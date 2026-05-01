@@ -150,22 +150,22 @@
     #   Dropover (1355679052), Runcat (1429033973), WhatsApp (310633997),
     #   WireGuard (1451685025), Windows App (1295203466), WeChat (836500024)
 
-    masApps = {
-      "Bitwarden" = 1352778147;
-      "Keynote" = 409183694;
-      "Numbers" = 409203825;
-      "Pages" = 409201541;
-      "Line" = 539883307;
-      "Amphetamine" = 937984704;
-      "Dropover" = 1355679052;
-      "Runcat" = 1429033973;
-      "WhatsApp" = 310633997;
-      # "Webull" = 1334590352;
-      "WireGuard" = 1451685025;
-      "Windows App" = 1295203466;
-      "WeChat" = 836500024;
-      # "Curiota" = 1038088531;
-    };
+    # masApps = {
+    #   "Bitwarden" = 1352778147;
+    #   "Keynote" = 409183694;
+    #   "Numbers" = 409203825;
+    #   "Pages" = 409201541;
+    #   "Line" = 539883307;
+    #   "Amphetamine" = 937984704;
+    #   "Dropover" = 1355679052;
+    #   "Runcat" = 1429033973;
+    #   "WhatsApp" = 310633997;
+    #   # "Webull" = 1334590352;
+    #   "WireGuard" = 1451685025;
+    #   "Windows App" = 1295203466;
+    #   "WeChat" = 836500024;
+    #   # "Curiota" = 1038088531;
+    # };
   };
 
   # Personal macOS preferences

@@ -105,10 +105,8 @@ dk() {
 }
 
 pkgup() {
-    # pnpm install -g @gsong/ccmcp
     # pnpm install -g @anthropic-ai/claude-code
     # pnpm install -g @dbml/cli
-    # pnpm install -g @fission-ai/openspec
     # pnpm install -g @github/copilot
     # pnpm install -g @google/gemini-cli
     # pnpm install -g get-graphql-schema
@@ -118,6 +116,7 @@ pkgup() {
     # npx skills add https://github.com/googleworkspace/cli
     # npm install -g @playwright/cli@latest
     # pnpm i -g opencode-ai@latest
+    # npm i -g oh-my-claude-sisyphus@latest
 
     # pnpm self-update
     claude update
