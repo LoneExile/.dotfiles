@@ -388,6 +388,34 @@
       "*" = {
         user = "root";
       };
+      "jumphost_server" = {
+        hostname = "192.168.50.29";
+        user = "jumphost";
+        identityFile = "~/.ssh/id_ed25519_unit_px";
+      };
+      "jumphost_server_lab" = {
+        hostname = "192.168.50.12";
+        user = "ubuntu";
+        identityFile = "~/.ssh/id_crypt";
+      };
+      "pxc_lab" = {
+        hostname = "10.0.10.180";
+        user = "root";
+        identityFile = "~/.ssh/id_crypt";
+      };
+      "th-dc" = {
+        hostname = "10.159.0.63";
+        user = "root";
+      };
+      "dxc.0dl.me" = {
+        proxyCommand = "cloudflared access ssh --hostname %h";
+        user = "root";
+      };
+      "git.cloud.local" = {
+        hostname = "10.159.0.65";
+        user = "git";
+        identityFile = "~/.ssh/id_ed25519";
+      };
     };
   };
 
