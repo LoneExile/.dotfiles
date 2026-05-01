@@ -132,6 +132,15 @@
           personal = true;
         };
       };
+      lex = lib.mkDarwin {
+        hostname = "lex";
+        username = "lex";
+        system = defaultSystem;
+        profiles = {
+          development = true;
+          personal = true;
+        };
+      };
     };
 
     # Development shells for contributors
