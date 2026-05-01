@@ -83,6 +83,13 @@ in {
         {
           networking.hostName = hostname;
 
+          # Auto-derive user identity from the username arg so host files
+          # don't have to. Host files may still override `description`.
+          users.users.${username} = {
+            home = "/Users/${username}";
+          };
+          system.primaryUser = username;
+
           # Add nodejs overlay to fix build issues
           nixpkgs.overlays = [
             (final: prev: {

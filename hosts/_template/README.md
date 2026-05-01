@@ -5,24 +5,27 @@ Starter template for adding a new MacBook to this flake.
 ## Add a host in 4 steps
 
 ```bash
-# 1. Copy this directory
-cp -r hosts/_template hosts/$(hostname)
+# 1. Copy this directory using your new host's name
+cp -r hosts/_template hosts/<hostname>
 
-# 2. Replace HOSTNAME / USERNAME / "Full Name" in default.nix
-$EDITOR hosts/$(hostname)/default.nix
+# 2. Edit default.nix:
+#    - replace USERNAME placeholder in users.users.<USERNAME>.description
+#    - replace HOSTNAME in networking.computerName
+$EDITOR hosts/<hostname>/default.nix
 
-# 3. Register the host in flake.nix under darwinConfigurations
-#    e.g.
+# 3. Register the host in flake.nix under darwinConfigurations:
 #      "<hostname>" = lib.mkDarwin {
 #        hostname = "<hostname>";
 #        username = "<username>";
 #        system   = "aarch64-darwin";
 #        profiles = { development = true; personal = true; };
 #      };
+#    lib.mkDarwin auto-wires networking.hostName, users.users.<username>.home,
+#    and system.primaryUser from these args — no further plumbing needed.
 
 # 4. Build & switch
-just build $(hostname)
-just switch $(hostname)
+just build <hostname>
+just switch <hostname>
 ```
 
 ## What you get

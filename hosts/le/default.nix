@@ -19,18 +19,12 @@
     ../common/default.nix
   ];
 
-  # Host identification
-  networking.hostName = "le";
+  # Host identification (hostname is set automatically from `lib.mkDarwin`'s
+  # hostname arg; computerName is what shows in System Settings → About).
   networking.computerName = "le";
 
-  # User configuration (host owner)
-  users.users.le = {
-    home = "/Users/le";
-    description = "Apinant U-suwantim";
-  };
-
-  # Set primary user for system-wide activation
-  system.primaryUser = "le";
+  # Owner display name (username/home/primaryUser are auto-set by mkDarwin)
+  users.users.le.description = "Apinant U-suwantim";
 
   # Set this MacBook's built-in display to its native resolution.
   # mode 13 (2560x1600) is correct for THIS machine — different MacBook =

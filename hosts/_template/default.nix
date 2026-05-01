@@ -29,18 +29,12 @@
     ../common/default.nix
   ];
 
-  # Host identification
-  networking.hostName = "HOSTNAME";
-  networking.computerName = "HOSTNAME";
-
-  # User configuration
-  users.users.USERNAME = {
-    home = "/Users/USERNAME";
-    description = "Full Name";
-  };
-
-  # Set primary user for system-wide activation
-  system.primaryUser = "USERNAME";
+  # `networking.hostName`, `users.users.<username>.home`, and
+  # `system.primaryUser` are set automatically by lib.mkDarwin from the
+  # hostname/username args you pass in flake.nix. You only need to set
+  # display-name overrides like the two below.
+  networking.computerName = "HOSTNAME"; # what shows in System Settings → About
+  users.users.USERNAME.description = "Full Name";
 
   # Host-specific system packages (optional)
   environment.systemPackages = with pkgs; [
