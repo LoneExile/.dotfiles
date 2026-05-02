@@ -140,6 +140,8 @@
       "mitmproxy"
       "flux-markdown"
       "thaw" # menu bar manager
+      "siyuan"
+      "shottr"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because

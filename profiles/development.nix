@@ -68,6 +68,8 @@
     unstablePkgs.deadnix
     unstablePkgs.alejandra
 
+    unstablePkgs.qpdf
+
     # Stable
     packer
     obsidian
