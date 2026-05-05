@@ -69,6 +69,7 @@
     unstablePkgs.alejandra
 
     unstablePkgs.qpdf
+    # unstablePkgs.samply  # samply is a command line CPU profiler
 
     # Stable
     packer

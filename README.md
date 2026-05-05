@@ -30,6 +30,7 @@ Before installing, ensure you have:
    curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --prefer-upstream-nix
 
    ## and then check system update
+   xcode-select --install
    ```
 
 2. **Clone this repository**:

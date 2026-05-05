@@ -89,6 +89,19 @@
       "rsync"
       "crane"
       "coreutils"
+      "mactop"
+
+      # Rime/Squirrel build deps
+      "cmake"
+      "boost"
+      "leveldb"
+      "marisa"
+      "yaml-cpp"
+      "opencc"
+      "googletest"
+      "pkgconf"
+      "ninja"
+
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
       # { name = "mole"; args = ["HEAD"]; }
@@ -142,6 +155,8 @@
       "thaw" # menu bar manager
       "siyuan"
       "shottr"
+      "squirrel-app"
+      "keepingyouawake"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
