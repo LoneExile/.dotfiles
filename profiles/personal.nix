@@ -90,6 +90,7 @@
       "crane"
       "coreutils"
       "mactop"
+      "glog"
 
       # Rime/Squirrel build deps
       "cmake"
@@ -156,7 +157,7 @@
       "siyuan"
       "shottr"
       "squirrel-app"
-      "keepingyouawake"
+      "bruno"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because

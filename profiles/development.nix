@@ -67,6 +67,7 @@
     unstablePkgs.statix
     unstablePkgs.deadnix
     unstablePkgs.alejandra
+    unstablePkgs.jujutsu
 
     unstablePkgs.qpdf
     # unstablePkgs.samply  # samply is a command line CPU profiler

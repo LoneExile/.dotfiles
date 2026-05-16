@@ -1,4 +1,4 @@
-## Aliases section
+# Aliases section
 alias cp="cp -i"                                                # Confirm before overwriting something
 alias mv="mv -i"                                                # Confirm before overwriting something
 alias df='df -h'                                                # Human-readable sizes
@@ -116,7 +116,8 @@ pkgup() {
     # npx skills add https://github.com/googleworkspace/cli
     # npm install -g @playwright/cli@latest
     # pnpm i -g opencode-ai@latest
-    # npm i -g oh-my-claude-sisyphus@latest
+    # pnpm install -g @usebruno/cli
+    # pnpx impeccable skills update
 
     # pnpm self-update
     claude update
