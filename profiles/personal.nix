@@ -158,6 +158,8 @@
       "shottr"
       "squirrel-app"
       "bruno"
+      "android-studio"
+      "bluestacks"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because

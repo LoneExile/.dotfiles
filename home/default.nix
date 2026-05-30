@@ -411,6 +411,15 @@
         proxyCommand = "cloudflared access ssh --hostname %h";
         user = "root";
       };
+
+      "hs.0dl.me" = {
+        proxyCommand = "cloudflared access ssh --hostname %h";
+        user = "ubuntu";
+      };
+      "sxc.voidbox.io" = {
+        proxyCommand = "cloudflared access ssh --hostname %h";
+        user = "root";
+      };
       "git.cloud.local" = {
         hostname = "10.159.0.65";
         user = "git";

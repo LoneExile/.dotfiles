@@ -118,6 +118,7 @@ pkgup() {
     # pnpm i -g opencode-ai@latest
     # pnpm install -g @usebruno/cli
     # pnpx impeccable skills update
+    # npm i -g @colbymchenry/codegraph
 
     # pnpm self-update
     claude update
