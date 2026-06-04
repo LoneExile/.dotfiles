@@ -160,6 +160,7 @@
       "bruno"
       "android-studio"
       "bluestacks"
+      "rustdesk"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
