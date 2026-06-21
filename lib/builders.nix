@@ -153,6 +153,19 @@ in {
               "jolehuit/homebrew-tap" = homebrew-jolehuit-tap;
               "xykong/homebrew-tap" = homebrew-xykong-tap;
             };
+
+            # Declarative tap trust for third-party taps (required by newer Homebrew).
+            # Without this, `brew bundle` refuses to load casks/formulae from untrusted taps.
+            # See: https://docs.brew.sh/Tap-Trust
+            trust = {
+              taps = [
+                "steveyegge/beads"
+                "telepresenceio/telepresence"
+                "AlexsJones/llmfit"
+                "jolehuit/tap"
+                "xykong/tap"
+              ];
+            };
           };
         }
       ];

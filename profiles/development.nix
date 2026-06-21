@@ -71,6 +71,8 @@
 
     unstablePkgs.qpdf
     # unstablePkgs.samply  # samply is a command line CPU profiler
+    unstablePkgs.aria2
+    unstablePkgs.shaka-packager
 
     # Stable
     packer

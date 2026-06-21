@@ -376,54 +376,53 @@
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
-    extraConfig = ''
-      StrictHostKeyChecking no
-    '';
-    matchBlocks = {
-      # ~/.ssh/config
-      "github.com" = {
-        hostname = "ssh.github.com";
-        port = 443;
-      };
+    settings = {
+      # Global defaults (Host *)
       "*" = {
-        user = "root";
-      };
-      "jumphost_server" = {
-        hostname = "192.168.50.29";
-        user = "jumphost";
-        identityFile = "~/.ssh/id_ed25519_unit_px";
-      };
-      "jumphost_server_lab" = {
-        hostname = "192.168.50.12";
-        user = "ubuntu";
-        identityFile = "~/.ssh/id_crypt";
-      };
-      "pxc_lab" = {
-        hostname = "10.0.10.180";
-        user = "root";
-        identityFile = "~/.ssh/id_crypt";
-      };
-      "th-dc" = {
-        hostname = "10.159.0.63";
-        user = "root";
-      };
-      "dxc.0dl.me" = {
-        proxyCommand = "cloudflared access ssh --hostname %h";
-        user = "root";
+        User = "root";
+        StrictHostKeyChecking = "no";
       };
 
+      # ~/.ssh/config
+      "github.com" = {
+        HostName = "ssh.github.com";
+        Port = 443;
+      };
+      "jumphost_server" = {
+        HostName = "192.168.50.29";
+        User = "jumphost";
+        IdentityFile = "~/.ssh/id_ed25519_unit_px";
+      };
+      "jumphost_server_lab" = {
+        HostName = "192.168.50.12";
+        User = "ubuntu";
+        IdentityFile = "~/.ssh/id_crypt";
+      };
+      "pxc_lab" = {
+        HostName = "10.0.10.180";
+        User = "root";
+        IdentityFile = "~/.ssh/id_crypt";
+      };
+      "th-dc" = {
+        HostName = "10.159.0.63";
+        User = "root";
+      };
+      "dxc.0dl.me" = {
+        ProxyCommand = "cloudflared access ssh --hostname %h";
+        User = "root";
+      };
       "hs.0dl.me" = {
-        proxyCommand = "cloudflared access ssh --hostname %h";
-        user = "ubuntu";
+        ProxyCommand = "cloudflared access ssh --hostname %h";
+        User = "ubuntu";
       };
       "sxc.voidbox.io" = {
-        proxyCommand = "cloudflared access ssh --hostname %h";
-        user = "root";
+        ProxyCommand = "cloudflared access ssh --hostname %h";
+        User = "root";
       };
       "git.cloud.local" = {
-        hostname = "10.159.0.65";
-        user = "git";
-        identityFile = "~/.ssh/id_ed25519";
+        HostName = "10.159.0.65";
+        User = "git";
+        IdentityFile = "~/.ssh/id_ed25519";
       };
     };
   };

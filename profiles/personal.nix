@@ -152,7 +152,7 @@
       "zoom"
       "gcloud-cli"
       "mitmproxy"
-      "flux-markdown"
+      "xykong/tap/flux-markdown"
       "thaw" # menu bar manager
       "siyuan"
       "shottr"
