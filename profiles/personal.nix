@@ -46,10 +46,14 @@
     enable = true;
     onActivation = {
       cleanup = "zap";
-      autoUpdate = true;
+      # Do not auto-update taps here. Taps are pinned via nix-homebrew flake inputs
+      # and updated with `nix flake update`. Running `brew update` can cause
+      # permission errors on the read-only tap checkouts from the nix store.
+      autoUpdate = false;
       upgrade = true;
     };
-    global.autoUpdate = true;
+    # Disable Homebrew's own auto-update. Updates are driven by the flake lock.
+    global.autoUpdate = false;
 
     taps = builtins.attrNames config.nix-homebrew.taps;
 
@@ -62,7 +66,7 @@
       "wireguard-tools"
       "huggingface-cli"
       "libpq"
-      "postgresql"
+      "postgresql@18"
       "git-lfs"
       "k3sup"
       "tokei"
@@ -102,6 +106,7 @@
       "googletest"
       "pkgconf"
       "ninja"
+      "tuxedo"
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
@@ -161,6 +166,7 @@
       "android-studio"
       "bluestacks"
       "rustdesk"
+      "zennotes/tap/zennotes"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because

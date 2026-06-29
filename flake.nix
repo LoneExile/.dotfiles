@@ -65,6 +65,10 @@
       url = "github:xykong/homebrew-tap";
       flake = false;
     };
+    homebrew-zennotes-tap = {
+      url = "github:zennotes/homebrew-tap";
+      flake = false;
+    };
 
     # SOPS for secrets management
     sops-nix = {

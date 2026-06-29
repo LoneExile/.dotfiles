@@ -149,6 +149,7 @@
         yarn = "latest";
         deno = "latest";
         bun = "latest";
+        herdr = "latest";
       };
       settings = {
         not_found_auto_install = true;
@@ -227,6 +228,12 @@
     # enableCompletion = true;
     # autosuggestion.enable = true;
     initContent = builtins.readFile ./zsh/zshrc;
+    # mise activates only in interactive shells (.zshrc). Login/non-interactive
+    # shells (`zsh -lc`) used by GUI apps — e.g. ZenNotes' Raycast/CLI installer
+    # probing for node/npm — skip .zshrc, so expose mise's shims here too.
+    profileExtra = ''
+      export PATH="$HOME/.local/share/mise/shims:$PATH"
+    '';
     oh-my-zsh = {
       enable = true;
       plugins = [];

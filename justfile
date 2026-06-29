@@ -14,9 +14,13 @@ build target_host=hostname flags="":
 [macos]
 trace target_host=hostname: (build target_host "--show-trace")
 
+# Prompt for the sudo password up front, before the build runs
+_sudo:
+  @sudo -v
+
 # Build the nix-darwin configuration and switch to it
 [macos]
-switch target_host=hostname: (build target_host)
+switch target_host=hostname: _sudo (build target_host)
   @echo "switching to new config for {{target_host}}"
   sudo ./result/sw/bin/darwin-rebuild switch --flake ".#{{target_host}}"
 

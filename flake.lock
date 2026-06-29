@@ -204,6 +204,22 @@
         "type": "github"
       }
     },
+    "homebrew-zennotes-tap": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782312118,
+        "narHash": "sha256-5u3VOPjZGJ7dq2+DJWG5gLRn9kPaWLyo1i2XGzRu6jE=",
+        "owner": "zennotes",
+        "repo": "homebrew-tap",
+        "rev": "760955916f7f1bc960641ff3a8bc0ef636e12f11",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zennotes",
+        "repo": "homebrew-tap",
+        "type": "github"
+      }
+    },
     "neovim-nightly-overlay": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -369,6 +385,7 @@
         "homebrew-steveyegge-beads": "homebrew-steveyegge-beads",
         "homebrew-telepresenceio-telepresence": "homebrew-telepresenceio-telepresence",
         "homebrew-xykong-tap": "homebrew-xykong-tap",
+        "homebrew-zennotes-tap": "homebrew-zennotes-tap",
         "neovim-nightly-overlay": "neovim-nightly-overlay",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",

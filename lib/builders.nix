@@ -152,6 +152,7 @@ in {
               "AlexsJones/homebrew-llmfit" = homebrew-alexsjones-llmfit;
               "jolehuit/homebrew-tap" = homebrew-jolehuit-tap;
               "xykong/homebrew-tap" = homebrew-xykong-tap;
+              "zennotes/homebrew-tap" = homebrew-zennotes-tap;
             };
 
             # Declarative tap trust for third-party taps (required by newer Homebrew).
@@ -164,6 +165,7 @@ in {
                 "AlexsJones/llmfit"
                 "jolehuit/tap"
                 "xykong/tap"
+                "zennotes/tap"
               ];
             };
           };
