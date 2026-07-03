@@ -91,6 +91,22 @@
         "type": "github"
       }
     },
+    "homebrew-barutsrb-tap": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782718505,
+        "narHash": "sha256-JKhc1sVj3d3Dm3h9pfiC0fNI33bpbYIx+WH8/U0Juww=",
+        "owner": "BarutSRB",
+        "repo": "homebrew-tap",
+        "rev": "a99c35bf4b5bc231852eeba8dc98f39b97c8091a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "BarutSRB",
+        "repo": "homebrew-tap",
+        "type": "github"
+      }
+    },
     "homebrew-bundle": {
       "flake": false,
       "locked": {
@@ -378,6 +394,7 @@
         "aerospace-sticky-meta": "aerospace-sticky-meta",
         "home-manager": "home-manager",
         "homebrew-alexsjones-llmfit": "homebrew-alexsjones-llmfit",
+        "homebrew-barutsrb-tap": "homebrew-barutsrb-tap",
         "homebrew-bundle": "homebrew-bundle",
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",

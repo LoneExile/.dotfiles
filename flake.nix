@@ -69,6 +69,10 @@
       url = "github:zennotes/homebrew-tap";
       flake = false;
     };
+    homebrew-barutsrb-tap = {
+      url = "github:BarutSRB/homebrew-tap";
+      flake = false;
+    };
 
     # SOPS for secrets management
     sops-nix = {

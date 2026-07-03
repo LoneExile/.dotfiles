@@ -153,6 +153,7 @@ in {
               "jolehuit/homebrew-tap" = homebrew-jolehuit-tap;
               "xykong/homebrew-tap" = homebrew-xykong-tap;
               "zennotes/homebrew-tap" = homebrew-zennotes-tap;
+              "BarutSRB/homebrew-tap" = homebrew-barutsrb-tap;
             };
 
             # Declarative tap trust for third-party taps (required by newer Homebrew).
@@ -166,6 +167,7 @@ in {
                 "jolehuit/tap"
                 "xykong/tap"
                 "zennotes/tap"
+                "BarutSRB/tap"
               ];
             };
           };

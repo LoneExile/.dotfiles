@@ -167,6 +167,7 @@
       "bluestacks"
       "rustdesk"
       "zennotes/tap/zennotes"
+      "BarutSRB/tap/omniwm"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
