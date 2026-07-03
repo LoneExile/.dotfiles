@@ -52,6 +52,10 @@ export PATH="$HOME/.bun/bin:$PATH"
 export PATH="$HOME/bin:$PATH"
 export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"
 
+export TODO_DIR="$HOME/.sync/TheBox/inbox"
+export TODO_FILE="$TODO_DIR/todo.txt"
+export DONE_FILE="$TODO_DIR/done.txt"
+
 # pnpm
 export PNPM_HOME="$HOME/Library/pnpm"
 case ":$PATH:" in
