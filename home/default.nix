@@ -395,6 +395,8 @@
         HostName = "ssh.github.com";
         Port = 443;
       };
+
+      ## office
       "jumphost_server" = {
         HostName = "192.168.50.29";
         User = "jumphost";
@@ -405,15 +407,44 @@
         User = "ubuntu";
         IdentityFile = "~/.ssh/id_crypt";
       };
+      "th-dc" = {
+        HostName = "10.159.0.63";
+        User = "root";
+      };
+      "git.cloud.local" = {
+        HostName = "10.159.0.65";
+        User = "git";
+        IdentityFile = "~/.ssh/id_ed25519";
+      };
+
+      ## homelab
       "pxc_lab" = {
         HostName = "10.0.10.180";
         User = "root";
         IdentityFile = "~/.ssh/id_crypt";
       };
-      "th-dc" = {
-        HostName = "10.159.0.63";
+      "pxc_root" = {
+        HostName = "10.0.10.10";
         User = "root";
+        IdentityFile = "~/.ssh/id_crypt";
       };
+      "pxc_hermes" = {
+        HostName = "10.0.10.29";
+        User = "ubuntu";
+        IdentityFile = "~/.ssh/id_ed25519";
+      };
+      "px_root" = {
+        HostName = "192.168.1.179";
+        User = "root";
+        IdentityFile = "~/.ssh/id_crypt";
+      };
+      "px_lab" = {
+        HostName = "192.168.1.31";
+        User = "root";
+        IdentityFile = "~/.ssh/id_crypt";
+      };
+
+      ## homelab-remote
       "dxc.0dl.me" = {
         ProxyCommand = "cloudflared access ssh --hostname %h";
         User = "root";
@@ -425,11 +456,6 @@
       "sxc.voidbox.io" = {
         ProxyCommand = "cloudflared access ssh --hostname %h";
         User = "root";
-      };
-      "git.cloud.local" = {
-        HostName = "10.159.0.65";
-        User = "git";
-        IdentityFile = "~/.ssh/id_ed25519";
       };
     };
   };
