@@ -10,6 +10,9 @@ alias v="nvim"
 alias vx="$HOME/.dotfiles/nvim-wrapper"
 alias gdu="gdu-go"
 alias ld="lazydocker"
+alias cc="claude --dangerously-skip-permissions"
+alias pn="pnpm"
+alias pnx="pnpm dlx"
 
 alias bu='brew update && brew upgrade && brew cleanup && brew doctor'
 alias zu='zap update all && zap clean'
@@ -121,10 +124,12 @@ pkgup() {
     # npm i -g @colbymchenry/codegraph
 
     # pnpm self-update
+    # mise upgrade
     claude update
     omc update
     pnpm update -g --latest
     uv tool upgrade --all
+    bun update -g
     # gh extension upgrade --all
     # zu
 }

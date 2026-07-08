@@ -428,6 +428,11 @@
         User = "root";
         IdentityFile = "~/.ssh/id_crypt";
       };
+      "pxc_llm" = {
+        HostName = "10.0.10.79";
+        User = "root";
+        IdentityFile = "~/.ssh/id_crypt";
+      };
       "pxc_hermes" = {
         HostName = "10.0.10.29";
         User = "ubuntu";
