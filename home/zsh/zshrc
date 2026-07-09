@@ -2,26 +2,24 @@
 if [ ! -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ]; then
   zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1 --keep
 fi
-[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
 
+# Real interactive terminal only.
+# Non-TTY / agent shells bail out earlier via programs.zsh.initContent (order 500)
+# so fzf/oh-my-zsh never run and can't emit "can't change option: zle".
+[ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
 
 plug "$HOME/.config/zsh/aliases.zsh"
 plug "$HOME/.config/zsh/options.zsh"
 plug "$HOME/.config/zsh/keybindings.zsh"
-plug "$HOME/.config/zsh/tmp.zsh"
-
-#plug "zap-zsh/supercharge"
-#plug "zap-zsh/zap-prompt"
+plug "$HOME/.config/zsh/tmp.zsh" 2>/dev/null || true
 
 plug "zsh-users/zsh-syntax-highlighting"
 plug "zsh-users/zsh-autosuggestions"
 plug "zsh-users/zsh-completions"
-
 plug "zsh-users/zsh-history-substring-search"
 plug "Aloxaf/fzf-tab"
 plug "Freed-Wu/fzf-tab-source"
 
-# Load and initialise completion system
 autoload -Uz compinit
 compinit
 
@@ -42,7 +40,6 @@ if [[ -x "$(command -v aws_completer)" ]]; then
 fi
 
 autoload bashcompinit && bashcompinit
-autoload -Uz compinit && compinit
 complete -C 'aws_completer' aws
 
 [[ ${commands[kubectl]} ]] && source <(kubectl completion zsh)

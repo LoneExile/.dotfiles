@@ -227,7 +227,25 @@
     enable = true;
     # enableCompletion = true;
     # autosuggestion.enable = true;
-    initContent = builtins.readFile ./zsh/zshrc;
+    # Early bailout must run before fzf (order 910). fzf's option restore does
+    # `options=(... zle on ...)` and errors with "(eval):1: can't change option: zle"
+    # when tools force `zsh -i` without a TTY. Default initContent is order 1000.
+    initContent = lib.mkMerge [
+      (lib.mkOrder 500 ''
+        # Non-TTY / agent path (omp ! commands, CI, scripted zsh -i)
+        if [[ ! -t 0 || ! -t 1 ]]; then
+          export PATH="$HOME/.local/bin:$HOME/.bun/bin:$HOME/bin:/opt/homebrew/opt/libpq/bin:/opt/homebrew/opt/postgresql@18/bin:$PATH"
+          export PNPM_HOME="$HOME/Library/pnpm"
+          case ":$PATH:" in
+            *":$PNPM_HOME/bin:"*) ;;
+            *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+          esac
+          [[ -x "$(command -v mise)" ]] && eval "$(mise activate zsh)" 2>/dev/null || true
+          return 2>/dev/null || true
+        fi
+      '')
+      (lib.mkOrder 1000 (builtins.readFile ./zsh/zshrc))
+    ];
     # mise activates only in interactive shells (.zshrc). Login/non-interactive
     # shells (`zsh -lc`) used by GUI apps — e.g. ZenNotes' Raycast/CLI installer
     # probing for node/npm — skip .zshrc, so expose mise's shims here too.

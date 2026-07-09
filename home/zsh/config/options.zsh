@@ -45,23 +45,26 @@ SAVEHIST=10000
 WORDCHARS=${WORDCHARS//\/[&.;]}                                 # Don't consider certain characters part of the word
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"         # Colored completion (different colors for dirs/files/etc)
 
-# -----------
+# ===================== INTERACTIVE ONLY =====================
+# dotenv chpwd hook + INTERACTIVE_COMMENTS only need a real TTY.
+# Non-TTY shells already return earlier (HM order 500); this is defense-in-depth.
+if [[ -o interactive && -t 0 && -t 1 ]]; then
+    : ${ZSH_DOTENV_FILE:=".env"}
 
-: ${ZSH_DOTENV_FILE:=".env"}
+    #
+    # Source local '.env' file (if any).
+    #
+    source_env_file() {
+      if [[ -f "${ZSH_DOTENV_FILE}" ]]; then
+        >&2 echo "Auto-sourcing ${ZSH_DOTENV_FILE} file"
+        source "${ZSH_DOTENV_FILE}"
+      fi
+    }
 
-#
-# Source local '.env' file (if any).
-#
-source_env_file() {
-  if [[ -f "${ZSH_DOTENV_FILE}" ]]; then
-    >&2 echo "Auto-sourcing ${ZSH_DOTENV_FILE} file"
-    source "${ZSH_DOTENV_FILE}"
-  fi
-}
+    # Hook our function so that it gets automatically executed whenever we `cd`
+    # See special `chpwd` hook function: https://zsh.sourceforge.io/Doc/Release/Functions.html
+    autoload -U add-zsh-hook
+    add-zsh-hook chpwd source_env_file
 
-# Hook our function so that it gets automatically executed whenever we `cd`
-# See special `chpwd` hook function: https://zsh.sourceforge.io/Doc/Release/Functions.html
-autoload -U add-zsh-hook
-add-zsh-hook chpwd source_env_file
-
-setopt INTERACTIVE_COMMENTS
+    setopt INTERACTIVE_COMMENTS
+fi
