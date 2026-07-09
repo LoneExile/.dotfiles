@@ -86,10 +86,6 @@
 
   # aerospace config and nvim config
   home.file = lib.mkMerge [
-    {
-      # Symlink oh-my-zsh so forge can find it at ~/.oh-my-zsh
-      ".oh-my-zsh".source = "${pkgs.oh-my-zsh}/share/oh-my-zsh";
-    }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
@@ -150,6 +146,7 @@
         deno = "latest";
         bun = "latest";
         herdr = "latest";
+        gup = "latest";
       };
       settings = {
         not_found_auto_install = true;
@@ -225,11 +222,11 @@
 
   programs.zsh = {
     enable = true;
-    # enableCompletion = true;
-    # autosuggestion.enable = true;
-    # Early bailout must run before fzf (order 910). fzf's option restore does
-    # `options=(... zle on ...)` and errors with "(eval):1: can't change option: zle"
-    # when tools force `zsh -i` without a TTY. Default initContent is order 1000.
+    # We run compinit ourselves in zshrc (cached, daily) — HM's default
+    # `autoload -U compinit && compinit` is uncached and slower.
+    enableCompletion = false;
+    # Early bailout must run before tools that need a TTY (order 500),
+    # so non-interactive shells (omp ! commands, CI, scripted `zsh -i`)
     initContent = lib.mkMerge [
       (lib.mkOrder 500 ''
         # Non-TTY / agent path (omp ! commands, CI, scripted zsh -i)
@@ -252,11 +249,6 @@
     profileExtra = ''
       export PATH="$HOME/.local/share/mise/shims:$PATH"
     '';
-    oh-my-zsh = {
-      enable = true;
-      plugins = [];
-      theme = ""; # Starship handles the prompt
-    };
   };
 
   programs.tmux = {

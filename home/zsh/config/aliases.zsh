@@ -130,6 +130,7 @@ pkgup() {
     pnpm update -g --latest
     uv tool upgrade --all
     bun update -g
+    gup update
     # gh extension upgrade --all
     # zu
 }

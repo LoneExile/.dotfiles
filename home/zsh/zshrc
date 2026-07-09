@@ -4,8 +4,7 @@ if [ ! -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ]; then
 fi
 
 # Real interactive terminal only.
-# Non-TTY / agent shells bail out earlier via programs.zsh.initContent (order 500)
-# so fzf/oh-my-zsh never run and can't emit "can't change option: zle".
+# Non-TTY / agent shells bail out earlier via programs.zsh.initContent (order 500).
 [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
 
 plug "$HOME/.config/zsh/aliases.zsh"
@@ -20,16 +19,32 @@ plug "zsh-users/zsh-history-substring-search"
 plug "Aloxaf/fzf-tab"
 plug "Freed-Wu/fzf-tab-source"
 
+# Refresh completion dump only once per day; -C skips the security
+# audit and loads the existing dump directly (~30x faster).
 autoload -Uz compinit
-compinit
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
+  compinit
+else
+  compinit -C
+fi
+ZSH_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+mkdir -p "$ZSH_CACHE_DIR"
 
-PATH="$HOME/.local/bin/:$PATH"
+# kubectl completion (cached — kubectl is slow to spawn, ~150ms)
+if [[ ${commands[kubectl]} ]]; then
+  _kcomp="$ZSH_CACHE_DIR/kubectl_completion"
+  _kver="$ZSH_CACHE_DIR/kubectl_version"
+  _cur_ver="$(kubectl version --client 2>/dev/null | head -1)"
+  if [[ ! -f "$_kcomp" || "$(cat "$_kver" 2>/dev/null)" != "$_cur_ver" ]]; then
+    kubectl completion zsh > "$_kcomp" 2>/dev/null
+    echo -n "$_cur_ver" > "$_kver"
+  fi
+  [[ -f "$_kcomp" ]] && source "$_kcomp"
+fi
 
-# shellcheck disable=SC1090
-[[ ${commands[kubectl]} ]] && source <(kubectl completion zsh)
-
-# AWS CLI completion for zsh
+# AWS CLI completion
 if [[ -x "$(command -v aws_completer)" ]]; then
+  autoload bashcompinit && bashcompinit
   compdef _aws aws
   function _aws {
     local IFS=$'\n'
@@ -37,17 +52,8 @@ if [[ -x "$(command -v aws_completer)" ]]; then
   }
   compdef _aws aws-vault
   compdef _aws sudo
+  complete -C 'aws_completer' aws
 fi
-
-autoload bashcompinit && bashcompinit
-complete -C 'aws_completer' aws
-
-[[ ${commands[kubectl]} ]] && source <(kubectl completion zsh)
-export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
-export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/.bun/bin:$PATH"
-export PATH="$HOME/bin:$PATH"
-export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"
 
 export TODO_DIR="$HOME/.sync/TheBox/inbox"
 export TODO_FILE="$TODO_DIR/todo.txt"
@@ -59,7 +65,5 @@ case ":$PATH:" in
   *":$PNPM_HOME/bin:"*) ;;
   *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
-# pnpm end
 
-# mise (manages node/python/etc. version paths)
-[[ -x "$(command -v mise)" ]] && eval "$(mise activate zsh)"
+# NOTE: mise is activated by HM's programs.mise.enableZshIntegration.

@@ -1,5 +1,5 @@
 ## Options section
-unsetopt correct                                                # Disabled: interferes with forge's :commands
+unsetopt correct                                                # Disabled: interferes with nvim's :commands
 setopt extendedglob                                             # Extended globbing. Allows using regular expressions with *
 setopt nocaseglob                                               # Case insensitive globbing
 setopt rcexpandparam                                            # Array expension with parameters
