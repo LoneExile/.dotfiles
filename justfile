@@ -58,8 +58,6 @@ nvim-reload target_host=hostname:
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc:
   nix-collect-garbage -d
-  nix-collect-garbage --delete-older-than 7d
-  nix-store --gc
 
 ### Development and Validation
 # Check flake syntax and build without switching
