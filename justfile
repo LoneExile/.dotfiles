@@ -18,11 +18,15 @@ trace target_host=hostname: (build target_host "--show-trace")
 _sudo:
   @sudo -v
 
-# Build the nix-darwin configuration and switch to it
+# Build the nix-darwin configuration and switch to it.
+# darwin-rebuild is already installed system-wide, so activate directly in a
+# single evaluation. The old form pre-built with `nix build` (eval+realize as
+# your user) and then re-evaluated the whole flake via `--flake` under sudo
+# (as root) — two full, cache-disjoint evals (~1-2 min each). This does one.
 [macos]
-switch target_host=hostname: _sudo (build target_host)
+switch target_host=hostname: _sudo
   @echo "switching to new config for {{target_host}}"
-  sudo ./result/sw/bin/darwin-rebuild switch --flake ".#{{target_host}}"
+  sudo darwin-rebuild switch --flake ".#{{target_host}}"
 
 # Update flake inputs to their latest revisions
 update:
@@ -41,19 +45,12 @@ home target_host=hostname:
   @echo "Activating home configuration..."
   ./result/activate
 
-# Quick nixCats reload (forces Lua config reload)
-nixcats target_host=hostname:
-  @echo "Forcing nixCats Lua config reload..."
-  @touch home/le.nix
-  @just home {{target_host}}
-
-# Force reload nixCats with Lua changes
-nvim-reload target_host=hostname:
-  @echo "🔄 Reloading Neovim configuration..."
-  @echo "Touching nix file to force rebuild..."
-  @touch home/le.nix
-  @just home {{target_host}}
-  @echo "✅ Neovim configuration reloaded!"
+# Upgrade Homebrew packages explicitly. `upgrade = false` in the homebrew config
+# keeps `just switch` fast by not upgrading on every activation; run this when
+# you actually want upgrades. Versions track the pinned taps, so run `just
+# update` first to pull newer formula/cask definitions.
+brew-upgrade:
+  brew upgrade
 
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc:

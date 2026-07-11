@@ -8,11 +8,6 @@
 }: {
   home.stateVersion = "25.11";
 
-  # Import nixCats home module
-  imports = [
-    inputs.nixCats.homeModule
-  ];
-
   # Development tools packages
   home.packages = with pkgs; [
     terraform
@@ -42,44 +37,6 @@
 
     # terragrunt
   ];
-
-  # Previous editors module configuration (commented out for nixCats migration)
-  # Custom settings preserved for migration to nixCats:
-  # - number, relativenumber, tabstop=2, shiftwidth=2, expandtab
-  # - wrap, linebreak
-  # - colorscheme catppuccin-mocha
-  # - plugins: vim-airline, nerdtree
-  # - defaultEditor = true
-  #
-  # modules.home.development.editors = {
-  #   enable = true;
-  #   neovim = {
-  #     enable = true;
-  #     defaultEditor = true;
-  #     extraConfig = ''
-  #       " Personal Neovim configuration
-  #       set number
-  #       set relativenumber
-  #       set tabstop=2
-  #       set shiftwidth=2
-  #       set expandtab
-  #
-  #       " Personal preferences
-  #       set wrap
-  #       set linebreak
-  #       colorscheme catppuccin-mocha
-  #     '';
-  #     plugins = with pkgs.vimPlugins; [
-  #       # Add any personal plugins here
-  #       vim-airline
-  #       nerdtree
-  #     ];
-  #   };
-  #
-  #   # Optionally enable other editors
-  #   vscode.enable = false; # VS Code is installed via Homebrew cask
-  #   helix.enable = false; # Not needed for this setup
-  # };
 
   # list of programs
   # https://mipmip.github.io/home-manager-option-search
@@ -471,151 +428,6 @@
       "sxc.voidbox.io" = {
         ProxyCommand = "cloudflared access ssh --hostname %h";
         User = "root";
-      };
-    };
-  };
-
-  # nixCats configuration
-  nixCats = let
-    tokyonight-latest = pkgs.vimUtils.buildVimPlugin {
-      name = "tokyonight-nvim";
-      src = inputs.tokyonight-nvim;
-      # Skip the require check that's failing
-      doCheck = false;
-    };
-    # Override to skip require check (needs nvim-treesitter at check time)
-    nvim-treesitter-textobjects-fixed = unstablePkgs.vimPlugins.nvim-treesitter-textobjects.overrideAttrs {
-      doCheck = false;
-    };
-    # tokyonight-latest = pkgs.vimUtils.buildVimPlugin {
-    #   name = "tokyonight-nvim";
-    #   src = pkgs.fetchFromGitHub {
-    #     owner = "folke";
-    #     repo = "tokyonight.nvim";
-    #     rev = "14fd5ff7f84027064724ec3157fe903199e77ded"; # v4.12.0
-    #     hash = "sha256-fj6x7R11+s0/lhWCe0s3ELTRLgvU25Rjp4M5vZw5i3c=";
-    #   };
-    #   # Skip the require check that's failing
-    #   doCheck = false;
-    # };
-  in {
-    enable = true;
-    addOverlays = [(inputs.nixCats.utils.standardPluginOverlay inputs)];
-    packageNames = ["leNvim"];
-    luaPath = ./nvim-config;
-
-    categoryDefinitions.replace = {
-      pkgs,
-      settings,
-      categories,
-      name,
-      ...
-    }: {
-      # LSPs, formatters, linters, and runtime dependencies
-      lspsAndRuntimeDeps = with pkgs; {
-        general = [
-          # Essential tools
-          lazygit
-          ripgrep
-          fd
-          tree-sitter
-        ];
-        lua = [
-          lua-language-server
-          stylua
-        ];
-        nix = [
-          nixd
-          alejandra
-        ];
-        go = [
-          gopls
-          golangci-lint
-          delve
-        ];
-      };
-
-      # Essential plugins loaded at startup
-      startupPlugins = with unstablePkgs.vimPlugins; {
-        general = [
-          # Core functionality
-          plenary-nvim
-          nvim-treesitter.withAllGrammars
-          nvim-treesitter-textobjects-fixed
-
-          # Plugin loader and extras
-          lze
-          lzextras
-          snacks-nvim
-
-          # UI and navigation
-          lualine-nvim
-          lualine-lsp-progress
-          mini-nvim
-          which-key-nvim
-
-          # Colorscheme (latest from GitHub)
-          tokyonight-latest
-
-          # Git integration
-          gitsigns-nvim
-
-          # Completion
-          blink-cmp
-
-          # Development tools
-          vim-startuptime
-        ];
-      };
-
-      # Language-specific and optional plugins
-      optionalPlugins = with unstablePkgs.vimPlugins; {
-        general = [
-          # LSP and development tools
-          nvim-lspconfig
-          nvim-lint
-          conform-nvim
-
-          # Debugging
-          nvim-dap
-          nvim-dap-ui
-          nvim-dap-virtual-text
-        ];
-        lua = [
-          lazydev-nvim
-        ];
-        nix = [
-          # Nix-specific plugins if needed
-        ];
-        go = [
-          nvim-dap-go
-        ];
-      };
-    };
-
-    packageDefinitions.replace = {
-      leNvim = {
-        pkgs,
-        name,
-        ...
-      }: {
-        settings = {
-          suffix-path = true;
-          suffix-LD = true;
-          wrapRc = true;
-          aliases = ["nvim-nix"];
-          hosts.python3.enable = true;
-          hosts.node.enable = true;
-        };
-        categories = {
-          general = true;
-          lua = true;
-          nix = true;
-          go = true; # Enable Go support based on mise configuration
-        };
-        extra = {
-          nixdExtras.nixpkgs = ''import ${pkgs.path} {}'';
-        };
       };
     };
   };

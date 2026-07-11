@@ -156,6 +156,22 @@
         "type": "github"
       }
     },
+    "homebrew-gromgit-fuse": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781596972,
+        "narHash": "sha256-6Q0p2xWJEL8xfOydG4hUbzZh1HmypD+sFWQLIBZtkpI=",
+        "owner": "gromgit",
+        "repo": "homebrew-fuse",
+        "rev": "6f9a415a4d7910fe2b97cc8ce84664ca1a1534c7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "gromgit",
+        "repo": "homebrew-fuse",
+        "type": "github"
+      }
+    },
     "homebrew-jolehuit-tap": {
       "flake": false,
       "locked": {
@@ -310,21 +326,6 @@
         "type": "github"
       }
     },
-    "nixCats": {
-      "locked": {
-        "lastModified": 1777273601,
-        "narHash": "sha256-xBUa8Tl9V7IXI+VmLEuDc81La/EhoSn1C3EVSnJ3cfU=",
-        "owner": "BirdeeHub",
-        "repo": "nixCats-nvim",
-        "rev": "f69ea013e328841a7def7037ed59788a76be8816",
-        "type": "github"
-      },
-      "original": {
-        "owner": "BirdeeHub",
-        "repo": "nixCats-nvim",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1781607440,
@@ -398,6 +399,7 @@
         "homebrew-bundle": "homebrew-bundle",
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",
+        "homebrew-gromgit-fuse": "homebrew-gromgit-fuse",
         "homebrew-jolehuit-tap": "homebrew-jolehuit-tap",
         "homebrew-steveyegge-beads": "homebrew-steveyegge-beads",
         "homebrew-telepresenceio-telepresence": "homebrew-telepresenceio-telepresence",
@@ -406,12 +408,10 @@
         "neovim-nightly-overlay": "neovim-nightly-overlay",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
-        "nixCats": "nixCats",
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "sops-nix": "sops-nix",
-        "tokyonight-nvim": "tokyonight-nvim"
+        "sops-nix": "sops-nix"
       }
     },
     "sops-nix": {
@@ -431,22 +431,6 @@
       "original": {
         "owner": "Mic92",
         "repo": "sops-nix",
-        "type": "github"
-      }
-    },
-    "tokyonight-nvim": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1774363414,
-        "narHash": "sha256-a9iRWue7DB7s/wNdxqqB51Jya5P9X6sDftqhdmKggU0=",
-        "owner": "folke",
-        "repo": "tokyonight.nvim",
-        "rev": "cdc07ac78467a233fd62c493de29a17e0cf2b2b6",
-        "type": "github"
-      },
-      "original": {
-        "owner": "folke",
-        "repo": "tokyonight.nvim",
         "type": "github"
       }
     }

@@ -73,6 +73,10 @@
       url = "github:BarutSRB/homebrew-tap";
       flake = false;
     };
+    homebrew-gromgit-fuse = {
+      url = "github:gromgit/homebrew-fuse";
+      flake = false;
+    };
 
     # SOPS for secrets management
     sops-nix = {
@@ -83,17 +87,6 @@
     # Neovim nightly overlay for latest Neovim features
     neovim-nightly-overlay = {
       url = "github:nix-community/neovim-nightly-overlay";
-    };
-
-    # nixCats for advanced Neovim configuration
-    nixCats = {
-      url = "github:BirdeeHub/nixCats-nvim";
-    };
-
-    # Tokyo Night theme - always latest
-    tokyonight-nvim = {
-      url = "github:folke/tokyonight.nvim";
-      flake = false;
     };
 
     # AeroSpace sticky-windows fork: build metadata (url + sha256) is published

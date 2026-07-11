@@ -50,7 +50,11 @@
       # and updated with `nix flake update`. Running `brew update` can cause
       # permission errors on the read-only tap checkouts from the nix store.
       autoUpdate = false;
-      upgrade = true;
+      # Don't run `brew upgrade` on every activation either: it hits the network
+      # and rebuilds/downloads outdated formulae, slowing each switch. Consistent
+      # with autoUpdate=false above — upgrades are explicit. Run `brew upgrade`
+      # manually (or `just brew-upgrade`) when you actually want them.
+      upgrade = false;
     };
     # Disable Homebrew's own auto-update. Updates are driven by the flake lock.
     global.autoUpdate = false;
@@ -90,6 +94,7 @@
       "krew"
       "argocd"
       "jolehuit/tap/clother"
+      "gromgit/fuse/sshfs-mac"
       "rsync"
       "crane"
       "coreutils"
@@ -127,6 +132,7 @@
       "font-meslo-lg-nerd-font"
       "google-chrome"
       "iina"
+      "macfuse"
       "obs"
       "raycast"
       "signal"
