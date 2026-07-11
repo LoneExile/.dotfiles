@@ -50,7 +50,7 @@ home target_host=hostname:
 # you actually want upgrades. Versions track the pinned taps, so run `just
 # update` first to pull newer formula/cask definitions.
 brew-upgrade:
-  brew upgrade
+  HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade
 
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc:
