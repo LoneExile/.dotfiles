@@ -154,6 +154,7 @@ in {
               "xykong/homebrew-tap" = homebrew-xykong-tap;
               "zennotes/homebrew-tap" = homebrew-zennotes-tap;
               "BarutSRB/homebrew-tap" = homebrew-barutsrb-tap;
+              "gromgit/homebrew-fuse" = homebrew-gromgit-fuse;
             };
 
             # Declarative tap trust for third-party taps (required by newer Homebrew).
@@ -168,6 +169,7 @@ in {
                 "xykong/tap"
                 "zennotes/tap"
                 "BarutSRB/tap"
+                "gromgit/fuse"
               ];
             };
           };

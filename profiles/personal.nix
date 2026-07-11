@@ -50,7 +50,11 @@
       # and updated with `nix flake update`. Running `brew update` can cause
       # permission errors on the read-only tap checkouts from the nix store.
       autoUpdate = false;
-      upgrade = true;
+      # Don't run `brew upgrade` on every activation either: it hits the network
+      # and rebuilds/downloads outdated formulae, slowing each switch. Consistent
+      # with autoUpdate=false above — upgrades are explicit. Run `brew upgrade`
+      # manually (or `just brew-upgrade`) when you actually want them.
+      upgrade = false;
     };
     # Disable Homebrew's own auto-update. Updates are driven by the flake lock.
     global.autoUpdate = false;
@@ -90,6 +94,7 @@
       "krew"
       "argocd"
       "jolehuit/tap/clother"
+      "gromgit/fuse/sshfs-mac"
       "rsync"
       "crane"
       "coreutils"
@@ -127,6 +132,7 @@
       "font-meslo-lg-nerd-font"
       "google-chrome"
       "iina"
+      "macfuse"
       "obs"
       "raycast"
       "signal"
@@ -196,6 +202,22 @@
     #   # "Curiota" = 1038088531;
     # };
   };
+
+  # Install the macFUSE cask before Homebrew's brew-bundle activation runs.
+  # nix-darwin renders the Brewfile Brews section before the Casks section and
+  # `brew bundle` installs in file order, so on a clean machine the
+  # `gromgit/fuse/sshfs-mac` brew (above) is reached before the `macfuse` cask.
+  # sshfs-mac carries a fatal MacfuseRequirement (needs /usr/local/include/fuse.h),
+  # so the first activation would abort without macFUSE already present.
+  # preActivation runs ahead of the homebrew activation step, fixing that order.
+  # Idempotent: no-op once the macFUSE headers exist. macFUSE's required reboot
+  # and kernel-extension approval still have to be completed manually.
+  system.activationScripts.preActivation.text = ''
+    if [ ! -f /usr/local/include/fuse.h ] && [ -x ${config.homebrew.prefix}/bin/brew ]; then
+      echo >&2 "Installing macFUSE cask (required by sshfs-mac)..."
+      PATH="${config.homebrew.prefix}/bin:$PATH" sudo --preserve-env=PATH --user=${config.homebrew.user} --set-home env HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask macfuse || true
+    fi
+  '';
 
   # Personal macOS preferences
   system.defaults = {

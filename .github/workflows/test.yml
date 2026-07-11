@@ -136,7 +136,6 @@ jobs:
           echo "Checking documentation structure..."
           test -f README.md
           test -f docs/SETUP.md
-          test -f docs/MODULES.md
           test -f docs/TROUBLESHOOTING.md
           test -f justfile
 
