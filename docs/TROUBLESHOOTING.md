@@ -246,35 +246,6 @@ echo "test" | gpg --clearsign
 git config --global gpg.program $(which gpg)
 ```
 
-### Neovim Plugin Issues
-
-#### Issue: nvim-treesitter-textobjects fails require check during build
-
-**Error:**
-```
-error: Cannot build '.../vimplugin-nvim-treesitter-textobjects-...'
-Require check failed for the following modules:
-  - nvim-treesitter-textobjects
-  - nvim-treesitter.textobjects.shared
-  - nvim-treesitter.textobjects.move
-  ...
-```
-
-**Cause:** The plugin requires `nvim-treesitter` to be available during the Nix require check, but it's not present at build time.
-
-**Solution:** Override the plugin to skip the require check:
-```nix
-nixCats = let
-  nvim-treesitter-textobjects-fixed = unstablePkgs.vimPlugins.nvim-treesitter-textobjects.overrideAttrs {
-    doCheck = false;
-  };
-in {
-  # ... use nvim-treesitter-textobjects-fixed instead of nvim-treesitter-textobjects
-};
-```
-
-This pattern applies to other vim plugins that fail require checks due to missing dependencies at build time.
-
 ### Shell Module Issues
 
 #### Issue: Zsh configuration not loading
