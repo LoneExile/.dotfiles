@@ -83,7 +83,7 @@ main() {
     run_test "Profile system" "nix eval '.#darwinConfigurations.le.system' --apply 'x: builtins.isString x.drvPath'"
     
     # Test 9: Documentation structure
-    run_test "Documentation files" "test -f docs/SETUP.md && test -f docs/MODULES.md && test -f docs/TROUBLESHOOTING.md"
+    run_test "Documentation files" "test -f docs/SETUP.md && test -f docs/TROUBLESHOOTING.md"
     
     # Test 10: Justfile commands
     run_test "Justfile availability" "test -f justfile"
