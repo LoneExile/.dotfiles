@@ -377,7 +377,7 @@
         HostName = "10.159.0.63";
         User = "root";
       };
-      "git.cloud.local" = {
+      "private-git.ocin.cloud" = {
         HostName = "10.159.0.65";
         User = "git";
         IdentityFile = "~/.ssh/id_ed25519";

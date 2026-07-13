@@ -30,6 +30,7 @@ switch target_host=hostname: _sudo
 
 # Update flake inputs to their latest revisions
 update:
+  # nix flake update --option access-tokens "github.com=$(gh auth token)"
   nix flake update
 
 # Update system configuration (flake update + rebuild)
