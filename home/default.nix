@@ -288,6 +288,12 @@
 
   programs.zoxide.enable = true;
 
+  programs.atuin = {
+    enable = true;
+    enableZshIntegration = true;
+    enableBashIntegration = true;
+  };
+
   programs.k9s = {
     enable = true;
     settings = {

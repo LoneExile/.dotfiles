@@ -125,11 +125,11 @@ pkgup() {
     # pnpm self-update
     # mise upgrade
     claude update
-    omc update
     pnpm update -g --latest
     uv tool upgrade --all
     bun update -g
     gup update
+    gup update -e treehouse
     # gh extension upgrade --all
     # zu
 }
