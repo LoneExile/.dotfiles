@@ -104,6 +104,19 @@ in {
           nix.settings = {
             experimental-features = ["nix-command" "flakes"];
             trusted-users = [username "root"];
+
+            # Extra binary caches. cache.nixos.org alone has incomplete
+            # aarch64-darwin coverage, so uncached unstable packages build
+            # from source locally. nix-community covers far more darwin/unstable
+            # derivations — cuts most local compiles. Keep cache.nixos.org first.
+            substituters = [
+              "https://cache.nixos.org"
+              "https://nix-community.cachix.org"
+            ];
+            trusted-public-keys = [
+              "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+              "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+            ];
           };
 
           # System state version
