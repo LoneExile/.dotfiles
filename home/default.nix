@@ -129,6 +129,9 @@
     enableBashIntegration = true;
     enableZshIntegration = true;
     tmux.enableShellIntegration = true;
+    # Atuin owns Ctrl-R (sourced last); disable fzf's history widget to
+    # avoid the home-manager Ctrl-R binding conflict. fzf keeps Ctrl-T / Alt-C.
+    historyWidget.command = "";
     defaultOptions = [
       "--no-mouse"
     ];
