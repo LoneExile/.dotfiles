@@ -150,7 +150,6 @@ in {
               "steveyegge/homebrew-beads" = homebrew-steveyegge-beads;
               "telepresenceio/homebrew-telepresence" = homebrew-telepresenceio-telepresence;
               "AlexsJones/homebrew-llmfit" = homebrew-alexsjones-llmfit;
-              "jolehuit/homebrew-tap" = homebrew-jolehuit-tap;
               "xykong/homebrew-tap" = homebrew-xykong-tap;
               "zennotes/homebrew-tap" = homebrew-zennotes-tap;
               "BarutSRB/homebrew-tap" = homebrew-barutsrb-tap;
@@ -165,7 +164,6 @@ in {
                 "steveyegge/beads"
                 "telepresenceio/telepresence"
                 "AlexsJones/llmfit"
-                "jolehuit/tap"
                 "xykong/tap"
                 "zennotes/tap"
                 "BarutSRB/tap"

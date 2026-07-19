@@ -53,10 +53,6 @@
       url = "github:AlexsJones/homebrew-llmfit";
       flake = false;
     };
-    homebrew-jolehuit-tap = {
-      url = "github:jolehuit/homebrew-tap";
-      flake = false;
-    };
     homebrew-xykong-tap = {
       url = "github:xykong/homebrew-tap";
       flake = false;

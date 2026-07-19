@@ -93,13 +93,13 @@
       "tea"
       "krew"
       "argocd"
-      "jolehuit/tap/clother"
       "gromgit/fuse/sshfs-mac"
       "rsync"
       "crane"
       "coreutils"
       "mactop"
       "glog"
+      "hunk" # diff viewer for agentic coders
 
       # Rime/Squirrel build deps
       "cmake"

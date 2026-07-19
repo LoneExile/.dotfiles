@@ -171,22 +171,6 @@
         "type": "github"
       }
     },
-    "homebrew-jolehuit-tap": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1774392334,
-        "narHash": "sha256-qKGFf+jvS9GMPUIEHOLFkyt1r7kIMb7t8YRa6wphWfQ=",
-        "owner": "jolehuit",
-        "repo": "homebrew-tap",
-        "rev": "02797d4ae6464304f3d6ee7107b5669689813081",
-        "type": "github"
-      },
-      "original": {
-        "owner": "jolehuit",
-        "repo": "homebrew-tap",
-        "type": "github"
-      }
-    },
     "homebrew-steveyegge-beads": {
       "flake": false,
       "locked": {
@@ -399,7 +383,6 @@
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",
         "homebrew-gromgit-fuse": "homebrew-gromgit-fuse",
-        "homebrew-jolehuit-tap": "homebrew-jolehuit-tap",
         "homebrew-steveyegge-beads": "homebrew-steveyegge-beads",
         "homebrew-telepresenceio-telepresence": "homebrew-telepresenceio-telepresence",
         "homebrew-xykong-tap": "homebrew-xykong-tap",
