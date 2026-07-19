@@ -129,7 +129,7 @@ pkgup() {
     uv tool upgrade --all
     bun update -g
     gup update
-    gup update -e treehouse
+    # treehouse update
     # gh extension upgrade --all
     # zu
 }
