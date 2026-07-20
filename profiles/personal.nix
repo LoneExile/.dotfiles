@@ -1,46 +1,16 @@
 {
   config,
   lib,
-  pkgs,
-  inputs,
-  unstablePkgs,
   ...
 }: {
   # Personal-use loadout.
   #
-  # Homebrew app selection, AeroSpace window manager, and the macOS UI
-  # preferences (Dark mode, dock layout, finder, Safari, etc.) used on
-  # personal MacBooks.
+  # Homebrew app selection and the macOS UI preferences (Dark mode, dock
+  # layout, finder, Safari, etc.) used on personal MacBooks.
 
   environment.variables = {
     EDITOR = lib.mkForce "nvim";
   };
-
-  environment.systemPackages = with pkgs; [
-    # AeroSpace with sticky-windows patch (LoneExile/AeroSpace fork).
-    # Metadata published by CI to the nix-release-meta branch; fetchurl
-    # over the raw .zip bytes for deterministic hashing.
-    (unstablePkgs.aerospace.overrideAttrs (old: let
-      meta = import "${inputs.aerospace-sticky-meta}/release.nix";
-    in {
-      version = meta.version;
-      src = unstablePkgs.fetchurl {
-        url = meta.url;
-        sha256 = meta.sha256;
-      };
-      nativeBuildInputs = (old.nativeBuildInputs or []) ++ [unstablePkgs.unzip];
-      dontUnpack = true;
-      installPhase = ''
-        runHook preInstall
-        unzip -q "$src"
-        cd AeroSpace-v*/
-        mkdir -p $out/Applications $out/share
-        mv AeroSpace.app $out/Applications
-        cp -R bin $out
-        runHook postInstall
-      '';
-    }))
-  ];
 
   homebrew = {
     enable = true;
@@ -171,7 +141,6 @@
       "squirrel-app"
       "bruno"
       "android-studio"
-      "bluestacks"
       "rustdesk"
       "zennotes/tap/zennotes"
       "BarutSRB/tap/omniwm"

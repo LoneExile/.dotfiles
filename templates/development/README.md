@@ -30,11 +30,9 @@ This template provides a comprehensive development environment with all the tool
 - Multiple programming languages (Python, Node.js, Rust, Go)
 - Container tools (Docker, Podman)
 - Shell enhancements (zsh, starship)
-- Window management (Aerospace)
 
 ## Customization
 
 - Enable/disable specific programming languages
 - Add custom development tools
 - Modify shell configuration
-- Adjust window management settings

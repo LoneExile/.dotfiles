@@ -1,22 +1,5 @@
 {
   "nodes": {
-    "aerospace-sticky-meta": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1776143205,
-        "narHash": "sha256-cSFORYp7cMzTrqvisDyZOlXCdCuTFgSwBIWYExC3pWo=",
-        "owner": "LoneExile",
-        "repo": "AeroSpace",
-        "rev": "66a0fcbff39b94c1a8207f1df6950a5d472b8950",
-        "type": "github"
-      },
-      "original": {
-        "owner": "LoneExile",
-        "ref": "nix-release-meta",
-        "repo": "AeroSpace",
-        "type": "github"
-      }
-    },
     "brew-src": {
       "flake": false,
       "locked": {
@@ -375,7 +358,6 @@
     },
     "root": {
       "inputs": {
-        "aerospace-sticky-meta": "aerospace-sticky-meta",
         "home-manager": "home-manager",
         "homebrew-alexsjones-llmfit": "homebrew-alexsjones-llmfit",
         "homebrew-barutsrb-tap": "homebrew-barutsrb-tap",

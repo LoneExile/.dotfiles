@@ -40,10 +40,9 @@
   # list of programs
   # https://mipmip.github.io/home-manager-option-search
 
-  # aerospace config and nvim config
+  # nvim config
   home.file = lib.mkMerge [
     (lib.mkIf pkgs.stdenv.isDarwin {
-      ".config/aerospace/aerospace.toml".text = builtins.readFile ./aerospace/aerospace.toml;
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
       # ".config/tmux/tmux.conf".text = builtins.readFile ./tmux/tmux.conf;
       ".config/zsh/aliases.zsh".text = builtins.readFile ./zsh/config/aliases.zsh;
@@ -65,13 +64,6 @@
   #   echo "Hello, this runs after home-manager switch!"
   #   # Place your script/commands here
   # '';
-
-  # programs.aerospace = {
-  #   enable = true;
-  #   userSettings = {
-  #     start-at-login = true;
-  #   };
-  # };
 
   programs.gpg.enable = true;
 

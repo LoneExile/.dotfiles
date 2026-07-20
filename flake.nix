@@ -80,13 +80,6 @@
     neovim-nightly-overlay = {
       url = "github:nix-community/neovim-nightly-overlay";
     };
-
-    # AeroSpace sticky-windows fork: build metadata (url + sha256) is published
-    # by CI in the nix-release-meta branch of LoneExile/AeroSpace.
-    aerospace-sticky-meta = {
-      url = "github:LoneExile/AeroSpace/nix-release-meta";
-      flake = false;
-    };
   };
 
   outputs = {self, ...} @ inputs: let
