@@ -128,7 +128,7 @@ pkgup() {
     pnpm update -g --latest
     uv tool upgrade --all
     bun update -g
-    gup update
+    # gup update
     # treehouse update
     # gh extension upgrade --all
     # zu
