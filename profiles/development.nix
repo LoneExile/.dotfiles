@@ -36,6 +36,9 @@
     unstablePkgs.awscli2
     unstablePkgs.hcloud
 
+    # Secrets management
+    unstablePkgs.secretspec
+
     # Editors / terminal
     unstablePkgs.wezterm
     unstablePkgs.yazi
@@ -51,7 +54,6 @@
     unstablePkgs.parallel
     unstablePkgs.gettext
     unstablePkgs.yq-go
-    unstablePkgs.poetry
     # Syncthing pinned to 2.1.2-1 ahead of nixpkgs (still on 2.0.14-1).
     # Remove this override once nixpkgs-unstable ships >= 2.1.2-1.
     (unstablePkgs.syncthing-macos.overrideAttrs (_: rec {

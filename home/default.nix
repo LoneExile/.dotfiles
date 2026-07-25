@@ -287,6 +287,7 @@
     enable = true;
     enableZshIntegration = true;
     enableBashIntegration = true;
+    flags = [ "--disable-up-arrow" ];
   };
 
   programs.k9s = {

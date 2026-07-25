@@ -83,6 +83,13 @@
       "ninja"
       "tuxedo"
       "openbao"
+      "opentofu"
+      "harper" # grammar checker
+
+      # Terminal recording / demo capture
+      "vhs" # terminal recorder (pulls in ttyd)
+      "asciinema" # terminal session recorder
+      "agg" # asciinema-to-gif renderer
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
@@ -144,6 +151,7 @@
       "rustdesk"
       "zennotes/tap/zennotes"
       "BarutSRB/tap/omniwm"
+      "handy"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
