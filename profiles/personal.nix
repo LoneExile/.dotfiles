@@ -70,6 +70,7 @@
       "mactop"
       "glog"
       "hunk" # diff viewer for agentic coders
+      "zseven-w/openpencil/op" # OpenPencil CLI
 
       # Rime/Squirrel build deps
       "cmake"
@@ -90,6 +91,7 @@
       "vhs" # terminal recorder (pulls in ttyd)
       "asciinema" # terminal session recorder
       "agg" # asciinema-to-gif renderer
+      "lightpanda-io/browser/lightpanda"
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
@@ -114,7 +116,7 @@
       "raycast"
       "signal"
       "slack"
-      "spotify"
+      # "spotify"
       "tailscale-app"
       # "nordvpn"  # cask URL stale/blocked (NordVPN-OpenVPN/10.0.3 404s); install manually if needed
       # "mtmr"     # cask URL stale (mtmr.app DMG); install manually if needed
@@ -195,6 +197,29 @@
       echo >&2 "Installing macFUSE cask (required by sshfs-mac)..."
       PATH="${config.homebrew.prefix}/bin:$PATH" sudo --preserve-env=PATH --user=${config.homebrew.user} --set-home env HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask macfuse || true
     fi
+
+    # `homebrew.onActivation.cleanup = "zap"` untaps every tap absent from the
+    # Brewfile, and brew runs as ${config.homebrew.user}. A tap tree that ended
+    # up root-owned (a root-context `brew tap`, or a tap materialised while brew
+    # ran as root) therefore cannot be untapped, and the whole activation dies:
+    #   Untapping <owner>/<tap>...
+    #   Error: Permission denied @ apply2files - .../Formula/<name>.rb
+    # preActivation runs as root, so hand undeclared tap trees back to the brew
+    # user before zap reaches them. Scoped to *undeclared* taps: the declared
+    # ones are never zapped, and walking homebrew-core on every switch is slow.
+    # Idempotent.
+    declaredTaps=" ${lib.concatStringsSep " " (builtins.attrNames config.nix-homebrew.taps)} "
+    for tapPath in ${config.homebrew.prefix}/Library/Taps/*/*; do
+      [ -d "$tapPath" ] || continue
+      tapName="$(basename "$(dirname "$tapPath")")/$(basename "$tapPath")"
+      case "$declaredTaps" in
+        *" $tapName "*) continue ;;
+      esac
+      if [ -n "$(find "$tapPath" ! -user ${config.homebrew.user} -print -quit)" ]; then
+        echo >&2 "Reclaiming undeclared tap $tapName for ${config.homebrew.user} so zap-cleanup can untap it..."
+        chown -R ${config.homebrew.user} "$tapPath" || true
+      fi
+    done
   '';
 
   # Personal macOS preferences

@@ -69,6 +69,10 @@
       url = "github:gromgit/homebrew-fuse";
       flake = false;
     };
+    homebrew-zseven-w-openpencil = {
+      url = "github:zseven-w/homebrew-openpencil";
+      flake = false;
+    };
     homebrew-kgarner7-feishin = {
       url = "github:kgarner7/homebrew-feishin";
       flake = false;

@@ -167,6 +167,7 @@ in {
               "zennotes/homebrew-tap" = homebrew-zennotes-tap;
               "BarutSRB/homebrew-tap" = homebrew-barutsrb-tap;
               "gromgit/homebrew-fuse" = homebrew-gromgit-fuse;
+              "zseven-w/homebrew-openpencil" = homebrew-zseven-w-openpencil;
               "kgarner7/homebrew-feishin" = homebrew-kgarner7-feishin;
             };
 
@@ -182,6 +183,7 @@ in {
                 "zennotes/tap"
                 "BarutSRB/tap"
                 "gromgit/fuse"
+                "zseven-w/openpencil"
                 "kgarner7/feishin"
               ];
             };
