@@ -69,6 +69,11 @@
       url = "github:gromgit/homebrew-fuse";
       flake = false;
     };
+    homebrew-kgarner7-feishin = {
+      url = "github:kgarner7/homebrew-feishin";
+      flake = false;
+    };
+
 
     # SOPS for secrets management
     sops-nix = {

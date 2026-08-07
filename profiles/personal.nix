@@ -152,6 +152,7 @@
       "zennotes/tap/zennotes"
       "BarutSRB/tap/omniwm"
       "handy"
+      "kgarner7/feishin/feishin"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because

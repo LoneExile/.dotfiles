@@ -167,6 +167,7 @@ in {
               "zennotes/homebrew-tap" = homebrew-zennotes-tap;
               "BarutSRB/homebrew-tap" = homebrew-barutsrb-tap;
               "gromgit/homebrew-fuse" = homebrew-gromgit-fuse;
+              "kgarner7/homebrew-feishin" = homebrew-kgarner7-feishin;
             };
 
             # Declarative tap trust for third-party taps (required by newer Homebrew).
@@ -181,6 +182,7 @@ in {
                 "zennotes/tap"
                 "BarutSRB/tap"
                 "gromgit/fuse"
+                "kgarner7/feishin"
               ];
             };
           };
