@@ -30,6 +30,10 @@ in {
     #     derivation hardcodes sourceRoot = "Obsidian.app" and copies "." into the
     #     app dir, which breaks on the new layout. Mirror upstream's fix: drop the
     #     hardcoded sourceRoot and copy the app bundle by name.
+    #   - gavl: init'd in nixpkgs with libdrm unconditionally in buildInputs, but
+    #     libdrm is Linux-only (meta.platforms excludes darwin), which makes the
+    #     eval refuse on aarch64-darwin via jellyfin-ffmpeg -> frei0r-plugins -> gavl.
+    #     gavl compiles fine without it on darwin.
     darwinBuildFixes = final: prev: {
       libcdio-paranoia = prev.libcdio-paranoia.overrideAttrs (old: {
         postPatch =
@@ -58,6 +62,15 @@ in {
           makeWrapper $out/Applications/Obsidian.app/Contents/MacOS/obsidian-cli $out/bin/obsidian-cli
           runHook postInstall
         '';
+      });
+      gavl = prev.gavl.overrideAttrs (old: {
+        buildInputs =
+          if prev.stdenv.hostPlatform.isDarwin
+          then
+            builtins.filter
+            (p: !(lib.hasPrefix "libdrm-" (p.name or "")))
+            (old.buildInputs or [])
+          else old.buildInputs;
       });
     };
 
