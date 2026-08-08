@@ -30,10 +30,11 @@ in {
     #     derivation hardcodes sourceRoot = "Obsidian.app" and copies "." into the
     #     app dir, which breaks on the new layout. Mirror upstream's fix: drop the
     #     hardcoded sourceRoot and copy the app bundle by name.
-    #   - gavl: init'd in nixpkgs with libdrm unconditionally in buildInputs, but
-    #     libdrm is Linux-only (meta.platforms excludes darwin), which makes the
-    #     eval refuse on aarch64-darwin via jellyfin-ffmpeg -> frei0r-plugins -> gavl.
-    #     gavl compiles fine without it on darwin.
+    #   - frei0r-plugins: the new nixpkgs package pulls gavl, but gavl 2.0.1
+    #     does not build on darwin (configure hard-requires glibc's getaddrinfo_a,
+    #     and its buildInputs list libdrm, which is Linux-only). gavl is optional
+    #     for frei0r (WITHOUT_GAVL), so disable it on darwin — matching the
+    #     pre-gavl-init behavior of the old nixpkgs pin.
     darwinBuildFixes = final: prev: {
       libcdio-paranoia = prev.libcdio-paranoia.overrideAttrs (old: {
         postPatch =
@@ -63,14 +64,19 @@ in {
           runHook postInstall
         '';
       });
-      gavl = prev.gavl.overrideAttrs (old: {
+      frei0r = prev.frei0r.overrideAttrs (old: {
         buildInputs =
           if prev.stdenv.hostPlatform.isDarwin
           then
             builtins.filter
-            (p: !(lib.hasPrefix "libdrm-" (p.name or "")))
+            (p: !(lib.hasPrefix "gavl-" (p.name or "")))
             (old.buildInputs or [])
           else old.buildInputs;
+        cmakeFlags =
+          (old.cmakeFlags or [])
+          ++ lib.optionals prev.stdenv.hostPlatform.isDarwin [
+            "-DWITHOUT_GAVL=ON"
+          ];
       });
     };
 
