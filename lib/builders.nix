@@ -25,6 +25,11 @@ in {
     #   - direnv: its `make test-go test-bash test-fish test-zsh` check phase
     #     runs `test/direnv-test.zsh` which hangs forever inside the Nix sandbox
     #     (no terminal/PROMPT_COMMAND). Skip checks.
+    #   - obsidian: 1.13.x DMGs name their HFS volume "Obsidian <version>-universal",
+    #     so 7zz extracts the app under that volume-label directory. The pinned
+    #     derivation hardcodes sourceRoot = "Obsidian.app" and copies "." into the
+    #     app dir, which breaks on the new layout. Mirror upstream's fix: drop the
+    #     hardcoded sourceRoot and copy the app bundle by name.
     darwinBuildFixes = final: prev: {
       libcdio-paranoia = prev.libcdio-paranoia.overrideAttrs (old: {
         postPatch =
@@ -42,6 +47,17 @@ in {
       });
       direnv = prev.direnv.overrideAttrs (_: {
         doCheck = !prev.stdenv.hostPlatform.isDarwin;
+      });
+      obsidian = prev.obsidian.overrideAttrs (_: {
+        sourceRoot = null;
+        installPhase = ''
+          runHook preInstall
+          mkdir -p $out/{Applications,bin}
+          cp -R Obsidian.app $out/Applications
+          makeWrapper $out/Applications/Obsidian.app/Contents/MacOS/Obsidian $out/bin/obsidian
+          makeWrapper $out/Applications/Obsidian.app/Contents/MacOS/obsidian-cli $out/bin/obsidian-cli
+          runHook postInstall
+        '';
       });
     };
 
