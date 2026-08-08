@@ -36,9 +36,6 @@
     unstablePkgs.awscli2
     unstablePkgs.hcloud
 
-    # Secrets management
-    unstablePkgs.secretspec
-
     # Editors / terminal
     unstablePkgs.wezterm
     unstablePkgs.yazi
