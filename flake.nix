@@ -83,6 +83,10 @@
       url = "github:kgarner7/homebrew-feishin";
       flake = false;
     };
+    homebrew-abue-ammar-tinycast = {
+      url = "github:abue-ammar/homebrew-tinycast";
+      flake = false;
+    };
 
 
     # SOPS for secrets management

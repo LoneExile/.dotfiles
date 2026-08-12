@@ -58,6 +58,22 @@
         "type": "github"
       }
     },
+    "homebrew-abue-ammar-tinycast": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786269037,
+        "narHash": "sha256-rpwJHQ6mV/VdE06PIGCkJ49S3bm7IU3LmRP6IL/XAnI=",
+        "owner": "abue-ammar",
+        "repo": "homebrew-tinycast",
+        "rev": "150edee89f3523060489bf8b934c7c0f9a99a351",
+        "type": "github"
+      },
+      "original": {
+        "owner": "abue-ammar",
+        "repo": "homebrew-tinycast",
+        "type": "github"
+      }
+    },
     "homebrew-alexsjones-llmfit": {
       "flake": false,
       "locked": {
@@ -391,6 +407,7 @@
     "root": {
       "inputs": {
         "home-manager": "home-manager",
+        "homebrew-abue-ammar-tinycast": "homebrew-abue-ammar-tinycast",
         "homebrew-alexsjones-llmfit": "homebrew-alexsjones-llmfit",
         "homebrew-barutsrb-tap": "homebrew-barutsrb-tap",
         "homebrew-bundle": "homebrew-bundle",
