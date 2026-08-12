@@ -444,6 +444,10 @@
         ProxyCommand = "cloudflared access ssh --hostname %h";
         User = "root";
       };
+      "ps.voidbox.io" = {
+        ProxyCommand = "cloudflared access ssh --hostname %h";
+        User = "root";
+      };
     };
   };
 }
