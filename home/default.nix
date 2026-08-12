@@ -66,13 +66,15 @@
     })
   ];
 
-  # Materialize SSH keys from OpenBao into ~/.ssh on every switch.
-  # The manifest (../secretspec.toml) declares the secret names; values live in
-  # the homelab OpenBao (secret/secretspec/dotfiles/default/*), shared across
-  # machines — a new laptop gets the same keys after `just secretspec-login`.
+  # Materialize secrets from OpenBao on every switch: SSH keys into ~/.ssh,
+  # the atuin encryption key into ~/.local/share/atuin. The manifest
+  # (../secretspec.toml) declares the secret names; values live in the homelab
+  # OpenBao (secret/secretspec/dotfiles/default/*), shared across machines — a
+  # new laptop gets the same keys after `just secretspec-login`.
   # Fail hard when a secret is missing: silent absence would strand the machine
-  # without working SSH. Keys are written outside the nix store (never 0444).
-  home.activation.secretspecSSHKeys = lib.hm.dag.entryAfter ["writeBoundary"] ''
+  # without working SSH or readable shell history. Secrets are written outside
+  # the nix store (never 0444).
+  home.activation.secretspecSecrets = lib.hm.dag.entryAfter ["writeBoundary"] ''
     secretspecBin="$HOME/.cargo/bin/secretspec"
     if [ ! -x "$secretspecBin" ]; then
       echo "error: secretspec not found at $secretspecBin; SSH keys not materialized" >&2
@@ -99,6 +101,11 @@
     ss SSH_ID_CRYPT_PUB > "$HOME/.ssh/id_crypt.pub" && chmod 644 "$HOME/.ssh/id_crypt.pub"
     ss SSH_LINE_PAYMENT_GATEWAY > "$HOME/.ssh/line-payment-gateway" && chmod 600 "$HOME/.ssh/line-payment-gateway"
     ss SSH_LINE_PAYMENT_GATEWAY_PUB > "$HOME/.ssh/line-payment-gateway.pub" && chmod 644 "$HOME/.ssh/line-payment-gateway.pub"
+    mkdir -p "$HOME/.local/share/atuin"
+    chmod 700 "$HOME/.local/share/atuin"
+    # atuin's key file is bare hex with no trailing newline; secretspec get
+    # appends one, so strip it via command substitution.
+    printf '%s' "$(ss ATUIN_KEY)" > "$HOME/.local/share/atuin/key" && chmod 600 "$HOME/.local/share/atuin/key"
   '';
 
   programs.gpg.enable = true;
