@@ -54,7 +54,7 @@ config.window_padding = {
 config.font_size = 14.0
 
 config.window_close_confirmation = 'NeverPrompt'
-config.window_background_opacity = 0.85
+config.window_background_opacity = 0.95
 -- config.window_background_opacity = 0.60
 -- config.text_background_opacity = 1.0
 
