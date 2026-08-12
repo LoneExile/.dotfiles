@@ -95,6 +95,7 @@
         bun = "latest";
         herdr = "latest";
         gup = "latest";
+        nub = "latest";
       };
       settings = {
         not_found_auto_install = true;
