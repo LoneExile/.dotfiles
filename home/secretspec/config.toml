@@ -1,0 +1,26 @@
+# SecretSpec user config — https://secretspec.dev/reference/configuration
+#
+# `provider` is the default backend for every `secretspec` command.
+# It can be a full URI or the name of an alias defined under [defaults.providers].
+#
+# Two aliases, two identities:
+#   openbao     — token auth (default). Human path: `just openbao-login` does
+#                 the Keycloak SSO browser flow and writes a short-lived token
+#                 to ~/.vault-token (or BAO_TOKEN). No static root token.
+#   openbao-sa  — JWT auth for automation: BAO_JWT=$(scripts/openbao-jwt.sh)
+#                 mints a client-credentials JWT (Keycloak service account
+#                 `service-account-openbao`), which OpenBao's oidc mount
+#                 (role `secretspec`, scoped policy) validates. Override per
+#                 command with --provider openbao-sa.
+#
+# Auth: token is read from $VAULT_TOKEN or ~/.vault-token (already present).
+
+[defaults]
+provider = "openbao"
+profile = "default"
+
+[defaults.providers]
+openbao = "vault://openbao.home.0dl.me/secret"
+openbao-sa = "openbao://openbao.home.0dl.me/secret?auth=jwt&auth_mount=oidc&role=secretspec"
+openbao-ocin = "openbao://private-secret.ocin.cloud/secret"
+openbao-ocin-sa = "openbao://private-secret.ocin.cloud/secret?auth=jwt&auth_mount=oidc&role=secretspec"

@@ -42,6 +42,12 @@
 
   # nvim config
   home.file = lib.mkMerge [
+    {
+      # User-global secretspec config (provider aliases, default profile).
+      # Copied from ~/.config/secretspec/config.toml so a new machine gets it
+      # automatically; secrets themselves stay in OpenBao, never in this repo.
+      ".config/secretspec/config.toml".source = ./secretspec/config.toml;
+    }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
       # ".config/tmux/tmux.conf".text = builtins.readFile ./tmux/tmux.conf;
@@ -60,10 +66,40 @@
     })
   ];
 
-  # home.activation.myCustomScript = lib.hm.dag.entryAfter ["writeBoundary"] ''
-  #   echo "Hello, this runs after home-manager switch!"
-  #   # Place your script/commands here
-  # '';
+  # Materialize SSH keys from OpenBao into ~/.ssh on every switch.
+  # The manifest (../secretspec.toml) declares the secret names; values live in
+  # the homelab OpenBao (secret/secretspec/dotfiles/default/*), shared across
+  # machines — a new laptop gets the same keys after `just secretspec-login`.
+  # Fail hard when a secret is missing: silent absence would strand the machine
+  # without working SSH. Keys are written outside the nix store (never 0444).
+  home.activation.secretspecSSHKeys = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    secretspecBin="$HOME/.cargo/bin/secretspec"
+    if [ ! -x "$secretspecBin" ]; then
+      echo "error: secretspec not found at $secretspecBin; SSH keys not materialized" >&2
+      echo "install it with: curl -sSL https://install.secretspec.dev | sh" >&2
+      exit 1
+    fi
+    manifest="${../secretspec.toml}"
+    reason="home-manager activation"
+    ss() {
+      "$secretspecBin" -f "$manifest" --reason "$reason" get -p openbao "$1" || {
+        echo "error: could not resolve secret '$1' from OpenBao" >&2
+        echo "run 'just secretspec-login', then 'just switch' to retry" >&2
+        exit 1
+      }
+    }
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+    ss SSH_ID_ED25519 > "$HOME/.ssh/id_ed25519" && chmod 600 "$HOME/.ssh/id_ed25519"
+    ss SSH_ID_ED25519_PUB > "$HOME/.ssh/id_ed25519.pub" && chmod 644 "$HOME/.ssh/id_ed25519.pub"
+    ss SSH_ID_ED25519_OC > "$HOME/.ssh/id_ed25519.oc" && chmod 600 "$HOME/.ssh/id_ed25519.oc"
+    ss SSH_ID_ED25519_OC_PUB > "$HOME/.ssh/id_ed25519.oc.pub" && chmod 644 "$HOME/.ssh/id_ed25519.oc.pub"
+    ss SSH_ID_ED25519_UNIT_PX > "$HOME/.ssh/id_ed25519_unit_px" && chmod 600 "$HOME/.ssh/id_ed25519_unit_px"
+    ss SSH_ID_CRYPT > "$HOME/.ssh/id_crypt" && chmod 600 "$HOME/.ssh/id_crypt"
+    ss SSH_ID_CRYPT_PUB > "$HOME/.ssh/id_crypt.pub" && chmod 644 "$HOME/.ssh/id_crypt.pub"
+    ss SSH_LINE_PAYMENT_GATEWAY > "$HOME/.ssh/line-payment-gateway" && chmod 600 "$HOME/.ssh/line-payment-gateway"
+    ss SSH_LINE_PAYMENT_GATEWAY_PUB > "$HOME/.ssh/line-payment-gateway.pub" && chmod 644 "$HOME/.ssh/line-payment-gateway.pub"
+  '';
 
   programs.gpg.enable = true;
 
@@ -301,7 +337,7 @@
     enable = true;
     enableZshIntegration = true;
     enableBashIntegration = true;
-    flags = [ "--disable-up-arrow" ];
+    flags = ["--disable-up-arrow"];
   };
 
   programs.k9s = {

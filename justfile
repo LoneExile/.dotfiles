@@ -18,6 +18,13 @@ trace target_host=hostname: (build target_host "--show-trace")
 _sudo:
   @sudo -v
 
+# Log in to the homelab OpenBao via Keycloak SSO and write ~/.vault-token.
+# Required once per machine (and before each token expiry) for secretspec to
+# resolve secrets like the SSH keys materialized on every switch.
+[macos]
+openbao-login:
+  BAO_ADDR=https://openbao.home.0dl.me bao login -method=oidc -path=oidc role=secretspec-human
+
 # Build the nix-darwin configuration and switch to it.
 # darwin-rebuild is already installed system-wide, so activate directly in a
 # single evaluation. The old form pre-built with `nix build` (eval+realize as
