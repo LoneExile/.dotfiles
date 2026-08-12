@@ -194,6 +194,19 @@
         fi
       '')
       (lib.mkOrder 1000 (builtins.readFile ./zsh/zshrc))
+      # atuin's zsh init unconditionally PREPENDS itself to
+      # ZSH_AUTOSUGGEST_STRATEGY, so suggestions come from `atuin search`
+      # (its own SQLite DB, prefix mode, --author '$all-user') instead of
+      # zsh's own $history — and the `history` strategy only runs when atuin
+      # returns nothing. Result: the suggestion is atuin's newest match, not
+      # necessarily the command you last ran in this shell. Re-pin the order
+      # AFTER atuin's integration (order 1500) so local recency wins and
+      # atuin only fills gaps.
+      (lib.mkOrder 2000 ''
+        if [[ $options[zle] = on ]]; then
+          ZSH_AUTOSUGGEST_STRATEGY=(history atuin)
+        fi
+      '')
     ];
     # mise activates only in interactive shells (.zshrc). Login/non-interactive
     # shells (`zsh -lc`) used by GUI apps — e.g. ZenNotes' Raycast/CLI installer
