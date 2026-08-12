@@ -38,7 +38,7 @@
       "rover"
       "doctl"
       "wireguard-tools"
-      "huggingface-cli"
+      # "huggingface-cli"
       "libpq"
       "postgresql@18"
       "git-lfs"
@@ -70,7 +70,6 @@
       "mactop"
       "glog"
       "hunk" # diff viewer for agentic coders
-      "zseven-w/openpencil/op" # OpenPencil CLI
 
       # Rime/Squirrel build deps
       "cmake"
@@ -82,7 +81,7 @@
       "googletest"
       "pkgconf"
       "ninja"
-      "tuxedo"
+      # "tuxedo"
       "openbao"
       "opentofu"
       "harper" # grammar checker
@@ -91,7 +90,10 @@
       "vhs" # terminal recorder (pulls in ttyd)
       "asciinema" # terminal session recorder
       "agg" # asciinema-to-gif renderer
+
       "lightpanda-io/browser/lightpanda"
+      "kubelogin"
+      "gdu"
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
@@ -111,7 +113,7 @@
       "font-meslo-lg-nerd-font"
       "google-chrome"
       "iina"
-      "macfuse"
+      # "macfuse"
       "obs"
       "raycast"
       "signal"
@@ -132,7 +134,7 @@
       "vnc-viewer"
       "visual-studio-code"
       "cap"
-      "figma"
+      # "figma"
       "tradingview"
       "gimp"
       "logseq"
@@ -141,20 +143,21 @@
       "github"
       "wifiman"
       "zoom"
-      "gcloud-cli"
+      # "gcloud-cli"
       "mitmproxy"
       "xykong/tap/flux-markdown"
       "thaw" # menu bar manager
-      "siyuan"
+      # "siyuan"
       "shottr"
       "squirrel-app"
       "bruno"
-      "android-studio"
+      # "android-studio"
       "rustdesk"
       "zennotes/tap/zennotes"
       "BarutSRB/tap/omniwm"
       "handy"
       "kgarner7/feishin/feishin"
+      "abue-ammar/tinycast/tinycast"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
@@ -220,6 +223,19 @@
         chown -R ${config.homebrew.user} "$tapPath" || true
       fi
     done
+  '';
+
+  # Keep sudo credentials alive through the whole `just switch` run.
+  # The activation runs as root, but Homebrew's bundle step drops back to
+  # the regular user (`sudo --user=lex … brew bundle`), so any cask that
+  # needs root (pkg installer, launchctl removal — e.g. the macfuse zap)
+  # re-runs `sudo` as that user. The nix build between the initial
+  # `sudo -v` and that point exceeds sudo's default 5-minute timeout,
+  # which is why a second password prompt appears mid-activation.
+  # 60 minutes covers any switch; still bounded, so an unlocked session
+  # does not stay privileged indefinitely.
+  security.sudo.extraConfig = ''
+    Defaults:${config.homebrew.user} timestamp_timeout=60
   '';
 
   # Personal macOS preferences
