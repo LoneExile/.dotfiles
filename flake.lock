@@ -154,22 +154,6 @@
         "type": "github"
       }
     },
-    "homebrew-gromgit-fuse": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1785567741,
-        "narHash": "sha256-9ivh9ilnW01LjTe1ONN1z3YcozqMDh72Seq8URzSRYk=",
-        "owner": "gromgit",
-        "repo": "homebrew-fuse",
-        "rev": "3d26b3d46e0d7b1f9aa2f4cfb80f8572f9dea3b1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "gromgit",
-        "repo": "homebrew-fuse",
-        "type": "github"
-      }
-    },
     "homebrew-kgarner7-feishin": {
       "flake": false,
       "locked": {
@@ -413,7 +397,6 @@
         "homebrew-bundle": "homebrew-bundle",
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",
-        "homebrew-gromgit-fuse": "homebrew-gromgit-fuse",
         "homebrew-kgarner7-feishin": "homebrew-kgarner7-feishin",
         "homebrew-steveyegge-beads": "homebrew-steveyegge-beads",
         "homebrew-telepresenceio-telepresence": "homebrew-telepresenceio-telepresence",

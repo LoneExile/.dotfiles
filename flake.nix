@@ -71,10 +71,6 @@
       url = "github:BarutSRB/homebrew-tap";
       flake = false;
     };
-    homebrew-gromgit-fuse = {
-      url = "github:gromgit/homebrew-fuse";
-      flake = false;
-    };
     homebrew-zseven-w-openpencil = {
       url = "github:zseven-w/homebrew-openpencil";
       flake = false;

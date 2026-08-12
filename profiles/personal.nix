@@ -63,7 +63,6 @@
       "tea"
       "krew"
       "argocd"
-      "gromgit/fuse/sshfs-mac"
       "rsync"
       "crane"
       "coreutils"
@@ -113,7 +112,6 @@
       "font-meslo-lg-nerd-font"
       "google-chrome"
       "iina"
-      # "macfuse"
       "obs"
       "raycast"
       "signal"
@@ -186,21 +184,7 @@
     # };
   };
 
-  # Install the macFUSE cask before Homebrew's brew-bundle activation runs.
-  # nix-darwin renders the Brewfile Brews section before the Casks section and
-  # `brew bundle` installs in file order, so on a clean machine the
-  # `gromgit/fuse/sshfs-mac` brew (above) is reached before the `macfuse` cask.
-  # sshfs-mac carries a fatal MacfuseRequirement (needs /usr/local/include/fuse.h),
-  # so the first activation would abort without macFUSE already present.
-  # preActivation runs ahead of the homebrew activation step, fixing that order.
-  # Idempotent: no-op once the macFUSE headers exist. macFUSE's required reboot
-  # and kernel-extension approval still have to be completed manually.
   system.activationScripts.preActivation.text = ''
-    if [ ! -f /usr/local/include/fuse.h ] && [ -x ${config.homebrew.prefix}/bin/brew ]; then
-      echo >&2 "Installing macFUSE cask (required by sshfs-mac)..."
-      PATH="${config.homebrew.prefix}/bin:$PATH" sudo --preserve-env=PATH --user=${config.homebrew.user} --set-home env HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask macfuse || true
-    fi
-
     # `homebrew.onActivation.cleanup = "zap"` untaps every tap absent from the
     # Brewfile, and brew runs as ${config.homebrew.user}. A tap tree that ended
     # up root-owned (a root-context `brew tap`, or a tap materialised while brew
@@ -228,7 +212,7 @@
   # Keep sudo credentials alive through the whole `just switch` run.
   # The activation runs as root, but Homebrew's bundle step drops back to
   # the regular user (`sudo --user=lex … brew bundle`), so any cask that
-  # needs root (pkg installer, launchctl removal — e.g. the macfuse zap)
+  # needs root (pkg installer, launchctl removal)
   # re-runs `sudo` as that user. The nix build between the initial
   # `sudo -v` and that point exceeds sudo's default 5-minute timeout,
   # which is why a second password prompt appears mid-activation.
