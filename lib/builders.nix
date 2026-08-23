@@ -35,6 +35,14 @@ in {
     #     and its buildInputs list libdrm, which is Linux-only). gavl is optional
     #     for frei0r (WITHOUT_GAVL), so disable it on darwin — matching the
     #     pre-gavl-init behavior of the old nixpkgs pin.
+    #   - curl-impersonate: upstream ships @rpath/libcurl-impersonate.4.dylib
+    #     and the package never ran fixDarwinDylibNames. curl-cffi (yt-dlp dep)
+    #     then records that @rpath with no LC_RPATH and dies at pythonImportsCheck
+    #     ("no LC_RPATH's found"). Mirror nixpkgs#554592: rewrite the install
+    #     name to the absolute store path. curl-cffi 0.15.0 then fails one WS
+    #     send test (unaligned 500k frame); 0.16.0 fixes it but breaks yt-dlp
+    #     2026.07.04 (nixpkgs#554405). Skip that test until the pin moves.
+    #     Drop both once nixpkgs-unstable carries #554592 + a compatible bump.
     darwinBuildFixes = final: prev: {
       libcdio-paranoia = prev.libcdio-paranoia.overrideAttrs (old: {
         postPatch =
@@ -78,6 +86,27 @@ in {
             "-DWITHOUT_GAVL=ON"
           ];
       });
+      curl-impersonate = prev.curl-impersonate.overrideAttrs (old: {
+        nativeBuildInputs =
+          (old.nativeBuildInputs or [])
+          ++ lib.optionals prev.stdenv.hostPlatform.isDarwin [
+            prev.fixDarwinDylibNames
+          ];
+      });
+      pythonPackagesExtensions =
+        prev.pythonPackagesExtensions
+        ++ [
+          (pyfinal: pyprev:
+            lib.optionalAttrs (pyprev ? curl-cffi) {
+              curl-cffi = pyprev.curl-cffi.overrideAttrs (old: {
+                disabledTests =
+                  (old.disabledTests or [])
+                  ++ [
+                    "test_large_message_echo"
+                  ];
+              });
+            })
+        ];
     };
 
     unstablePkgs = import inputs.nixpkgs-unstable {
