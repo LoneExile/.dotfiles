@@ -1,0 +1,3 @@
+name = "Yazi"
+description = "Opens Yazi"
+command = "yazi"

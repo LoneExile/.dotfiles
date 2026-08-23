@@ -1,0 +1,3 @@
+name = "Tuxedo"
+description = "Opens Tuxedo"
+command = "tuxedo"

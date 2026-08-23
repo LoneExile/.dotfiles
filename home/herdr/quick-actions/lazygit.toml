@@ -1,0 +1,3 @@
+name = "Lazygit"
+description = "Opens Lazygit"
+command = "lazygit"

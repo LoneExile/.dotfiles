@@ -1,0 +1,3 @@
+name = "Neovim"
+description = "Opens Neovim"
+command = "nvim ."

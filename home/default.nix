@@ -61,6 +61,12 @@
       ".config/btop/btop.conf".source = ./btop/btop.conf;
       ".config/gh/config.yml".source = ./gh/config.yml;
       ".config/herdr/config.toml".source = ./herdr/config.toml;
+      # herdr-plus plugin quick-actions (per-action TOMLs). recursive keeps the
+      # dir writable (plugin can add actions); the managed ones are pinned.
+      ".config/herdr/plugins/config/cloudmanic.herdr-plus/quick-actions" = {
+        source = ./herdr/quick-actions;
+        recursive = true;
+      };
     }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
