@@ -93,6 +93,7 @@
       "lightpanda-io/browser/lightpanda"
       "kubelogin"
       "gdu"
+      "vale"
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
@@ -156,6 +157,9 @@
       "handy"
       "kgarner7/feishin/feishin"
       "abue-ammar/tinycast/tinycast"
+      "cursor"
+      "cursor-cli"
+      "vorssaint"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
