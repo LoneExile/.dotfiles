@@ -47,6 +47,20 @@
       # Copied from ~/.config/secretspec/config.toml so a new machine gets it
       # automatically; secrets themselves stay in OpenBao, never in this repo.
       ".config/secretspec/config.toml".source = ./secretspec/config.toml;
+      # Reproducible non-secret config (verbatim copies). Tool secrets (atuin
+      # ai token, npm token) live in OpenBao, materialized by secretspecSecrets.
+      ".config/yazi/yazi.toml".source = ./yazi/yazi.toml;
+      ".config/yazi/keymap.toml".source = ./yazi/keymap.toml;
+      ".config/yazi/package.toml".source = ./yazi/package.toml;
+      ".config/yazi/plugins/what-size.yazi" = {
+        source = ./yazi/plugins/what-size.yazi;
+        recursive = true;
+      };
+      # btop rewrites btop.conf on in-TUI option changes; declarative here means
+      # those tweaks won't persist — edit this repo file instead.
+      ".config/btop/btop.conf".source = ./btop/btop.conf;
+      ".config/gh/config.yml".source = ./gh/config.yml;
+      ".config/herdr/config.toml".source = ./herdr/config.toml;
     }
     (lib.mkIf pkgs.stdenv.isDarwin {
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
@@ -107,6 +121,10 @@
     # appends one, so strip it via command substitution.
     printf '%s' "$(ss ATUIN_KEY)" > "$HOME/.local/share/atuin/key" && chmod 600 "$HOME/.local/share/atuin/key"
     ss NPMRC > "$HOME/.npmrc" && chmod 600 "$HOME/.npmrc"
+    # atuin config.toml carries [ai].api_token, so it lives in OpenBao (not
+    # programs.atuin.settings, which would commit the token to git).
+    mkdir -p "$HOME/.config/atuin"
+    ss ATUIN_CONFIG > "$HOME/.config/atuin/config.toml" && chmod 600 "$HOME/.config/atuin/config.toml"
   '';
 
   programs.gpg.enable = true;
@@ -197,6 +215,13 @@
       pull = {
         rebase = true;
       };
+      # Portable OcinCloud URL rewrite (folded from the stray ~/.gitconfig).
+      url."git@private-git.ocin.cloud:OpenCloud/".insteadOf = "http://gitea-http.gitea.svc.cluster.local:3000/OpenCloud/";
+      # Machine-local git config (e.g. the firstmate gitea credential helper,
+      # whose path is per-clone) lives in ~/.config/git/config.local — a
+      # writable, uncommitted file. A missing include is silently ignored, so
+      # this is a portable no-op on machines that don't have it.
+      include.path = "~/.config/git/config.local";
     };
   };
 

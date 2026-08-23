@@ -1,0 +1,4 @@
+# Yazi configuration
+[mgr]
+sort_by = "size"
+linemode = "size"

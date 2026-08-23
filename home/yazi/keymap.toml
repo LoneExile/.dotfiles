@@ -1,0 +1,6 @@
+# Keybindings for the what-size plugin (disk usage of selection or cwd).
+# Press `.` then `s` in Yazi to show the recursive size.
+[[mgr.prepend_keymap]]
+on = [ ".", "s" ]
+run = "plugin what-size"
+desc = "Calc size of selection or cwd"
