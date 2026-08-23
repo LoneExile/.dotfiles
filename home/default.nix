@@ -106,6 +106,7 @@
     # atuin's key file is bare hex with no trailing newline; secretspec get
     # appends one, so strip it via command substitution.
     printf '%s' "$(ss ATUIN_KEY)" > "$HOME/.local/share/atuin/key" && chmod 600 "$HOME/.local/share/atuin/key"
+    ss NPMRC > "$HOME/.npmrc" && chmod 600 "$HOME/.npmrc"
   '';
 
   programs.gpg.enable = true;
