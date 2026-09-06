@@ -282,6 +282,28 @@
           ZSH_AUTOSUGGEST_STRATEGY=(history atuin)
         fi
       '')
+      # Real fzf (github.com/junegunn/fzf) as the Ctrl-R picker, piped from
+      # Atuin's synced history instead of Atuin's own TUI. Atuin stays the
+      # store (sync, dedup, cross-machine, host/exit-code metadata); fzf
+      # becomes the interactive picker. Must land after atuin's own ^R
+      # binding (order 1500) to win the keymap.
+      (lib.mkOrder 2000 ''
+        if [[ $options[zle] = on ]]; then
+          atuin-fzf-widget() {
+            local selected
+            selected=$(atuin history list --cmd-only --reverse false \
+              | fzf --scheme=history --query "$BUFFER")
+            if [[ -n $selected ]]; then
+              BUFFER=$selected
+              CURSOR=$#BUFFER
+            fi
+            zle reset-prompt
+          }
+          zle -N atuin-fzf-widget
+          bindkey -M emacs '^r' atuin-fzf-widget
+          bindkey -M viins '^r' atuin-fzf-widget
+        fi
+      '')
     ];
     # mise activates only in interactive shells (.zshrc). Login/non-interactive
     # shells (`zsh -lc`) used by GUI apps — e.g. ZenNotes' Raycast/CLI installer
