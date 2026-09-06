@@ -291,7 +291,7 @@
         if [[ $options[zle] = on ]]; then
           atuin-fzf-widget() {
             local selected
-            selected=$(atuin history list --cmd-only --reverse false \
+            selected=$(atuin history list --cmd-only --reverse=false \
               | fzf --scheme=history --query "$BUFFER")
             if [[ -n $selected ]]; then
               BUFFER=$selected
@@ -398,7 +398,7 @@
     enable = true;
     enableZshIntegration = true;
     enableBashIntegration = true;
-    flags = ["--disable-up-arrow"];
+    flags = ["--disable-up-arrow" "--disable-ctrl-r"];
   };
 
   programs.k9s = {
