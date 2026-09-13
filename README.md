@@ -1,233 +1,112 @@
-# Modular Nix Configuration
+# ~/.dotfiles
 
-A modular, well-documented Nix configuration for macOS that follows community best practices. This configuration provides a flexible, maintainable system for managing your development environment using Nix Darwin and Home Manager.
+Personal macOS config: **nix-darwin** (system) + **Home Manager** (user), driven by this flake.
 
-## ✨ Features
+Live host is **`lex`** (hostname = username). `le` is the same shape, kept as a second darwinConfiguration.
 
-- 🧩 **Modular Architecture** - Organized into reusable, configurable modules
-- 📚 **Well Documented** - Comprehensive documentation and examples
-- 🎯 **Profile System** - Predefined configurations for different use cases
-- 🔒 **Secrets Management** - SOPS integration for secure configuration
-- 🛠️ **Development Ready** - Full development environment with modern tools
-- 🔄 **Easy Updates** - Simple commands for system updates and maintenance
-- 🧪 **Testing Support** - Built-in validation and testing tools
+## Daily commands
 
-## 🚀 Quick Start
+| Command | What it does |
+|---|---|
+| `just switch` | Full nix-darwin rebuild + activate. Needs sudo. |
+| `just home` | Home Manager only. No sudo. Use for zsh / `home.file` / secretspec materialization. |
+| `just openbao-login` | Keycloak SSO → `~/.vault-token`. Required before activation can pull secrets. |
+| `just brew-upgrade` | `brew upgrade` on demand. `just switch` does **not** upgrade Homebrew. |
+| `just update` | `nix flake update` (lockfile only). |
+| `just gc` | `nix-collect-garbage -d`. |
+| `just --list` | Everything else (`check`, `fmt`, `lint`, `build`, `trace`). |
 
-### Prerequisites
+`just` with no args runs `switch`.
 
-Before installing, ensure you have:
+After `just home` / `just switch`, a **new shell** (or `exec zsh`) is required for zshrc / keymap changes. Running shells keep the old init.
 
-- **macOS** (Darwin) - This configuration is designed for macOS systems
-- **Nix Package Manager** with flakes enabled
-- **Git** for cloning the repository
-- **Command Line Tools** for Xcode (install with `xcode-select --install`)
+## Layout
 
-### Installation
+```
+flake.nix                 darwinConfigurations.lex / .le
+justfile                  the commands above
+lib/builders.nix          mkDarwin: HM, nix-homebrew, overlays
+hosts/<name>/             hostname, primaryUser, host-only tweaks
+hosts/common/             shared darwin defaults (nix, TouchID sudo, keyboard)
+profiles/development.nix  CLI / k8s / fonts
+profiles/personal.nix     Homebrew casks + personal packages
+home/default.nix          Home Manager: packages, programs.*, activation
+home/zsh/                 zshrc + aliases / options / keybindings
+secretspec.toml           secret *names* only (no values)
+home/secretspec/          secretspec provider aliases → OpenBao
+```
 
-1. **Install Nix** (if not already installed):
+Profiles are boolean toggles on `lib.mkDarwin` in `flake.nix`, not files under `hosts/common/profiles/`.
+
+## Secrets
+
+Live path is **secretspec → homelab OpenBao**, not SOPS.
+
+- Manifest: `secretspec.toml` (`[profiles.default]`). Names and dest paths only.
+- Values: `secret/secretspec/dotfiles/default/<NAME>` on `https://openbao.home.0dl.me`.
+- Activation: `home.activation.secretspecSecrets` in `home/default.nix` writes them on every `just home` / `just switch` (SSH keys, Atuin key + config, `~/.npmrc`). Missing secret → activation **fails**.
+- Login: `just openbao-login` (recipe name is `openbao-login`, not `secretspec-login`).
+- Binary: `~/.cargo/bin/secretspec` (install script, not the nixpkgs package).
+
+SOPS is leftover, not live: no `secrets/secrets.yaml`, no `sops.secrets.*` in any host/profile. What remains is the `sops-nix` input, `mkDarwin`'s unused darwin module, `.sops.yaml`, and `secrets/note.md`. Ignore those; do not put tokens in `programs.atuin.settings` or git.
+
+Seed / update a secret without printing it:
+
+```bash
+secretspec set NAME --reason "why" -- "$(cat /path/to/file)"
+```
+
+## New machine
+
+1. Install Nix (Determinate), Xcode CLT, clone this repo to `~/.dotfiles`.
+2. `curl -sSL https://install.secretspec.dev | sh`
+3. `just openbao-login`
+4. First activation (nix-darwin not on PATH yet):
+
    ```bash
-   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --prefer-upstream-nix
-
-   ## and then check system update
-   xcode-select --install
+   nix run nix-darwin -- switch --flake .#lex
    ```
 
-2. **Clone this repository**:
-   ```bash
-   git clone https://github.com/loneexile/.dotfiles.git ~/.dotfiles
-   cd ~/.dotfiles
-   ```
+   After that: `just switch`.
+5. `mise install` (language runtimes are mise, not nix packages).
 
-3. **Add your host**:
-   ```bash
-   # Copy the host template
-   cp -r hosts/_template hosts/$(hostname)
+Activation will refuse if OpenBao is unreachable or a declared secret is missing.
 
-   # Replace HOSTNAME / USERNAME / "Full Name" with your values
-   $EDITOR hosts/$(hostname)/default.nix
-   ```
+## New host
 
-   Then register the host in `flake.nix` under `darwinConfigurations`:
+1. `cp -r hosts/_template hosts/<hostname>` and fill hostname / username / home.
+2. Register in `flake.nix`:
+
    ```nix
-   darwinConfigurations = {
-     "${YOUR_HOSTNAME}" = lib.mkDarwin {
-       hostname = "${YOUR_HOSTNAME}";
-       username = "${YOUR_USERNAME}";
-       system   = "aarch64-darwin";   # or "x86_64-darwin"
-       profiles = { development = true; personal = true; };
-     };
+   <hostname> = lib.mkDarwin {
+     hostname = "<hostname>";
+     username = "<username>";   # just home assumes this equals hostname
+     system = "aarch64-darwin";
+     profiles = { development = true; personal = true; };
    };
    ```
 
-4. **Build and activate** the configuration:
-   ```bash
-   # First time setup (install nix-darwin)
-   nix run nix-darwin -- switch --flake .#$(hostname)
-   
-   # Subsequent updates
-   darwin-rebuild switch --flake .#$(hostname)
-   
-   # Or use the convenient just command
-   just switch
+3. `just switch` (or `just switch <hostname>`).
 
-   mise install
-   ```
+See `hosts/lex/default.nix` for the live example.
 
-### Configuration Pattern
+## Shell
 
-Each host file (`hosts/<name>/default.nix`) contains the actual customization
-(packages, Homebrew brews/casks, macOS defaults, activation scripts). Profiles
-are passed as boolean toggles to `lib.mkDarwin` in `flake.nix`. See
-`hosts/le/default.nix` for a working example with Homebrew, fonts, and macOS
-preferences.
+- zsh + Starship. Completions are cached after `compinit` (do not `source <(tool completion zsh)` on every start).
+- **Ctrl-R**: `atuin-fzf-widget` — Atuin's synced DB piped through real [fzf](https://github.com/junegunn/fzf) (`--scheme=history`). Enter fills the prompt; it does not run the command. Atuin is told `--disable-ctrl-r` so it never binds the key.
+- **Ctrl-T** / **Alt-C**: fzf file / directory widgets (`programs.fzf.historyWidget.command` is empty on purpose).
+- Native Atuin TUI: `atuin search -i`.
+- To give Ctrl-R back to Atuin: drop `"--disable-ctrl-r"` from `programs.atuin.flags` and delete the `atuin-fzf-widget` `mkOrder 2000` block in `home/default.nix`, then `just home` and `exec zsh`.
 
-## 📁 Structure
+## Homebrew
 
-This configuration is organized into the following directories:
+Taps are flake inputs (`flake = false`), registered in `nix-homebrew.taps` **and** `nix-homebrew.trust.taps`. Adding a third-party formula/cask is those two plus `homebrew.brews` / `homebrew.casks`, then `nix flake lock` and `just switch` (not `just home`).
 
-```
-├── README.md          # This file
-├── flake.nix          # Main flake configuration; darwinConfigurations live here
-├── flake.lock         # Locked dependencies
-├── justfile           # Common commands (just build, just switch, just home, ...)
-├── lib/               # Reusable library functions
-│   ├── default.nix    # Main library exports (mkDarwin, utils, ...)
-│   ├── builders.nix   # System builders
-│   └── utils.nix      # Utility functions
-├── profiles/          # Profile toggles consumed by lib.mkDarwin
-│   ├── development.nix
-│   └── personal.nix
-├── hosts/             # Host-specific configurations
-│   ├── _template/     # Starter template for new hosts
-│   ├── common/        # Shared base config imported by every host
-│   └── le/            # Personal MacBook host
-├── home/              # Home Manager config (default.nix used by every user)
-├── config/            # Auxiliary configuration files
-├── docs/              # Documentation
-├── scripts/           # Utility scripts
-├── secrets/           # SOPS-encrypted secrets
-└── templates/         # Independent flake templates for new projects
-```
+`homebrew.onActivation.upgrade = false` so `just switch` stays offline-ish. Upgrade with `just brew-upgrade` after `just update` if you need newer formulae.
 
-## 🎯 Profiles
+## Notes
 
-Profile toggles enable curated bundles of settings via `lib.mkDarwin`.
-
-| Profile | Description |
-|---------|-------------|
-| **development** | Full development environment |
-| **personal** | Personal use optimization |
-
-Profiles can be combined — see `flake.nix` for how `darwinConfigurations.le`
-enables `development` and `personal` together. Add new profiles as `.nix`
-files under `profiles/` to expose new toggles.
-
-## 🔧 Common Tasks
-
-### Update System
-```bash
-# Update flake inputs and rebuild
-just update
-
-# Or manually:
-nix flake update
-darwin-rebuild switch --flake .
-```
-
-### Add New Software
-```bash
-# Add to a module or host configuration
-# Then rebuild
-darwin-rebuild switch --flake .
-```
-
-### Validate Configuration
-```bash
-# Check configuration syntax and formatting
-just check
-
-# Or use individual commands:
-nix flake check
-nixfmt **/*.nix
-statix check .
-```
-
-### Development Environment
-```bash
-# Enter development shell
-nix develop
-
-# Or use specific shells:
-nix develop .#minimal    # Minimal tools
-nix develop .#docs      # Documentation tools
-```
-
-## 📚 Documentation
-
-- **[Setup Instructions](docs/SETUP.md)** - Detailed installation and configuration guide
-- **[Host Template README](hosts/_template/README.md)** - Adding a new MacBook
-- **[Lint Exemptions](docs/EXEMPTIONS.md)** - Documented baseline lint warnings
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Contributing](docs/CONTRIBUTING.md)** - Development workflows and guidelines
-
-## 🛠️ Available Commands
-
-This configuration includes a `justfile` with common commands:
-
-```bash
-just --list              # Show all available commands
-just check               # Validate configuration
-just build               # Build configuration
-just update              # Update and rebuild system
-just clean               # Clean build artifacts
-just docs                # Build documentation
-just format              # Format Nix files
-```
-
-## 🔒 Secrets Management
-
-This configuration uses SOPS for managing secrets:
-
-1. **Setup SOPS** (first time):
-   ```bash
-   # Generate age key
-   age-keygen -o ~/.config/sops/age/keys.txt
-   
-   # Add public key to .sops.yaml
-   ```
-
-2. **Edit secrets**:
-   ```bash
-   sops secrets/secrets.yaml
-   ```
-
-3. **Use in configuration**:
-   ```nix
-   sops.secrets.example = {
-     sopsFile = ../secrets/secrets.yaml;
-   };
-   ```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for:
-
-- Development setup
-- Code style guidelines
-- Testing procedures
-- Pull request process
-
-## 📄 License
-
-This configuration is provided as-is for educational and personal use. Feel free to fork and adapt for your own needs.
-
-## 🆘 Support
-
-- **Issues**: Report bugs or request features via GitHub Issues
-- **Discussions**: Ask questions in GitHub Discussions
-- **Documentation**: Check the [docs/](docs/) directory for detailed guides
-
----
-
-**Happy Nix-ing!** 🎉
+- `docs/SETUP.md` is a stub. This README is the setup path.
+- `just docs` / `just docs-serve` expect an mdbook tree that is not present.
+- Formatter is **alejandra** (`just fmt`), not nixfmt.
+- Lint baseline: [docs/EXEMPTIONS.md](docs/EXEMPTIONS.md).
