@@ -490,6 +490,10 @@
         HostName = "10.159.0.63";
         User = "root";
       };
+      "th-dc2" = {
+        HostName = "10.152.16.63";
+        User = "root";
+      };
       "private-git.ocin.cloud" = {
         HostName = "10.159.0.65";
         User = "git";
