@@ -94,6 +94,7 @@
       "kubelogin"
       "gdu"
       "vale"
+      "crit"
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
@@ -147,7 +148,7 @@
       "xykong/tap/flux-markdown"
       "thaw" # menu bar manager
       # "siyuan"
-      "shottr"
+      # "shottr"
       "squirrel-app"
       "bruno"
       # "android-studio"
@@ -160,6 +161,7 @@
       "cursor"
       "cursor-cli"
       "vorssaint"
+      # "flameshot"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
