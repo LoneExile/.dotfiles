@@ -94,7 +94,7 @@
       "kubelogin"
       "gdu"
       "vale"
-      "crit"
+      # "crit"
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
@@ -115,7 +115,7 @@
       "google-chrome"
       "iina"
       "obs"
-      "raycast"
+      # "raycast"
       "signal"
       "slack"
       # "spotify"
