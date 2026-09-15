@@ -26,12 +26,13 @@
     # Homebrew integration for macOS packages
     nix-homebrew = {
       url = "github:zhaofengli-wip/nix-homebrew";
-      # brew-src override: upstream nix-homebrew still pins brew 6.0.13, but
-      # current homebrew-core formulas use the install_steps DSL methods
-      # (symlink_tree, update_gdk_pixbuf_loaders_cache, install overwrite:)
-      # that only exist in brew >= 6.0.14. Keep brew-src at the latest release
-      # tag so `brew bundle` can parse the pinned tap revisions.
-      inputs.brew-src.url = "github:Homebrew/brew/6.0.15";
+      # brew-src override: pin brew to a release new enough for the DSL the
+      # current tap revisions use. The taps track upstream, so they move ahead
+      # of whatever brew nix-homebrew pins — when `brew bundle` fails with
+      # "unknown keyword: :<kw>" / "is unreadable", bump this tag.
+      # 6.0.22: install_steps `run(..., must_succeed:)` (added upstream in
+      # 6.0.16, used by kgarner7/feishin). Matches nix-homebrew's own pin.
+      inputs.brew-src.url = "github:Homebrew/brew/6.0.22";
     };
 
     # Homebrew taps (non-flake inputs)
