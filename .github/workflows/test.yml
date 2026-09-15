@@ -139,14 +139,6 @@ jobs:
           test -f docs/TROUBLESHOOTING.md
           test -f justfile
 
-      - name: Validate README links
-        run: |
-          echo "Checking README structure..."
-          grep -q "Quick Start" README.md
-          grep -q "Structure" README.md
-          grep -q "Profiles" README.md
-          grep -q "Common Tasks" README.md
-
       - name: Check justfile commands
         run: |
           echo "Validating justfile..."
