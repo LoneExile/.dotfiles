@@ -69,6 +69,10 @@
       };
     }
     (lib.mkIf pkgs.stdenv.isDarwin {
+      # Ghostty (installed as a Homebrew cask in profiles/personal.nix) is kept
+      # in lockstep with the wezterm config below; see the header of
+      # ./ghostty/config for the option-by-option mapping.
+      ".config/ghostty/config".source = ./ghostty/config;
       ".config/wezterm/wezterm.lua".text = builtins.readFile ./wezterm/wezterm.lua;
       # ".config/tmux/tmux.conf".text = builtins.readFile ./tmux/tmux.conf;
       ".config/zsh/aliases.zsh".text = builtins.readFile ./zsh/config/aliases.zsh;

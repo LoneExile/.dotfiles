@@ -162,6 +162,7 @@
       "cursor-cli"
       "vorssaint"
       # "flameshot"
+      "ghostty"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because

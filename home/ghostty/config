@@ -1,0 +1,96 @@
+# Ghostty config, ported from ./wezterm/wezterm.lua so both terminals look and
+# feel the same. Change one, change the other.
+#
+# Managed by home-manager (see home/default.nix): ~/.config/ghostty/config is a
+# read-only /nix/store symlink, so edit THIS file and run `just home`.
+# Option names verified against Ghostty 1.3.1; Ghostty only supports
+# whole-line comments, never trailing ones.
+
+# --- Theme and colors --------------------------------------------------------
+
+# wezterm: config.color_scheme = 'tokyonight_night'
+theme = TokyoNight Night
+
+# wezterm: config.colors.background = '#1a1b26' (overrides the scheme default)
+background = #1a1b26
+
+# wezterm: config.window_background_opacity = 0.95
+background-opacity = 0.95
+
+# --- Font --------------------------------------------------------------------
+
+# wezterm: font_with_fallback({'JetBrains Mono', 'Noto Looped Thai', 'Noto Color Emoji'})
+#
+# Deliberately NOT ported as font-family lines, because doing so is at best a
+# no-op and at worst breaks all text. Measured with `ghostty +show-face`:
+#
+#   * None of those three families is installed on this machine. "JetBrains
+#     Mono" ships *inside* both terminals (wezterm reports it as `<built-in>`,
+#     Ghostty embeds it and has no .ttf in its Resources), and wezterm bundles
+#     Noto Color Emoji too. The only system JetBrains Mono is the nerd-patched
+#     "JetBrainsMono NF", whose glyph metrics differ from the unpatched
+#     built-in, so pinning it would *reduce* fidelity.
+#   * Ghostty promotes the first *resolvable* family in the list to the primary
+#     face, whatever its position. So `font-family = JetBrains Mono` (which
+#     resolves to nothing here) followed by any installed font hands the
+#     primary face to that font: the chain [JetBrains Mono, Menlo] renders
+#     latin text in Menlo. Listing an absent family as a placeholder is a trap
+#     that fires the day someone installs it.
+#
+# With no font-family at all, Ghostty mirrors the wezterm font
+# architecture: embedded JetBrains Mono for text, embedded Symbols Nerd Font
+# for nerd glyphs, internal sprites for powerline separators (wezterm: built-in
+# JetBrains Mono + built-in Symbols Nerd Font Mono).
+#
+# One genuine remaining difference in look, no config can close it locally:
+# emoji. wezterm renders them in its built-in Noto Color Emoji; Ghostty uses
+# Apple Color Emoji, which it always prefers on macOS unless a listed family
+# supplies emoji glyphs. To match wezterm, add pkgs.noto-fonts-color-emoji to
+# fonts.packages in profiles/development.nix, `just switch`, then add a single
+# `font-family = Noto Color Emoji` line here.
+# Thai also differs (Ghostty: Arial Unicode MS, wezterm: Ayuthaya); both are
+# system fallbacks picked automatically, neither terminal is configured for it.
+
+# wezterm: config.font_size = 14.0
+font-size = 14
+
+# --- Window ------------------------------------------------------------------
+
+# wezterm: config.window_decorations = 'RESIZE' — no titlebar, still resizable.
+# "hidden" is the faithful equivalent: it drops the whole top strip (title,
+# proxy icon and the traffic-light buttons, which macos-window-buttons cannot
+# re-enable in this mode) while keeping the native frame and rounded corners,
+# unlike window-decoration = none.
+# Dragging: the titlebar area is gone, but ctrl+cmd+drag anywhere on the window
+# works because hosts/common/default.nix sets NSWindowShouldDragOnGesture.
+# Close with cmd+w / cmd+shift+w. Ghostty applies this only to NEW windows and
+# warns that flipping it at runtime can leave existing windows in a bad state,
+# so quit Ghostty (cmd+q) and relaunch after changing it.
+macos-titlebar-style = hidden
+
+# wezterm: config.window_padding = { left = 2, right = 2, top = 0, bottom = 0 }
+window-padding-x = 2
+window-padding-y = 0
+
+# wezterm: config.window_close_confirmation = 'NeverPrompt'
+confirm-close-surface = false
+
+# wezterm hides the mouse pointer while typing by default; Ghostty does not.
+mouse-hide-while-typing = true
+
+# --- Keys --------------------------------------------------------------------
+
+# wezterm: SHIFT+Enter sends "\x1b\r" (ESC CR), for multiline input in repls
+keybind = shift+enter=text:\x1b\r
+
+# --- Deliberately not ported -------------------------------------------------
+
+# hide_tab_bar_if_only_one_tab: macOS uses native tabs, which already hide when
+#   a window has a single tab. Ghostty's window-show-tab-bar is GTK-only.
+# adjust_window_size_when_changing_font_size = false: already Ghostty's
+#   behaviour, it keeps the window size and reflows the grid.
+# use_dead_keys = false: no Ghostty equivalent; dead-key composition is left to
+#   the macOS input source.
+# window_frame (Roboto Bold tab-bar font, '#333333' titlebar): moot with
+#   macos-titlebar-style = hidden, and window-title-font-family /
+#   window-titlebar-background are GTK-only anyway.
