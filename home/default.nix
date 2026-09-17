@@ -68,7 +68,7 @@
         recursive = true;
       };
     }
-    (lib.mkIf pkgs.stdenv.isDarwin {
+    (lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
       # Ghostty (installed as a Homebrew cask in profiles/personal.nix) is kept
       # in lockstep with the wezterm config below; see the header of
       # ./ghostty/config for the option-by-option mapping.
