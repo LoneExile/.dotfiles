@@ -21,9 +21,10 @@ _sudo:
 # Log in to the homelab OpenBao via Keycloak SSO and write ~/.vault-token.
 # Required once per machine (and before each token expiry) for secretspec to
 # resolve secrets like the SSH keys materialized on every switch.
+# Uses the OIDC mount default role — `secretspec-human` is OcinCloud-only.
 [macos]
 openbao-login:
-  BAO_ADDR=https://openbao.home.0dl.me bao login -method=oidc -path=oidc role=secretspec-human
+  BAO_ADDR=https://openbao.home.0dl.me bao login -method=oidc -path=oidc
 
 # Build the nix-darwin configuration and switch to it.
 # darwin-rebuild is already installed system-wide, so activate directly in a
