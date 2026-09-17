@@ -37,7 +37,7 @@
     unstablePkgs.hcloud
 
     # Editors / terminal
-    unstablePkgs.wezterm
+    # unstablePkgs.wezterm
     unstablePkgs.yazi
 
     # CLI utilities
