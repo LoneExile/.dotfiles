@@ -170,6 +170,22 @@
         "type": "github"
       }
     },
+    "homebrew-lightpanda-io-browser": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789527023,
+        "narHash": "sha256-oqzBGbOdtA89GlWkARP0aXfOT0JzbtWcrWiyoradXYE=",
+        "owner": "lightpanda-io",
+        "repo": "homebrew-browser",
+        "rev": "b5332b04aa6fba4a96a743fa27cb57eabfeb03f1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lightpanda-io",
+        "repo": "homebrew-browser",
+        "type": "github"
+      }
+    },
     "homebrew-steveyegge-beads": {
       "flake": false,
       "locked": {
@@ -398,6 +414,7 @@
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",
         "homebrew-kgarner7-feishin": "homebrew-kgarner7-feishin",
+        "homebrew-lightpanda-io-browser": "homebrew-lightpanda-io-browser",
         "homebrew-steveyegge-beads": "homebrew-steveyegge-beads",
         "homebrew-telepresenceio-telepresence": "homebrew-telepresenceio-telepresence",
         "homebrew-xykong-tap": "homebrew-xykong-tap",

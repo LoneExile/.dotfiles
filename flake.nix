@@ -84,6 +84,11 @@
       url = "github:abue-ammar/homebrew-tinycast";
       flake = false;
     };
+    homebrew-lightpanda-io-browser = {
+      url = "github:lightpanda-io/homebrew-browser";
+      flake = false;
+    };
+
 
 
     # SOPS for secrets management

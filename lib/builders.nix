@@ -233,6 +233,7 @@ in {
               "zseven-w/homebrew-openpencil" = homebrew-zseven-w-openpencil;
               "kgarner7/homebrew-feishin" = homebrew-kgarner7-feishin;
               "abue-ammar/homebrew-tinycast" = homebrew-abue-ammar-tinycast;
+              "lightpanda-io/homebrew-browser" = homebrew-lightpanda-io-browser;
             };
 
             # Declarative tap trust for third-party taps (required by newer Homebrew).
@@ -249,6 +250,7 @@ in {
                 "zseven-w/openpencil"
                 "kgarner7/feishin"
                 "abue-ammar/tinycast"
+                "lightpanda-io/browser"
               ];
             };
           };
