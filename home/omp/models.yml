@@ -1,0 +1,1130 @@
+providers:
+  neuralwatt:
+    baseUrl: https://api.neuralwatt.com/v1
+    apiKey: NEURALWATT_API_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: glm-5.2
+        name: glm-5.2
+        reasoning: true
+        input: [text]
+        contextWindow: 1048560
+        maxTokens: 32768
+        cost: { input: 1.45, output: 4.5, cacheRead: 0.3625, cacheWrite: 0 }
+      - id: glm-5.2-fast
+        name: GLM-5.2 (fast)
+        reasoning: false
+        input: [text]
+        contextWindow: 1048560
+        maxTokens: 32768
+        cost: { input: 1.45, output: 4.5, cacheRead: 0.3625, cacheWrite: 0 }
+      - id: kimi-k2.6
+        name: Kimi K2.6
+        reasoning: true
+        input: [text, image]
+        contextWindow: 262128
+        maxTokens: 32768
+        cost: { input: 0.69, output: 3.22, cacheRead: 0.1725, cacheWrite: 0 }
+      - id: kimi-k2.6-fast
+        name: Kimi K2.6 (fast)
+        reasoning: false
+        input: [text, image]
+        contextWindow: 262128
+        maxTokens: 32768
+        cost: { input: 0.69, output: 3.22, cacheRead: 0.1725, cacheWrite: 0 }
+      - id: kimi-k2.7-code
+        name: Kimi K2.7 Code
+        reasoning: true
+        input: [text, image]
+        contextWindow: 262128
+        maxTokens: 32768
+        cost: { input: 0.95, output: 4, cacheRead: 0.2375, cacheWrite: 0 }
+      - id: kimi-k2.7-code-flex
+        name: Kimi K2.7 Code (flex)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 262128
+        maxTokens: 32768
+        cost: { input: 0.95, output: 4, cacheRead: 0.2375, cacheWrite: 0 }
+      - id: glm-5.2-short
+        name: GLM-5.2 (short)
+        reasoning: true
+        input: [text]
+        contextWindow: 199984
+        maxTokens: 32768
+        cost: { input: 1.45, output: 4.5, cacheRead: 0.3625, cacheWrite: 0 }
+      - id: qwen3.6-35b
+        name: Qwen3.6 35B
+        reasoning: true
+        input: [text, image]
+        contextWindow: 131056
+        maxTokens: 32768
+        cost: { input: 0.29, output: 1.15, cacheRead: 0.0725, cacheWrite: 0 }
+      - id: qwen3.5-397b
+        name: Qwen3.5 397B
+        reasoning: true
+        input: [text]
+        contextWindow: 262128
+        maxTokens: 32768
+        cost: { input: 0.69, output: 4.14, cacheRead: 0.1725, cacheWrite: 0 }
+      - id: qwen3.5-397b-fast
+        name: Qwen3.5 397B (fast)
+        reasoning: false
+        input: [text]
+        contextWindow: 262128
+        maxTokens: 32768
+        cost: { input: 0.69, output: 4.14, cacheRead: 0.1725, cacheWrite: 0 }
+      - id: qwen3.6-35b-fast
+        name: Qwen3.6 35B (fast)
+        reasoning: false
+        input: [text, image]
+        contextWindow: 131056
+        maxTokens: 32768
+        cost: { input: 0.29, output: 1.15, cacheRead: 0.0725, cacheWrite: 0 }
+  # Cline — OpenAI-compatible gateway at api.cline.bot/api/v1, one CLINE_API_KEY.
+  # Endpoint + IDs live-verified 2026-07-20. Streaming = standard OpenAI SSE.
+  # TWO billing paths on the SAME key (server decides by model id):
+  #  * Frontier/plain ids (anthropic/*, openai/*, google/*, z-ai/glm-4.6,
+  #    moonshotai/kimi-k3, deepseek/*, qwen/*, minimax/*) = USAGE-BILLING =>
+  #    drawn from your Cline CREDITS (app.cline.bot). cost:0 below is a
+  #    placeholder; real spend is metered by Cline, watch your credit balance.
+  #  * "cline-pass/<model>" ids = your ClinePass SUBSCRIPTION ($9.99/mo). The
+  #    covered set (kimi family + minimax below) returns cost:0 = NO credits,
+  #    metered against ClinePass 5h/weekly/monthly rate limits instead. NOTE:
+  #    cline-pass/glm-5.2 and cline-pass/deepseek-v4-* currently route to a
+  #    PAID fallback and DO charge credits, so they are intentionally omitted.
+  #    ClinePass coverage/pricing can change upstream; re-verify with a
+  #    cost-field check if a model starts unexpectedly charging.
+  cline:
+    baseUrl: https://api.cline.bot/api/v1
+    apiKey: CLINE_API_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: anthropic/claude-opus-4.6
+        name: Claude Opus 4.6 (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: anthropic/claude-opus-4.5
+        name: Claude Opus 4.5 (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: anthropic/claude-sonnet-4.5
+        name: Claude Sonnet 4.5 (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: anthropic/claude-haiku-4.5
+        name: Claude Haiku 4.5 (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: openai/gpt-5.1
+        name: GPT-5.1 (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 400000
+        maxTokens: 128000
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: openai/gpt-5-codex
+        name: GPT-5 Codex (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 400000
+        maxTokens: 128000
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: openai/o3
+        name: OpenAI o3 (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 100000
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: google/gemini-3-pro-preview
+        name: Gemini 3 Pro Preview (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 65536
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: google/gemini-2.5-pro
+        name: Gemini 2.5 Pro (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 65536
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: google/gemini-2.5-flash
+        name: Gemini 2.5 Flash (Cline)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 65536
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: deepseek/deepseek-v3.2
+        name: DeepSeek V3.2 (Cline)
+        reasoning: true
+        input: [text]
+        contextWindow: 163840
+        maxTokens: 65536
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: z-ai/glm-4.6
+        name: GLM-4.6 (Cline)
+        reasoning: true
+        input: [text]
+        contextWindow: 200000
+        maxTokens: 128000
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: moonshotai/kimi-k2
+        name: Kimi K2 (Cline)
+        reasoning: false
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: moonshotai/kimi-k3
+        name: Kimi K3 (Cline)
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: qwen/qwen3-coder
+        name: Qwen3 Coder (Cline)
+        reasoning: false
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 65536
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: minimax/minimax-m2
+        name: MiniMax M2 (Cline)
+        reasoning: true
+        input: [text]
+        contextWindow: 204800
+        maxTokens: 16384
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      # --- ClinePass SUBSCRIPTION (cost:0 = drawn from your $9.99/mo plan, NOT
+      #     credits; verified cost:0 on 2026-07-20). Metered by ClinePass rate
+      #     limits. Prefer these to avoid burning credits.
+      - id: cline-pass/kimi-k3
+        name: Kimi K3 (ClinePass sub)
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: cline-pass/kimi-k2.7-code
+        name: Kimi K2.7 Code (ClinePass sub)
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: cline-pass/kimi-k2.6
+        name: Kimi K2.6 (ClinePass sub)
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: cline-pass/minimax-m3
+        name: MiniMax M3 (ClinePass sub)
+        reasoning: true
+        input: [text]
+        contextWindow: 204800
+        maxTokens: 16384
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+# --- OpenAI Codex: keep OMP below the provider's larger server context.
+  # openai-codex:
+  #   modelOverrides:
+  #     gpt-5.6-luna:
+  #       contextWindow: 500000
+  # --- OpenRouter: built-in provider (409 models, key from .env OPENROUTER_API_KEY).
+  #     Override-only block: no `models:` key, so the bundled catalog is kept intact.
+  #     Do NOT add `models:` entries here for OpenRouter ids — the bundled catalog
+  #     already carries them with correct rates, and a hand-written cost block would
+  #     freeze prices that OpenRouter later changes.
+  #     These three are the only models where the bundled catalog disagrees with the
+  #     live openrouter.ai/api/v1/models pricing on input/output (audited 2026-07-29).
+  #     mistral-small-3.1 under-reported ~10x. The ~17 other diffs are cacheRead/
+  #     cacheWrite where OpenRouter stopped publishing a cache rate; those are left
+  #     alone on purpose, since keeping a non-zero rate is the conservative estimate.
+  openrouter:
+    modelOverrides:
+      mistralai/mistral-small-3.1-24b-instruct:
+        cost: { input: 0.351, output: 0.555, cacheRead: 0, cacheWrite: 0 }
+      nousresearch/hermes-4-70b:
+        cost: { input: 0.13, output: 0.4, cacheRead: 0, cacheWrite: 0 }
+      thedrummer/rocinante-12b:
+        cost: { input: 0.25, output: 0.5, cacheRead: 0, cacheWrite: 0 }
+  # --- xAI Grok via the SuperGrok OAuth path (`xai-oauth`).
+  #     OMP's bundled catalog ships every xai-oauth model at cost:0 because the
+  #     SuperGrok subscription is flat-rate, so the dashboard reported $0.00 for
+  #     ~6.4M grok-4.5 tokens/day. These overrides restore xAI's published API
+  #     list prices (docs.x.ai/developers/pricing, verified 2026-07-26) so cost
+  #     accounting is comparable to the metered providers above.
+  #     NOTE: this is NOTIONAL "equivalent API spend" — the subscription does not
+  #     bill per token, and xAI's long-context tier (>=200k prompt: 2x rates on
+  #     grok-4.5) is not modelled, so real long-context turns under-report.
+  #     Override-only block: no `models:` key, so built-in entries are kept.
+  xai-oauth:
+    modelOverrides:
+      grok-4.5:
+        cost: { input: 2, output: 6, cacheRead: 0.3, cacheWrite: 0 }
+      grok-4.3:
+        cost: { input: 1.25, output: 2.5, cacheRead: 0.2, cacheWrite: 0 }
+      grok-4.20-0309-reasoning:
+        cost: { input: 1.25, output: 2.5, cacheRead: 0.2, cacheWrite: 0 }
+      grok-4.20-0309-non-reasoning:
+        cost: { input: 1.25, output: 2.5, cacheRead: 0.2, cacheWrite: 0 }
+      grok-4.20-multi-agent-0309:
+        cost: { input: 2, output: 6, cacheRead: 0.2, cacheWrite: 0 }
+      grok-build:
+        cost: { input: 1, output: 2, cacheRead: 0.2, cacheWrite: 0 }
+      grok-build-0.1:
+        cost: { input: 1, output: 2, cacheRead: 0.2, cacheWrite: 0 }
+      # grok-composer-2.5-fast intentionally left at cost:0 — xAI publishes no
+      # list price for it, and a guessed rate is worse than a known zero.
+  # --- oauth-token-refresher providers (homelab) — NEW providers that use the
+  #     cluster refresher's live token instead of OMP's own OAuth. The token is
+  #     read from the refresher /token/{provider} endpoint by a small local
+  #     helper and exposed as REFRESHER_ANTHROPIC_KEY / REFRESHER_XAI_KEY.
+  #     These are DISTINCT from the built-in anthropic / xai-oauth providers,
+  #     so existing modelRoles and auth are untouched.
+  anthropic-refresher:
+    baseUrl: https://api.anthropic.com
+    apiKey: REFRESHER_ANTHROPIC_KEY
+    api: anthropic-messages
+    auth: apiKey
+    authHeader: true
+    headers:
+      anthropic-beta: oauth-2025-04-20
+    models:
+      - id: claude-3-5-sonnet-20240620
+        name: Claude 3.5 Sonnet (2024-06-20)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 8192
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-3-5-sonnet-20241022
+        name: Claude 3.5 Sonnet (2024-10-22)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 8192
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-3-7-sonnet-20250219
+        name: Claude 3.7 Sonnet
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-3-haiku-20240307
+        name: Claude 3 Haiku
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 4096
+        cost: { input: 0.25, output: 1.25, cacheRead: 0.03, cacheWrite: 0.3 }
+      - id: claude-3-opus-20240229
+        name: Claude 3 Opus
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 4096
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-3-sonnet-20240229
+        name: Claude 3 Sonnet
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 4096
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-fable-5
+        name: Claude Fable 5
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-haiku-4-5
+        name: Claude Haiku 4.5
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 0.8, output: 4, cacheRead: 0.08, cacheWrite: 1 }
+      - id: claude-haiku-4-5-20251001
+        name: Claude Haiku 4.5 (2025-10-01)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 0.8, output: 4, cacheRead: 0.08, cacheWrite: 1 }
+      - id: claude-mythos-5
+        name: Claude Mythos 5
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-opus-4-0
+        name: Claude Opus 4.0
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 32000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-4-1
+        name: Claude Opus 4.1
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 32000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-4-1-20250805
+        name: Claude Opus 4.1 (2025-08-05)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 32000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-4-20250514
+        name: Claude Opus 4.0 (2025-05-14)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 32000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-4-5
+        name: Claude Opus 4.5
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-4-5-20251101
+        name: Claude Opus 4.5 (2025-11-01)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-4-6
+        name: Claude Opus 4.6
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-4-7
+        name: Claude Opus 4.7
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-4-8
+        name: Claude Opus 4.8
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }
+      - id: claude-opus-5
+        name: Claude Opus 5
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 }
+      - id: claude-sonnet-4-0
+        name: Claude Sonnet 4.0
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-sonnet-4-20250514
+        name: Claude Sonnet 4.0 (2025-05-14)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-sonnet-4-5
+        name: Claude Sonnet 4.5
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 64000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-sonnet-4-5-20250929
+        name: Claude Sonnet 4.5 (2025-09-29)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 64000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-sonnet-4-6
+        name: Claude Sonnet 4.6
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-sonnet-5
+        name: Claude Sonnet 5
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+  xai-refresher:
+    baseUrl: https://api.x.ai/v1
+    apiKey: REFRESHER_XAI_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: grok-4.5
+        name: Grok 4.5 (refresher)
+        reasoning: true
+        input: [text]
+        contextWindow: 131072
+        maxTokens: 32768
+        cost: { input: 2, output: 6, cacheRead: 0.3, cacheWrite: 0 }
+  # --- OmniRoute — second OpenAI-compatible gateway on backbone-cluster, running
+  #   ALONGSIDE litellm (evaluation: it does quota-aware auto-fallback across a
+  #   huge provider pool, which litellm does not). Runtime SQLite state, no
+  #   declarative config in git — re-sync this list from the live gateway if the
+  #   pool changes (GET /v1/models with your key).
+  #   LAN-only ungated API route: https://omniroute-api.home.0dl.me/v1 (Envoy
+  #   TLS). REQUIRE_API_KEY=true is the ONLY gate on that hostname, so put an
+  #   OmniRoute API key (minted in the dashboard, api_keys table) in
+  #   ~/.omp/.env as OMNIROUTE_API_KEY. Keep that key for inference only and
+  #   never hand it to an in-cluster consumer pointing at the Service directly:
+  #   on /v1/* every valid key can also mint/revoke keys (scopes are not
+  #   consulted on /api/v1/*) — the Envoy path-allowlist is the real control.
+  #   The six ids are OmniRoute's README-documented zero-config VIRTUAL combos
+  #   ("auto" variants). A combo's context/max-token limits and per-token cost
+  #   depend on whichever pool member answers a given request, so those fields
+  #   are intentionally omitted (optional in OMP's schema) rather than guessed.
+  omniroute:
+    baseUrl: https://omniroute-api.home.0dl.me/v1
+    apiKey: OMNIROUTE_API_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: auto
+        name: OmniRoute Auto (balanced LKGP)
+      - id: auto/coding
+        name: OmniRoute Auto (coding)
+      - id: auto/fast
+        name: OmniRoute Auto (fast)
+      - id: auto/cheap
+        name: OmniRoute Auto (cheap)
+      - id: auto/offline
+        name: OmniRoute Auto (offline)
+      - id: auto/smart
+        name: OmniRoute Auto (smart)
+  # --- OpenCode Go — flat-rate SUBSCRIPTION gateway (opencode.ai). The catalog
+  #     is BUNDLED in OMP (provider `opencode-go`, baseUrl
+  #     https://opencode.ai/zen/go/v1) and the key is read automatically from
+  #     OPENCODE_API_KEY in .env — no models: list needed. The bundled entries
+  #     carry ZEN PAY-AS-YOU-GO rates, which would overstate spend for a Go
+  #     subscriber, so this override block zeroes them (cline-pass convention:
+  #     cost:0 = drawn from your plan, not per-token). Live-verified 2026-08-04:
+  #     every id below answered a real request on the Go endpoint; mimo-v2-pro /
+  #     mimo-v2-omni / hy3-preview are advertised by /v1/models but currently
+  #     400/500 upstream ("Unsupported model" / "ModelNotFound") and are left
+  #     as-is in the catalog. opencode-zen is the separate pay-as-you-go catalog
+  #     — untouched, keeps its real per-token rates.
+  #     2026-09-10 audit (source: https://opencode.ai/docs/go): the "flat-rate"
+  #     wording above is imprecise. Go is $10/mo whose entitlement is a PER-MODEL
+  #     MONTHLY DOLLAR CAP ($15/$30/$60 by model), burned at real token prices
+  #     (5-hour = 20% of monthly, weekly = 50%). This applies to EVERY id below,
+  #     not just the newest one. cost:0 stops sessions reporting notional spend
+  #     but equally hides cap burn — and a per-token cost cannot express a
+  #     monthly cap either way, so this is a reporting choice, not a fix. Kept
+  #     uniform on purpose: change it for the whole block or not at all.
+  #     `deepseek-flash` = DeepSeek V4.1 Flash (docs Endpoints table maps the
+  #     display name to this id; OMP lists ids, so "V4.1" never appears in
+  #     `omp models`). 1M ctx / 384k out, effort thinking, chat/completions,
+  #     cap $15, off-peak $0.15/$0.60/$0.003, PEAK 2x during 01:00-04:00 and
+  #     06:00-10:00 UTC Mon-Fri. Discovery-only: the literal id appears 0 times
+  #     in @oh-my-pi/pi-catalog/src/models.json — it arrives via runtime
+  #     discovery (agent/models.db model_cache, `opencode-go:models-v3:<credfp>`)
+  #     so it is NOT pinned with a `models:` entry that would shadow the refresh.
+  #     Live-verified 2026-09-10: GET /v1/models (36 ids) + a real reply from
+  #     `omp -p --model opencode-go/deepseek-flash --thinking=high` (effort is
+  #     the --thinking flag; a `:high` id suffix does not resolve for this id).
+  #     Beware: provider `deepseek` (api.deepseek.com) caches a DIFFERENT
+  #     `deepseek-flash` (reasoning:false, null limits) — always fully qualify.
+  opencode-go:
+    modelOverrides:
+      deepseek-flash: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      deepseek-v4-flash: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      deepseek-v4-pro: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      # DeepSeek V4.1 Flash ships image input in the provider's discovery payload
+      # (omp models ls --json → input:[text,image]) but OMP's resolved compat for
+      # this provider still sets stripImageInput, so the table showed images=no and
+      # pastes got "[image omitted: model does not support vision]". Cleared here
+      # (2026-09-11). Revert this compat line if upstream rejects image payloads.
+      deepseek-v4.1-flash: { compat: { stripImageInput: false } }
+      glm-5: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      glm-5.1: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      glm-5.2: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      gpt-5.6-luna: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      grok-4.5: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      hy3: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      hy3-preview: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      kimi-k2.5: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      kimi-k2.6: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      kimi-k2.7-code: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      kimi-k3: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      mimo-v2-omni: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      mimo-v2-pro: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      mimo-v2.5: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      mimo-v2.5-pro: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      minimax-m2.5: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      minimax-m2.7: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      minimax-m3: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      qwen3.5-plus: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      qwen3.6-plus: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      qwen3.7-max: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      qwen3.7-plus: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+      qwen3.8-max: { cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+  # --- Hetzner Inference — OpenAI-compatible API on Hetzner's own data
+  #     centers (experiments.hetzner.com/docs/inference). Base URL, model ids
+  #     and context windows live-verified 2026-08-12 via GET /v1/models and a
+  #     real chat completion per model with the HETZNER_API_KEY from .env.
+  #     FREE while experimental (docs FAQ) => cost:0 everywhere, exactly like
+  #     cline-pass: nothing is metered today, so the dashboard shows $0.00.
+  #     If Hetzner starts billing, restore per-token rates.
+  #     Rate limits (per key): 4M input + 100k output tokens/min, 10
+  #     requests/min. GLM-5.2-NVFP4 (744B) is slow: ~40-130s per reply.
+  #     GLM-5.2-NVFP4 also 502'd once transiently; it recovers.
+  hetzner:
+    baseUrl: https://inference.hetzner.com/api/v1
+    apiKey: HETZNER_API_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: DeepSeek-V4-Flash-0731
+        name: DeepSeek V4 Flash (Hetzner)
+        reasoning: true
+        input: [text]
+        contextWindow: 512000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: GLM-5.2-NVFP4
+        name: GLM-5.2 NVFP4 (Hetzner)
+        reasoning: true
+        input: [text]
+        contextWindow: 512000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: Kimi-K2.7-Code
+        name: Kimi K2.7 Code (Hetzner)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: Qwen/Qwen3.6-35B-A3B-FP8
+        name: Qwen3.6 35B A3B FP8 (Hetzner)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+  # --- CommandCode (commandcode.ai) — pay-as-you-go Provider API, OpenAI Chat
+  #   Completions-compatible. Key in .env as COMMANDCODE_API_KEY (also serves
+  #   the `cmd` CLI). NOT bundled in OMP as of 2026-08-20 — verified absent via
+  #   `omp models` grep and the pi-catalog models.json (both empty).
+  #   Requires a plan with API access (Provider/GOAT/Pro/Max/Team — NOT the $1
+  #   Go plan, per docs.commandcode.ai/provider).
+  #   Model ids + context windows verified live 2026-08-20 via GET
+  #   /provider/v1/models with the real key (needs a browser-shaped
+  #   User-Agent — Cloudflare 1010-blocks bare python/curl UAs). Per-token
+  #   rates are LIST prices scraped from docs.commandcode.ai/docs/resources/
+  #   pricing-limits#models — several of these carry auto-applied promotional
+  #   deals (e.g. gemini-3.7-flash -50% through 2026-12-31, minimax-m3
+  #   permanent 2x-usage -50%) that are NOT modelled here, so real spend may
+  #   read lower than these costs until a deal lapses. This is a curated
+  #   subset of CommandCode's ~56-model catalog (see /docs/reference/cli/
+  #   models for the rest) — not exhaustive.
+  commandcode:
+    baseUrl: https://api.commandcode.ai/provider/v1
+    apiKey: COMMANDCODE_API_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: claude-sonnet-5
+        name: Claude Sonnet 5 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 64000
+        cost: { input: 2.00, output: 10.00, cacheRead: 0.20, cacheWrite: 2.50 }
+      - id: claude-opus-5
+        name: Claude Opus 5 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 64000
+        cost: { input: 5.00, output: 25.00, cacheRead: 0.50, cacheWrite: 6.25 }
+      - id: claude-haiku-4-5-20251001
+        name: Claude Haiku 4.5 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 1.00, output: 5.00, cacheRead: 0.10, cacheWrite: 1.25 }
+      - id: gpt-5.6-sol
+        name: GPT-5.6 Sol (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1100000
+        maxTokens: 128000
+        cost: { input: 5.00, output: 30.00, cacheRead: 0.50, cacheWrite: 6.25 }
+      - id: gpt-5.6-terra
+        name: GPT-5.6 Terra (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1100000
+        maxTokens: 128000
+        cost: { input: 2.00, output: 12.00, cacheRead: 0.20, cacheWrite: 2.50 }
+      - id: gpt-5.6-luna
+        name: GPT-5.6 Luna (CommandCode)
+        reasoning: false
+        input: [text]
+        contextWindow: 1100000
+        maxTokens: 128000
+        cost: { input: 0.20, output: 1.20, cacheRead: 0.02, cacheWrite: 0.25 }
+      - id: gpt-5.5
+        name: GPT-5.5 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 200000
+        maxTokens: 128000
+        cost: { input: 5.00, output: 30.00, cacheRead: 0.50, cacheWrite: 0 }
+      - id: deepseek/deepseek-v4-flash
+        name: DeepSeek V4 Flash latest (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 65536
+        cost: { input: 0.22, output: 0.66, cacheRead: 0.007, cacheWrite: 0 }
+      - id: deepseek/deepseek-v4-pro
+        name: DeepSeek V4 Pro latest (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 65536
+        cost: { input: 0.66, output: 1.98, cacheRead: 0.022, cacheWrite: 0 }
+      - id: moonshotai/Kimi-K3
+        name: Kimi K3 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 0 }
+      - id: moonshotai/Kimi-K2.7-Code
+        name: Kimi K2.7 Code (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 256000
+        maxTokens: 32768
+        cost: { input: 0.95, output: 4.00, cacheRead: 0.19, cacheWrite: 0 }
+      - id: moonshotai/Kimi-K2.7-Code-Highspeed
+        name: Kimi K2.7 Code HighSpeed (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 262000
+        maxTokens: 32768
+        cost: { input: 1.90, output: 8.00, cacheRead: 0.38, cacheWrite: 0 }
+      - id: moonshotai/Kimi-K2.6
+        name: Kimi K2.6 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 256000
+        maxTokens: 32768
+        cost: { input: 0.95, output: 4.00, cacheRead: 0.16, cacheWrite: 0 }
+      - id: zai-org/GLM-5.3
+        name: GLM-5.3 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 1.40, output: 4.40, cacheRead: 0.26, cacheWrite: 0 }
+      - id: zai-org/GLM-5.2
+        name: GLM-5.2 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 1.40, output: 4.40, cacheRead: 0.26, cacheWrite: 0 }
+      - id: zai-org/GLM-5.2-Fast
+        name: GLM-5.2 Fast (CommandCode)
+        reasoning: false
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 3.00, output: 10.25, cacheRead: 0.50, cacheWrite: 0 }
+      - id: MiniMaxAI/MiniMax-M3
+        name: MiniMax M3 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 16384
+        cost: { input: 0.60, output: 2.40, cacheRead: 0.12, cacheWrite: 0 }
+      - id: Qwen/Qwen3.8-Max
+        name: Qwen 3.8 Max (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 2.00, output: 6.00, cacheRead: 0.25, cacheWrite: 2.50 }
+      - id: Qwen/Qwen3.8-27B
+        name: Qwen 3.8 27B (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0.40, output: 3.00, cacheRead: 0.04, cacheWrite: 0 }
+      - id: tencent/hy3-paid
+        name: Tencent Hy3 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0.14, output: 0.58, cacheRead: 0.035, cacheWrite: 0 }
+      - id: google/gemini-3.7-flash
+        name: Gemini 3.7 Flash (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 65536
+        cost: { input: 1.50, output: 7.50, cacheRead: 0.15, cacheWrite: 0 }
+      - id: google/gemini-3.5-flash-lite
+        name: Gemini 3.5 Flash Lite (CommandCode)
+        reasoning: false
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 65536
+        cost: { input: 0.30, output: 2.50, cacheRead: 0.03, cacheWrite: 0 }
+      - id: xai/grok-4.6
+        name: Grok 4.6 (CommandCode)
+        reasoning: true
+        input: [text]
+        contextWindow: 500000
+        maxTokens: 32768
+        cost: { input: 2.00, output: 6.00, cacheRead: 0.50, cacheWrite: 0 }
+  # --- Apodex (platform.apodex.ai) — pay-as-you-go CORE models, OpenAI Chat
+  #   Completions-compatible at https://api.apodex.ai/v1. Key in .env as
+  #   APODEX_KEY, sent as a Bearer token. NOT bundled in OMP as of 2026-08-25
+  #   (verified absent via `omp models` grep). Two text-only core models, both
+  #   262,144-token context; ids + prices from platform.apodex.ai/docs/models.
+  #   Per-1M LIST prices: in / cached-input(=cacheRead) / out. No separate
+  #   cache-write rate is published (billing is input/cached-input/output), so
+  #   cacheWrite:0. NOTE: requests with >200K input tokens are billed at 2x the
+  #   listed rates for the whole request — that long-context multiplier is NOT
+  #   modelled here, so very-long-context turns under-report.
+  #   Reasoning is ON by default (reasoning_content) and counts toward
+  #   max_tokens; leave >=1024 headroom (OMP streams, so the 32768 non-stream
+  #   cap does not bite). The deep-research tiers on the same /v1/chat/
+  #   completions path are deliberately EXCLUDED: they ignore sampling params,
+  #   run for minutes, and return HTTP 200 even on failure — not OpenAI-plain.
+  apodex:
+    baseUrl: https://api.apodex.ai/v1
+    apiKey: APODEX_KEY
+    api: openai-completions
+    auth: apiKey
+    # OMP treats api.apodex.ai as an unknown host and would default to the
+    # OpenAI-current wire (store:false + max_completion_tokens). Apodex ACCEPTS
+    # those (verified live 2026-08-25: store, max_completion_tokens and
+    # reasoning_effort each returned 200), but its docs specify `max_tokens`
+    # and never document `store` on chat completions — so align to the
+    # documented contract for robustness if Apodex later tightens validation.
+    # supportsReasoningEffort is deliberately LEFT ON (default true): both
+    # models are reasoning models that accept + honor reasoning_effort, so the
+    # thinking-level selector keeps controlling reasoning depth.
+    compat:
+      supportsStore: false
+      maxTokensField: max_tokens
+    models:
+      - id: apodex-1.1
+        name: Apodex 1.1
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0.24, output: 2.40, cacheRead: 0.024, cacheWrite: 0 }
+      - id: apodex-1.1-mini
+        name: Apodex 1.1 Mini
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+  # --- Straitly (straitly.ai) — pay-as-you-go frontier-model router, OpenAI
+  #   Chat Completions-compatible at https://api.straitly.ai/v1 (one base URL
+  #   also serves the Anthropic-native /messages dialect; the OpenAI dialect
+  #   is used here). Key in .env as STRAITLY_KEY, sent as a Bearer token. NOT
+  #   bundled in OMP as of 2026-08-26 (verified absent via `omp models` grep).
+  #   Id, context window, input modality and per-1M rates live-verified
+  #   2026-08-26 via GET /v1/models with the real key (the docs Models page
+  #   says that endpoint is the authoritative callable list). Straitly bills
+  #   FOUR meters (input / cache-read / cache-write / output), so cacheWrite
+  #   is set from the published cache-write rate, not zeroed.
+  #   Wire probe 2026-08-26: OMP's unknown-host default (store:false +
+  #   max_completion_tokens) and reasoning_effort were each accepted (200) by
+  #   /v1/chat/completions, so no compat block is needed.
+  #   ALPHA promo banner advertises 30% off the first $10K of token spend —
+  #   not modelled, so real spend may read lower for early usage.
+  #   Four models configured (deepseek-v4-flash-0731 + the GPT-5.6 trio
+  #   luna/terra/sol); the other ~174 catalog entries are deliberately
+  #   omitted.
+  #   The GPT-5.6 trio: API reports 1.05M context for each (top_provider
+  #   matches; a 400K-token probe was accepted, so 1.05M is the enforced
+  #   serving context, unlike the 350K-capped deepseek/glm/gemini/qwen ids),
+  #   a 32000-token published output cap, and reasoning on by default (effort
+  #   medium). API list prices per-1M: luna $0.05/$0.30, terra $0.50/$3.00,
+  #   sol $2.50/$15.00 (cacheRead/cacheWrite as listed per model). NOTE: the
+  #   console may display HIGHER list prices (luna showed ~4x: $0.20/$1.20)
+  #   with a 30%-off alpha promo (sale = list x 0.7, redeem an invite code to
+  #   unlock) — API rates here are config metadata only; verify actual
+  #   charges in Straitly's Activity view.
+  straitly:
+    baseUrl: https://api.straitly.ai/v1
+    apiKey: STRAITLY_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: deepseek/deepseek-v4-flash-0731
+        name: DeepSeek V4 Flash 0731 (Straitly)
+        reasoning: false
+        input: [text, image]
+        contextWindow: 350000
+        maxTokens: 32768
+        cost: { input: 0.0585, output: 0.162, cacheRead: 0.0144, cacheWrite: 0.0585 }
+      - id: openai/gpt-5.6-luna
+        name: GPT-5.6 Luna (Straitly)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1050000
+        maxTokens: 32000
+        cost: { input: 0.05, output: 0.30, cacheRead: 0.005, cacheWrite: 0.0625 }
+      - id: openai/gpt-5.6-terra
+        name: GPT-5.6 Terra (Straitly)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1050000
+        maxTokens: 32000
+        cost: { input: 0.50, output: 3.00, cacheRead: 0.05, cacheWrite: 0.625 }
+      - id: openai/gpt-5.6-sol
+        name: GPT-5.6 Sol (Straitly)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1050000
+        maxTokens: 32000
+        cost: { input: 2.50, output: 15.00, cacheRead: 0.25, cacheWrite: 3.125 }
+  # --- Merge Gateway (gateway.merge.dev) — unified OpenAI-compatible router in
+  #   front of ~24 upstream vendors behind one key. Endpoint + config per
+  #   docs.merge.dev/merge-gateway/coding-agents/pi. Key in .env as
+  #   MERGE_GATEWAY_KEY, sent as a Bearer token. NOT bundled in OMP as of
+  #   2026-08-27 (verified absent via `omp models` grep).
+  #   User wants GLM-5.3 + GLM-5.3 Flash exposed. Gateway's live catalog
+  #   (GET /v1/models, queried 2026-08-27 with the real key) lists both as
+  #   distinct ids from glm-5.2/5.1/5/5-turbo/4.7/4.6/4.5 — only the plain
+  #   5.3 and 5.3-flash ids are added here.
+  #   The two ids are UNRELATED specs/pricing, not variants of one number
+  #   set — GLM-5.3 Flash is ~58x cheaper, not a smaller GLM-5.3.
+  #   GLM-5.3 (zai vendor route): 1,000,000-token context, 131,072 max
+  #   output, text-only input, tool_use output (tool calling supported),
+  #   reasoning ON by default with a real reasoning_effort control
+  #   (low/high/max) — so supportsReasoningEffort is left at OMP's default
+  #   (on), unlike the Pi doc's blanket `compat.supportsReasoningEffort:
+  #   false` example (a generic safe default for vendors that reject it;
+  #   this route documents support for it). Pricing per 1M: input $0.70,
+  #   output $2.20, cached-input $0.13.
+  #   GLM-5.3 Flash's own (independently verified, different) specs and
+  #   pricing are documented on its entry below, not restated here.
+  #   maxTokens on both capped at the file's usual 32768 house value (real
+  #   ceilings are ~131K on both; OMP streams, so a lower non-stream cap
+  #   doesn't bite). Neither model publishes a separate cache-write rate,
+  #   so cacheWrite:0 on both.
+  #   No compat block needed for either: real chat completions probed
+  #   2026-08-27 confirmed OMP's unknown-host defaults (store:false +
+  #   max_completion_tokens) and reasoning_effort are accepted (200) on
+  #   both ids; each response's own reported cost matched its own rates
+  #   exactly (5.3: 1.85e-05 for 17in/3out; flash: 3.24e-07 for 17in/3out).
+  merge-gateway:
+    baseUrl: https://api-gateway.merge.dev/v1/openai
+    apiKey: MERGE_GATEWAY_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: zai/glm-5.3
+        name: GLM-5.3 (Merge Gateway)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 0.70, output: 2.20, cacheRead: 0.13, cacheWrite: 0 }
+      - id: zai/glm-5.3-flash
+        name: GLM-5.3 Flash (Merge Gateway)
+        # Catalog now reports FOUR vendor routes for this id (zai/particle
+        # at $0.015/$0.05, baseten/wafer at $0.15/$0.50) — the $0.012/$0.04
+        # this entry previously carried was stale vs the current catalog.
+        # Cross-multiplying 3 live calls' usage.cost exactly matches
+        # $0.015/$0.05, so billing lands on the cheap pair; zai and particle
+        # price identically, so cost alone cannot attribute a specific
+        # vendor — treat it as the zai/particle pricing class, not one
+        # named route. (Comment's vendor-route list updated 2026-09-06;
+        # original was written 2026-08-27 when only 2 routes existed.)
+        # Reasoning cannot be disabled on any route
+        # (disable_supported=false, efforts low/high/max only).
+        # Live-measured (n=3, reasoning on, sequential): TTFT 1.22-7.73s,
+        # decode 89-607 tok/s — the third run is a clear outlier (7.73s
+        # TTFT, 607 tok/s post-first-delta); cause is uncertain — do not
+        # treat this single outlier as steady-state. The two non-outlier
+        # runs sit at TTFT ~1.22-1.24s, decode ~89-118 tok/s. Small sample,
+        # do not treat as stable. Input modality is actually
+        # [text, image, document, video] per the catalog, but this file only
+        # ever models [text, image] (no document/video precedent elsewhere),
+        # so mapped to that.
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 0.015, output: 0.05, cacheRead: 0.003, cacheWrite: 0 }
+      - id: deepseek/deepseek-v4-flash-0731
+        name: DeepSeek V4 Flash 0731 (Merge Gateway)
+        # Added 2026-09-06. Catalog reports SIX vendor routes for this id
+        # (deepseek/particle/baseten/makora/empiriolabs/togetherai) with
+        # genuinely different pricing each — unlike zai/glm-5.3-flash above,
+        # not interchangeable numbers. Cross-multiplied 3 live streamed
+        # requests' own usage.cost against each route's per-token rate: all
+        # matched PARTICLE exactly (29in+300out -> 2.2015e-05 ==
+        # 29*0.035e-6 + 300*0.07e-6) — this is Gateway's OBSERVED routing,
+        # not a documented per-model guarantee, so re-verify via cost
+        # cross-multiply if pricing ever looks off. particle's specs used,
+        # not deepseek's own $0.22/$0.66. particle: 1,048,576-token context,
+        # 384,000 max output (capped to house 32768), text-only input (no
+        # image, unlike straitly's copy of this same model id above),
+        # reasoning on by default with reasoning_effort configurable (left
+        # at OMP's default passthrough, no compat override). No cache-write
+        # rate published -> cacheWrite:0. Live-measured: TTFT ~0.7-1.4s
+        # (mostly sub-1s); completion throughput ~80-200 tok/s depending on
+        # internal <thinking> length before visible content (isolated
+        # content-only speed at reasoning_effort:none was ~157 tok/s).
+        # Cheaper, different route to the same model than the straitly
+        # entry above ($0.035/$0.07 vs $0.0585/$0.162) — not a duplicate.
+        # `omp -p --model merge-gateway/deepseek/deepseek-v4-flash-0731`
+        # smoke test confirmed end-to-end (real request/parse, not just
+        # the raw gateway probe above).
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0.035, output: 0.07, cacheRead: 0.007, cacheWrite: 0 }
+  # --- UNITLLM — self-hosted LiteLLM gateway (LoneExile/ai-gateway fork,
+  #     UnitLLM rebrand) at 192.168.50.60:4000, routing to the local
+  #     vLLM on 192.168.50.10:8080. Not bundled with OMP (verified
+  #     2026-09-04). Catalog has ONE model (verified via /v1/models
+  #     2026-09-04): qwen3.8, a self-hosted vLLM serving (system_fingerprint
+  #     vllm-0.27.1-tp2). model/info confirms supports_reasoning + function
+  #     calling and ZERO per-token cost on input and output (gateway does not
+  #     meter this backend), so cost:0 — drawn from your own GPU, same
+  #     convention as the opencode-go subscription block. Qwen3.8 answers with
+  #     reasoning_content, hence reasoning: true. contextWindow/maxTokens from
+  #     model/info max_input/max_output 262144 (maxTokens capped at the
+  #     house 32768). No cache-write pricing published: cacheWrite:0.
+  #     No compat block needed: live probe 2026-09-04 confirmed OMP's
+  #     unknown-host defaults (store:false + max_completion_tokens) are
+  #     accepted (HTTP 200) on this id.
+  unitllm:
+    baseUrl: http://192.168.50.60:4000/v1
+    apiKey: UNITLLM_TOKEN
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: qwen3.8
+        name: Qwen3.8 (UnitLLM)
+        reasoning: true
+        input: [text]
+        contextWindow: 262144
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+  # --- Nous Research Inference API (portal.nousresearch.com) — OpenAI Chat
+  #   Completions-compatible at https://inference-api.nousresearch.com/v1.
+  #   Key in .env as NOUSRESEARCH_TOKEN, sent as a Bearer token. NOT bundled
+  #   in OMP as of 2026-09-07 (verified absent via `omp models --json`
+  #   provider histogram). Catalog queried 2026-09-07 with the real key
+  #   (GET /v1/models, 390 entries); only the two ids the user asked for
+  #   are added. The two ids are UNRELATED specs/pricing.
+  #   DeepSeek V4 Flash 0731: id deepseek/deepseek-v4-flash-0731 (exact
+  #   catalog name "DeepSeek: DeepSeek V4 Flash 0731"). text-only input.
+  #   Catalog context_length 1,310,720 vs top_provider 1,048,576 — use the
+  #   serving ceiling. max output 393,216, capped to house 32768. Reasoning
+  #   ON by default (mandatory=false, default_effort high, efforts
+  #   max/high/low — no "none" in the catalog list, but disable is allowed
+  #   via mandatory=false). Catalog LIST (pricing.original) per 1M: input
+  #   $0.07, output $0.14, cached-input $0.014. Current catalog promo is
+  #   $0.04/$0.128/$0.0104 — not modelled, so real spend may read lower
+  #   while the promo lasts. Live probes returned is_byok=true and a
+  #   rounded usage.cost floor ($0.00005) that does NOT cross-multiply
+  #   against either catalog rate, so LIST is used. No cache-write rate
+  #   published -> cacheWrite:0.
+  #   GLM 5.3 Flash: id z-ai/glm-5.3-flash (exact catalog name "Z.ai: GLM
+  #   5.3 Flash"). Input modality is [text, image, video] per catalog;
+  #   this file only models [text, image]. Serving context 1,048,576 (same
+  #   top_provider vs advertised 1,310,720 split). max output 131,072,
+  #   capped to house 32768. Reasoning MANDATORY (disable_supported=false,
+  #   default_effort max, efforts max/high/low only). cost: is catalog
+  #   LIST (pricing.original) per 1M: input $0.0713, output $0.2375,
+  #   cached-input $0.0142 — same field as DeepSeek, not current
+  #   $0.057/$0.19/$0.0114 (promo, not modelled). Live usage.cost ran
+  #   higher than list (17in/37out billed $1.0525e-05; 17in/18out with
+  #   reasoning_effort:high billed $1.155e-05) — not a unique rate, not
+  #   used on cost:.
+  #   No cache-write rate published -> cacheWrite:0.
+  #   :batch / :US / ~latest / vision-exp / glm-5.3 (non-flash) siblings
+  #   are deliberately omitted.
+  #   No compat block: live chat/completions 2026-09-07 confirmed OMP's
+  #   unknown-host defaults (store:false + max_completion_tokens) and
+  #   reasoning_effort=high are accepted (HTTP 200) on both ids.
+  nousresearch:
+    baseUrl: https://inference-api.nousresearch.com/v1
+    apiKey: NOUSRESEARCH_TOKEN
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: deepseek/deepseek-v4-flash-0731
+        name: DeepSeek V4 Flash 0731 (Nous)
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0.07, output: 0.14, cacheRead: 0.014, cacheWrite: 0 }
+      - id: z-ai/glm-5.3-flash
+        name: GLM 5.3 Flash (Nous)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0.0713, output: 0.2375, cacheRead: 0.0142, cacheWrite: 0 }

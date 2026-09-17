@@ -67,6 +67,21 @@
         source = ./herdr/quick-actions;
         recursive = true;
       };
+      # OMP mutates these (TUI settings, models, mcp). Store copies would be
+      # 0444 and break writes; out-of-store links target this working tree.
+      # .env is not here — OpenBao blob, written by secretspecSecrets.
+      ".omp/agent/config.yml" = {
+        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/home/omp/config.yml";
+        force = true;
+      };
+      ".omp/agent/models.yml" = {
+        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/home/omp/models.yml";
+        force = true;
+      };
+      ".omp/agent/mcp.json" = {
+        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/home/omp/mcp.json";
+        force = true;
+      };
     }
     (lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
       # Ghostty (installed as a Homebrew cask in profiles/personal.nix) is kept
@@ -91,8 +106,8 @@
   ];
 
   # Materialize secrets from OpenBao on every switch: SSH keys into ~/.ssh,
-  # the atuin encryption key into ~/.local/share/atuin. The manifest
-  # (../secretspec.toml) declares the secret names; values live in the homelab
+  # the atuin encryption key into ~/.local/share/atuin, and ~/.omp/.env.
+  # The manifest (../secretspec.toml) declares the secret names; values live in the homelab
   # OpenBao (secret/secretspec/dotfiles/default/*), shared across machines — a
   # new laptop gets the same keys after `just secretspec-login`.
   # Fail hard when a secret is missing: silent absence would strand the machine
@@ -135,6 +150,8 @@
     # programs.atuin.settings, which would commit the token to git).
     mkdir -p "$HOME/.config/atuin"
     ss ATUIN_CONFIG > "$HOME/.config/atuin/config.toml" && chmod 600 "$HOME/.config/atuin/config.toml"
+    mkdir -p "$HOME/.omp"
+    ss OMP_ENV > "$HOME/.omp/.env" && chmod 600 "$HOME/.omp/.env"
   '';
 
   programs.gpg.enable = true;

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
+  "mcpServers": {
+    "codegraph": {
+      "type": "stdio",
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp"
+      ]
+    },
+    "zennotes": {
+      "type": "stdio",
+      "command": "/opt/homebrew/bin/zn",
+      "args": [
+        "mcp"
+      ]
+    },
+    "context-mode": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/Users/lex/.omp/plugins/node_modules/context-mode/server.bundle.mjs"
+      ]
+    },
+    "drawio": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@next-ai-drawio/mcp-server@latest"
+      ]
+    },
+    "open-design": {
+      "type": "stdio",
+      "command": "/Applications/Open Design.app/Contents/Frameworks/Open Design Helper.app/Contents/MacOS/Open Design Helper",
+      "args": [
+        "/Applications/Open Design.app/Contents/Resources/app/prebundled/daemon/daemon-cli.mjs",
+        "mcp"
+      ],
+      "env": {
+        "OD_DATA_DIR": "/Users/lex/Library/Application Support/Open Design/namespaces/release-stable/data",
+        "OD_SIDECAR_IPC_PATH": "/tmp/open-design/ipc/release-stable/daemon.sock",
+        "ELECTRON_RUN_AS_NODE": "1"
+      },
+      "enabled": false
+    },
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
+    "aws-pricing-calculator-mcp-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "sample-aws-pricing-calculator-mcp@latest"
+      ],
+      "enabled": false
+    },
+    "unsplash": {
+      "command": "/Users/lex/mcp-servers/unsplash-mcp-server/.venv/bin/python",
+      "args": [
+        "/Users/lex/mcp-servers/unsplash-mcp-server/server.py"
+      ],
+      "enabled": false,
+      "type": "stdio"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    },
+    "atlassian": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v1/mcp/authv2",
+      "enabled": false
+    },
+    "reactive-resume": {
+      "type": "http",
+      "url": "https://resume.0dl.me/mcp",
+      "enabled": true
+    }
+  },
+  "disabledServers": []
+}
