@@ -36,10 +36,16 @@ switch target_host=hostname: _sudo
   @echo "switching to new config for {{target_host}}"
   sudo darwin-rebuild switch --flake ".#{{target_host}}"
 
-# Update flake inputs to their latest revisions
+# Update flake inputs to their latest revisions.
+# Unauthenticated GitHub API is 60 req/hr and 403s; pass `gh auth token` when logged in.
 update:
-  # nix flake update --option access-tokens "github.com=$(gh auth token)"
-  nix flake update
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if token=$(gh auth token 2>/dev/null); then
+    nix flake update --option access-tokens "github.com=${token}"
+  else
+    nix flake update
+  fi
 
 # Update system configuration (flake update + rebuild)
 update-system target_host=hostname: update (switch target_host)
@@ -59,7 +65,7 @@ home target_host=hostname:
 # you actually want upgrades. Versions track the pinned taps, so run `just
 # update` first to pull newer formula/cask definitions.
 brew-upgrade:
-  HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade
+  HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade --yes
 
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc:
