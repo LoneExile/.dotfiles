@@ -16,13 +16,6 @@
         "mcp"
       ]
     },
-    "context-mode": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "/Users/lex/.omp/plugins/node_modules/context-mode/server.bundle.mjs"
-      ]
-    },
     "drawio": {
       "type": "stdio",
       "command": "npx",
@@ -84,6 +77,13 @@
       "type": "http",
       "url": "https://resume.0dl.me/mcp",
       "enabled": true
+    },
+    "context-mode": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/Users/le/.omp/plugins/node_modules/context-mode/server.bundle.mjs"
+      ]
     }
   },
   "disabledServers": []
