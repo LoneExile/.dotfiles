@@ -34,6 +34,7 @@ home/default.nix          Home Manager: packages, programs.*, activation
 home/zsh/                 zshrc + aliases / options / keybindings
 secretspec.toml           secret *names* only (no values)
 home/secretspec/          secretspec provider aliases → OpenBao
+home/herdr/               herdr config.toml + herdr-plus quick-actions
 ```
 
 Profiles are boolean toggles on `lib.mkDarwin` in `flake.nix`, not files under `hosts/common/profiles/`.
@@ -103,6 +104,10 @@ See `hosts/lex/default.nix` for the live example.
 Taps are flake inputs (`flake = false`), registered in `nix-homebrew.taps` **and** `nix-homebrew.trust.taps`. Adding a third-party formula/cask is those two plus `homebrew.brews` / `homebrew.casks`, then `nix flake lock` and `just switch` (not `just home`).
 
 `homebrew.onActivation.upgrade = false` so `just switch` stays offline-ish. Upgrade with `just brew-upgrade` after `just update` if you need newer formulae.
+
+## Herdr
+
+`herdr` is mise (`herdr = "latest"` in `home/default.nix`), not a nix package. **herdr-plus** is a herdr plugin, not a Homebrew tap — the tap only installs a PATH binary and does not register actions. `home.activation.herdrPlusPlugin` runs `herdr plugin install cloudmanic/herdr-plus --yes` when `plugins.json` does not already list it. Config: `home/herdr/config.toml` (prefix+o projects, prefix+y quick-actions) and `home/herdr/quick-actions/`.
 
 ## Notes
 

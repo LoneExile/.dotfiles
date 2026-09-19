@@ -154,6 +154,30 @@
     ss OMP_ENV > "$HOME/.omp/.env" && chmod 600 "$HOME/.omp/.env"
   '';
 
+  # herdr-plus is a herdr plugin (https://github.com/cloudmanic/herdr-plus),
+  # not a brew formula — the tap only puts a binary on PATH and does not
+  # register actions. Config/keybindings/quick-actions are home.file above;
+  # this registers the plugin itself. Idempotent: skip if already in
+  # plugins.json. herdr lives at ~/.local/bin (mise). Keep mise/go off PATH
+  # so the plugin build downloads the GitHub release instead of compiling
+  # during activation. Missing herdr is a skip, not a failure — `mise install`
+  # is after the first switch.
+  home.activation.herdrPlusPlugin = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    herdrBin=""
+    if [ -x "$HOME/.local/bin/herdr" ]; then
+      herdrBin="$HOME/.local/bin/herdr"
+    fi
+    pluginsJson="$HOME/.config/herdr/plugins.json"
+    if [ -z "$herdrBin" ]; then
+      echo "skip herdr-plus: herdr not found at ~/.local/bin/herdr (mise install)" >&2
+    elif [ -f "$pluginsJson" ] && grep -q '"plugin_id": "cloudmanic.herdr-plus"' "$pluginsJson"; then
+      echo "herdr-plus already registered"
+    else
+      echo "installing herdr plugin cloudmanic/herdr-plus"
+      PATH="/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin" run "$herdrBin" plugin install --yes cloudmanic/herdr-plus
+    fi
+  '';
+
   programs.gpg.enable = true;
 
   programs.direnv = {
