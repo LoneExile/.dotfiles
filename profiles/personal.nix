@@ -95,6 +95,7 @@
       "gdu"
       "vale"
       # "crit"
+      "rtk"
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
       # "steveyegge/beads/bd"
