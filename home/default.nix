@@ -105,54 +105,18 @@
     })
   ];
 
-  # Materialize secrets from OpenBao on every switch: SSH keys into ~/.ssh,
-  # the atuin encryption key into ~/.local/share/atuin, and ~/.omp/.env.
-  # The manifest (../secretspec.toml) declares the secret names; values live in the homelab
-  # OpenBao (secret/secretspec/dotfiles/default/*), shared across machines — a
-  # new laptop gets the same keys after `just secretspec-login`.
-  # Fail hard when a secret is missing: silent absence would strand the machine
-  # without working SSH or readable shell history. Secrets are written outside
-  # the nix store (never 0444).
+  # 3-way materialize from OpenBao on every switch. Never pushes.
+  # Vault-newer → pull; local-newer → leave dest; both changed → fail.
+  # Push/review: `just secretspec-sync`. Last-sync hashes live in
+  # ~/.local/state/dotfiles/secretspec (not the nix store). Missing secret
+  # fails activation. Values stay in OpenBao, never in this repo.
   home.activation.secretspecSecrets = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    secretspecBin="$HOME/.cargo/bin/secretspec"
-    if [ ! -x "$secretspecBin" ]; then
-      echo "error: secretspec not found at $secretspecBin; SSH keys not materialized" >&2
-      echo "install it with: curl -sSL https://install.secretspec.dev | sh" >&2
-      exit 1
-    fi
-    manifest="${../secretspec.toml}"
-    reason="home-manager activation"
-    ss() {
-      "$secretspecBin" -f "$manifest" --reason "$reason" get -p openbao "$1" || {
-        echo "error: could not resolve secret '$1' from OpenBao" >&2
-        echo "run 'just secretspec-login', then 'just switch' to retry" >&2
-        exit 1
-      }
-    }
-    mkdir -p "$HOME/.ssh"
-    chmod 700 "$HOME/.ssh"
-    ss SSH_ID_ED25519 > "$HOME/.ssh/id_ed25519" && chmod 600 "$HOME/.ssh/id_ed25519"
-    ss SSH_ID_ED25519_PUB > "$HOME/.ssh/id_ed25519.pub" && chmod 644 "$HOME/.ssh/id_ed25519.pub"
-    ss SSH_ID_ED25519_OC > "$HOME/.ssh/id_ed25519.oc" && chmod 600 "$HOME/.ssh/id_ed25519.oc"
-    ss SSH_ID_ED25519_OC_PUB > "$HOME/.ssh/id_ed25519.oc.pub" && chmod 644 "$HOME/.ssh/id_ed25519.oc.pub"
-    ss SSH_ID_ED25519_UNIT_PX > "$HOME/.ssh/id_ed25519_unit_px" && chmod 600 "$HOME/.ssh/id_ed25519_unit_px"
-    ss SSH_ID_CRYPT > "$HOME/.ssh/id_crypt" && chmod 600 "$HOME/.ssh/id_crypt"
-    ss SSH_ID_CRYPT_PUB > "$HOME/.ssh/id_crypt.pub" && chmod 644 "$HOME/.ssh/id_crypt.pub"
-    ss SSH_LINE_PAYMENT_GATEWAY > "$HOME/.ssh/line-payment-gateway" && chmod 600 "$HOME/.ssh/line-payment-gateway"
-    ss SSH_LINE_PAYMENT_GATEWAY_PUB > "$HOME/.ssh/line-payment-gateway.pub" && chmod 644 "$HOME/.ssh/line-payment-gateway.pub"
-    mkdir -p "$HOME/.local/share/atuin"
-    chmod 700 "$HOME/.local/share/atuin"
-    # atuin's key file is bare hex with no trailing newline; secretspec get
-    # appends one, so strip it via command substitution.
-    printf '%s' "$(ss ATUIN_KEY)" > "$HOME/.local/share/atuin/key" && chmod 600 "$HOME/.local/share/atuin/key"
-    ss NPMRC > "$HOME/.npmrc" && chmod 600 "$HOME/.npmrc"
-    # atuin config.toml carries [ai].api_token, so it lives in OpenBao (not
-    # programs.atuin.settings, which would commit the token to git).
-    mkdir -p "$HOME/.config/atuin"
-    ss ATUIN_CONFIG > "$HOME/.config/atuin/config.toml" && chmod 600 "$HOME/.config/atuin/config.toml"
-    mkdir -p "$HOME/.omp"
-    ss OMP_ENV > "$HOME/.omp/.env" && chmod 600 "$HOME/.omp/.env"
+    export SECRETSPEC_BIN="$HOME/.cargo/bin/secretspec"
+    export SECRETSPEC_FILE="${../secretspec.toml}"
+    export SECRETSPEC_REASON="home-manager activation"
+    bash ${./secretspec/materialize.sh} apply
   '';
+
 
   # herdr-plus is a herdr plugin (https://github.com/cloudmanic/herdr-plus),
   # not a brew formula — the tap only puts a binary on PATH and does not

@@ -11,10 +11,12 @@ Live host is **`lex`** (hostname = username). `le` is the same shape, kept as a 
 | `just switch` | Full nix-darwin rebuild + activate. Needs sudo. |
 | `just home` | Home Manager only. No sudo. Use for zsh / `home.file` / secretspec materialization. |
 | `just openbao-login` | Keycloak SSO → `~/.vault-token`. Required before activation can pull secrets. |
+| `just secretspec-sync` | Review local vs OpenBao secret files, then y/N to push/pull. |
 | `just brew-upgrade` | `brew upgrade` on demand. `just switch` does **not** upgrade Homebrew. |
 | `just update` | `nix flake update` (lockfile only). |
 | `just gc` | `nix-collect-garbage -d`. |
 | `just --list` | Everything else (`check`, `fmt`, `lint`, `build`, `trace`). |
+
 
 `just` with no args runs `switch`.
 
@@ -45,17 +47,22 @@ Live path is **secretspec → homelab OpenBao**, not SOPS.
 
 - Manifest: `secretspec.toml` (`[profiles.default]`). Names and dest paths only.
 - Values: `secret/secretspec/dotfiles/default/<NAME>` on `https://openbao.home.0dl.me`.
-- Activation: `home.activation.secretspecSecrets` in `home/default.nix` writes them on every `just home` / `just switch` (SSH keys, Atuin key + config, `~/.npmrc`). Missing secret → activation **fails**.
+- Activation: `home.activation.secretspecSecrets` runs `home/secretspec/materialize.sh apply` on every `just home` / `just switch`. 3-way via `~/.local/state/dotfiles/secretspec/<NAME>.sha256` (on-disk bytes, not raw `secretspec get`): vault-newer → pull; local-newer → leave dest and hint `just secretspec-sync`; both changed → fail; equal (including first apply with no last-sync) → record hash. Missing secret → activation **fails**.
+- Review / push: `just secretspec-sync` (TTY). `nvim -d` with swap/shada/undo disabled; if nvim is missing, `diff -u` for `OMP_ENV` / `ATUIN_CONFIG` / `NPMRC` and `bytes differ` for SSH keys + Atuin key.
 - Login: `just openbao-login` (recipe name is `openbao-login`, not `secretspec-login`).
 - Binary: `~/.cargo/bin/secretspec` (install script, not the nixpkgs package).
 
 SOPS is leftover, not live: no `secrets/secrets.yaml`, no `sops.secrets.*` in any host/profile. What remains is the `sops-nix` input, `mkDarwin`'s unused darwin module, `.sops.yaml`, and `secrets/note.md`. Ignore those; do not put tokens in `programs.atuin.settings` or git.
 
-Seed / update a secret without printing it:
+Prefer `just secretspec-sync`. Manual set (keeps trailing newlines):
 
 ```bash
-secretspec set NAME --reason "why" -- "$(cat /path/to/file)"
+value=$(cat /path/to/file; printf x)
+value=${value%x}
+secretspec set NAME --reason "why" -- "$value"
 ```
+
+
 
 ## New machine
 

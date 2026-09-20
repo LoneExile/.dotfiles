@@ -26,6 +26,18 @@ _sudo:
 openbao-login:
   BAO_ADDR=https://openbao.home.0dl.me bao login -method=oidc -path=oidc
 
+
+# Review local vs OpenBao secret files (nvim -d, or diff -u) then y/N to push/pull.
+# Activation never pushes; run this after editing ~/.omp/.env and similar.
+[macos]
+secretspec-sync:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  export SECRETSPEC_BIN="${SECRETSPEC_BIN:-$HOME/.cargo/bin/secretspec}"
+  export SECRETSPEC_FILE="{{justfile_directory()}}/secretspec.toml"
+  export SECRETSPEC_REASON="just secretspec-sync"
+  exec bash "{{justfile_directory()}}/home/secretspec/materialize.sh" sync
+
 # Build the nix-darwin configuration and switch to it.
 # darwin-rebuild is already installed system-wide, so activate directly in a
 # single evaluation. The old form pre-built with `nix build` (eval+realize as
