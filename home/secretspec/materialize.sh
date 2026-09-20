@@ -43,7 +43,7 @@ require_bin() {
 }
 
 file_sha256() {
-  local out
+  local out digest
   if command -v sha256sum >/dev/null 2>&1; then
     out=$(sha256sum "$1") || return 1
   elif command -v shasum >/dev/null 2>&1; then
@@ -52,8 +52,13 @@ file_sha256() {
     echo "error: no sha256sum or shasum" >&2
     return 1
   fi
-  printf '%s\n' "${out%% *}"
+  digest=${out%% *}
+  if [[ ! $digest =~ ^[0-9a-fA-F]{64}$ ]]; then
+    die "invalid sha256 for $1"
+  fi
+  printf '%s\n' "$digest"
 }
+
 
 
 ss_get() {
@@ -221,16 +226,15 @@ cmd_apply() {
 
 
   local conflicts=()
+  local drifted=()
   local spec name rel mode nl dest canonical action
   for spec in "${SECRETS[@]}"; do
     IFS='|' read -r name rel mode nl <<<"$spec"
     dest="$HOME/$rel"
     canonical="$MATERIALIZE_WORKDIR/${name}.openbao"
-
     write_canonical "$name" "$canonical" "$nl"
     chmod 600 "$canonical"
     action=$(classify_dest "$name" "$dest" "$canonical")
-
     case $action in
       equal)
         chmod "$mode" "$dest"
@@ -240,7 +244,7 @@ cmd_apply() {
         do_pull "$name" "$dest" "$mode" "$canonical"
         ;;
       push)
-        echo "local drifted $name — run: just secretspec-sync"
+        drifted+=("$name|$dest")
         ;;
       conflict)
         echo "conflict $name"
@@ -249,11 +253,26 @@ cmd_apply() {
     esac
   done
 
+  if ((${#drifted[@]} > 0)); then
+    echo >&2
+    echo "!!!!!!!! secretspec: local files not overwritten !!!!!!!!" >&2
+    local item
+    for item in "${drifted[@]}"; do
+      name=${item%%|*}
+      dest=${item#*|}
+      echo "  local drifted $name — $dest" >&2
+    done
+    echo "  OpenBao left unchanged. Diff/push:  just secretspec-sync" >&2
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >&2
+    echo >&2
+  fi
+
   if ((${#conflicts[@]} > 0)); then
     echo "error: secret conflict (local and OpenBao both changed): ${conflicts[*]}" >&2
     echo "run 'just secretspec-sync' to resolve" >&2
     exit 1
   fi
+
 }
 
 cmd_sync() {
