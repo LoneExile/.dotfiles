@@ -84,6 +84,14 @@
       };
     }
     (lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
+      # OmniWM writes settings.toml from its Settings UI. Store copies would be
+      # 0444 and break writes; out-of-store link targets this working tree.
+      # Runtime state stays in ~/.local/state/omniwm (not tracked).
+      ".config/omniwm/settings.toml" = {
+        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/home/omniwm/settings.toml";
+        force = true;
+      };
+
       # Ghostty (installed as a Homebrew cask in profiles/personal.nix) is kept
       # in lockstep with the wezterm config below; see the header of
       # ./ghostty/config for the option-by-option mapping.
