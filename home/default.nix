@@ -125,7 +125,6 @@
     bash ${./secretspec/materialize.sh} apply
   '';
 
-
   # herdr-plus is a herdr plugin (https://github.com/cloudmanic/herdr-plus),
   # not a brew formula — the tap only puts a binary on PATH and does not
   # register actions. Config/keybindings/quick-actions are home.file above;
