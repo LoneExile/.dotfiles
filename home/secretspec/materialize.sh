@@ -43,12 +43,18 @@ require_bin() {
 }
 
 file_sha256() {
+  local out
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
+    out=$(sha256sum "$1") || return 1
+  elif command -v shasum >/dev/null 2>&1; then
+    out=$(shasum -a 256 "$1") || return 1
   else
-    shasum -a 256 "$1" | awk '{print $1}'
+    echo "error: no sha256sum or shasum" >&2
+    return 1
   fi
+  printf '%s\n' "${out%% *}"
 }
+
 
 ss_get() {
   if ! "$SECRETSPEC_BIN" -f "$SECRETSPEC_FILE" --reason "$SECRETSPEC_REASON" get -p "$PROVIDER" "$1"; then

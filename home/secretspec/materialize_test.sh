@@ -327,6 +327,29 @@ else
 fi
 cleanup
 
+setup
+mkdir -p "$TEST_ROOT/bin"
+printf '%s\n' '#!/bin/sh' 'echo "awk: command not found" >&2' 'exit 127' >"$TEST_ROOT/bin/awk"
+chmod +x "$TEST_ROOT/bin/awk"
+export PATH="$TEST_ROOT/bin:$PATH"
+if apply; then
+  assert_file_eq "apply without awk writes OMP_ENV" "$HOME/.omp/.env" $'vault-OMP_ENV\n'
+  got=$(state_hash OMP_ENV)
+  if [[ ${#got} -eq 64 ]]; then
+    pass "apply without awk records hash"
+  else
+    fail "apply without awk records hash" "got ${got:-empty}"
+  fi
+  if grep -q 'awk: command not found' "$APPLY_OUT"; then
+    fail "apply without awk does not call awk" "$(cat "$APPLY_OUT")"
+  else
+    pass "apply without awk does not call awk"
+  fi
+else
+  fail "apply without awk" "$(cat "$APPLY_OUT")"
+fi
+cleanup
+
 if [[ $FAILS -ne 0 ]]; then
   echo "$FAILS failed"
   exit 1
