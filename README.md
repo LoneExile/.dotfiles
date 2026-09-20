@@ -8,8 +8,8 @@ Live host is **`lex`** (hostname = username). `le` is the same shape, kept as a 
 
 | Command | What it does |
 |---|---|
-| `just switch` | Full nix-darwin rebuild + activate. Needs sudo. |
-| `just home` | Home Manager only. No sudo. Use for zsh / `home.file` / secretspec materialization. |
+| `just switch` | Full nix-darwin rebuild + activate. Needs sudo. Same OmniWM settings.toml preflight as `just home`. |
+| `just home` | Home Manager only. No sudo. Use for zsh / `home.file` / secretspec materialization. If `~/.config/omniwm/settings.toml` is a regular file, reviews the diff then y/N before replacing it with the repo symlink. |
 | `just openbao-login` | Keycloak SSO → `~/.vault-token`. Required before activation can pull secrets. |
 | `just secretspec-sync` | Review local vs OpenBao secret files, then y/N to push/pull. |
 | `just brew-upgrade` | `brew upgrade` on demand. `just switch` does **not** upgrade Homebrew. |
@@ -36,6 +36,7 @@ home/default.nix          Home Manager: packages, programs.*, activation
 home/zsh/                 zshrc + aliases / options / keybindings
 secretspec.toml           secret *names* only (no values)
 home/secretspec/          secretspec provider aliases → OpenBao
+home/omniwm/              OmniWM settings.toml (out-of-store symlink) + adopt.sh
 home/herdr/               herdr config.toml + herdr-plus quick-actions
 ```
 

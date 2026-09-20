@@ -38,14 +38,23 @@ secretspec-sync:
   export SECRETSPEC_REASON="just secretspec-sync"
   exec bash "{{justfile_directory()}}/home/secretspec/materialize.sh" sync
 
+# If ~/.config/omniwm/settings.toml is a regular file, Home Manager will not
+# replace it. Review nvim -d / diff -u, then y to remove so the symlink can land.
+_omniwm-adopt:
+  @bash "{{justfile_directory()}}/home/omniwm/adopt.sh"
+
 # Build the nix-darwin configuration and switch to it.
 # darwin-rebuild is already installed system-wide, so activate directly in a
 # single evaluation. The old form pre-built with `nix build` (eval+realize as
 # your user) and then re-evaluated the whole flake via `--flake` under sudo
 # (as root) — two full, cache-disjoint evals (~1-2 min each). This does one.
 [macos]
-switch target_host=hostname: _sudo
-  @echo "switching to new config for {{target_host}}"
+switch target_host=hostname:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  bash "{{justfile_directory()}}/home/omniwm/adopt.sh"
+  sudo -v
+  echo "switching to new config for {{target_host}}"
   sudo darwin-rebuild switch --flake ".#{{target_host}}"
 
 # Update flake inputs to their latest revisions.
@@ -66,7 +75,8 @@ update-system target_host=hostname: update (switch target_host)
 # Convention: host name = primary username (e.g. host `le` → user `le`).
 # If a future host needs a different username, override target_host with the
 # username, or replace this recipe with one that reads system.primaryUser.
-home target_host=hostname:
+[macos]
+home target_host=hostname: _omniwm-adopt
   @echo "Building home config for {{target_host}}..."
   nix build ".#darwinConfigurations.{{target_host}}.config.home-manager.users.{{target_host}}.home.activationPackage"
   @echo "Activating home configuration..."
