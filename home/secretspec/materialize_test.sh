@@ -20,6 +20,8 @@ ALL_SECRETS=(
   NPMRC
   ATUIN_CONFIG
   OMP_ENV
+  TOFU_BACKBONE_CLUSTER_PASS
+
 )
 
 pass() { printf 'ok  %s\n' "$1"; }
@@ -167,6 +169,9 @@ setup
 if apply; then
   assert_file_eq "new machine writes OMP_ENV" "$HOME/.omp/.env" $'vault-OMP_ENV\n'
   assert_file_eq "new machine writes npmrc" "$HOME/.npmrc" $'vault-NPMRC\n'
+  assert_file_eq "new machine writes tofu pass" "$HOME/.config/tofu/backbone-cluster.pass" $'vault-TOFU_BACKBONE_CLUSTER_PASS\n'
+  assert_eq "tofu pass mode 600" "$(file_mode "$HOME/.config/tofu/backbone-cluster.pass")" "600"
+
   got_key=$(cat "$HOME/.local/share/atuin/key"; printf x)
   got_key=${got_key%x}
   assert_eq "new machine ATUIN_KEY strips newline" "$got_key" "deadbeef"

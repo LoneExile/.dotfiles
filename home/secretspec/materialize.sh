@@ -27,6 +27,8 @@ SECRETS=(
   "NPMRC|.npmrc|600|keep"
   "ATUIN_CONFIG|.config/atuin/config.toml|600|keep"
   "OMP_ENV|.omp/.env|600|keep"
+  "TOFU_BACKBONE_CLUSTER_PASS|.config/tofu/backbone-cluster.pass|600|keep"
+
 )
 
 die() {
@@ -143,6 +145,8 @@ ensure_layout() {
   chmod 700 "$HOME/.local/share/atuin"
   mkdir -p "$HOME/.config/atuin"
   mkdir -p "$HOME/.omp"
+  mkdir -p "$HOME/.config/tofu"
+
 }
 
 install_dest() {
