@@ -224,7 +224,6 @@ in {
               "homebrew/homebrew-core" = homebrew-core;
               "homebrew/homebrew-cask" = homebrew-cask;
               "homebrew/homebrew-bundle" = homebrew-bundle;
-              "steveyegge/homebrew-beads" = homebrew-steveyegge-beads;
               "telepresenceio/homebrew-telepresence" = homebrew-telepresenceio-telepresence;
               "AlexsJones/homebrew-llmfit" = homebrew-alexsjones-llmfit;
               "xykong/homebrew-tap" = homebrew-xykong-tap;
@@ -234,24 +233,6 @@ in {
               "kgarner7/homebrew-feishin" = homebrew-kgarner7-feishin;
               "abue-ammar/homebrew-tinycast" = homebrew-abue-ammar-tinycast;
               "lightpanda-io/homebrew-browser" = homebrew-lightpanda-io-browser;
-            };
-
-            # Declarative tap trust for third-party taps (required by newer Homebrew).
-            # Without this, `brew bundle` refuses to load casks/formulae from untrusted taps.
-            # See: https://docs.brew.sh/Tap-Trust
-            trust = {
-              taps = [
-                "steveyegge/beads"
-                "telepresenceio/telepresence"
-                "AlexsJones/llmfit"
-                "xykong/tap"
-                "zennotes/tap"
-                "BarutSRB/tap"
-                "zseven-w/openpencil"
-                "kgarner7/feishin"
-                "abue-ammar/tinycast"
-                "lightpanda-io/browser"
-              ];
             };
           };
         }

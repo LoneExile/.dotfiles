@@ -12,7 +12,8 @@ Live host is **`lex`** (hostname = username). `le` is the same shape, kept as a 
 | `just home` | Home Manager only. No sudo. Use for zsh / `home.file` / secretspec materialization. If `~/.config/omniwm/settings.toml` is a regular file, reviews the diff then y/N before replacing it with the repo symlink. |
 | `just openbao-login` | Keycloak SSO → `~/.vault-token`. Required before activation can pull secrets. |
 | `just secretspec-sync` | Review local vs OpenBao secret files, then y/N to push/pull. |
-| `just brew-upgrade` | `brew upgrade` on demand. `just switch` does **not** upgrade Homebrew. |
+| `just update-all` | `just update` → `just switch` → `just brew-upgrade`. |
+| `just brew-upgrade` | `brew upgrade` on demand. `just switch` does **not** upgrade Homebrew. Runs `just switch` first when `flake.lock` is newer than the active system (taps sync on switch). Casks that remove launchctl services (VS Code, Discord) prompt for sudo mid-run; a shell `sudo -v` can't pre-authorise Homebrew's own sudo. |
 | `just update` | `nix flake update` (lockfile only). |
 | `just gc` | `nix-collect-garbage -d`. |
 | `just --list` | Everything else (`check`, `fmt`, `lint`, `build`, `trace`). |
@@ -109,9 +110,9 @@ See `hosts/lex/default.nix` for the live example.
 
 ## Homebrew
 
-Taps are flake inputs (`flake = false`), registered in `nix-homebrew.taps` **and** `nix-homebrew.trust.taps`. Adding a third-party formula/cask is those two plus `homebrew.brews` / `homebrew.casks`, then `nix flake lock` and `just switch` (not `just home`).
+Taps are flake inputs (`flake = false`), registered in `nix-homebrew.taps` (`lib/builders.nix`). Adding a third-party formula/cask is that plus `homebrew.brews` / `homebrew.casks`, then `nix flake lock` and `just switch` (not `just home`). Tap trust is automatic: `profiles/personal.nix` marks every non-`homebrew/` tap `trusted` in the Brewfile, which is the only trust that survives activation (`brew bundle --force-cleanup` rewrites `~/.homebrew/trust.json` from the Brewfile).
 
-`homebrew.onActivation.upgrade = false` so `just switch` stays offline-ish. Upgrade with `just brew-upgrade` after `just update` if you need newer formulae.
+`homebrew.onActivation.upgrade = false` so `just switch` stays offline-ish. `just update` only moves the lockfile; the taps under `/opt/homebrew/Library/Taps` are synced from it by `just switch`, and upgrading against stale taps fails for formulae with moving download URLs (lightpanda's `nightly` asset). `just brew-upgrade` therefore switches first whenever the lock is newer than the active system; `just update-all` is the explicit one-shot.
 
 ## Herdr
 

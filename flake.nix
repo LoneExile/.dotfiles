@@ -23,17 +23,14 @@
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
-    # Homebrew integration for macOS packages
-    nix-homebrew = {
-      url = "github:zhaofengli-wip/nix-homebrew";
-      # brew-src override: pin brew to a release new enough for the DSL the
-      # current tap revisions use. The taps track upstream, so they move ahead
-      # of whatever brew nix-homebrew pins — when `brew bundle` fails with
-      # "unknown keyword: :<kw>" / "is unreadable", bump this tag.
-      # 6.0.22: install_steps `run(..., must_succeed:)` (added upstream in
-      # 6.0.16, used by kgarner7/feishin). Matches nix-homebrew's own pin.
-      inputs.brew-src.url = "github:Homebrew/brew/6.0.22";
-    };
+    # Homebrew integration for macOS packages.
+    # Do not override `inputs.brew-src`: nix-homebrew generates bin/brew for the
+    # brew release it pins, and the two drift apart (a 6.0.22 override under a
+    # nix-homebrew built for 7.0.4 died in `brew bundle` with
+    # KeyError: HOMEBREW_ORIGINAL_BREW_FILE). If the taps ever need a newer
+    # brew DSL than nix-homebrew's pin ("unknown keyword: :<kw>"), update
+    # nix-homebrew itself.
+    nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
 
     # Homebrew taps (non-flake inputs)
     homebrew-core = {
@@ -46,10 +43,6 @@
     };
     homebrew-bundle = {
       url = "github:homebrew/homebrew-bundle";
-      flake = false;
-    };
-    homebrew-steveyegge-beads = {
-      url = "github:steveyegge/homebrew-beads";
       flake = false;
     };
     homebrew-telepresenceio-telepresence = {
@@ -88,8 +81,6 @@
       url = "github:lightpanda-io/homebrew-browser";
       flake = false;
     };
-
-
 
     # SOPS for secrets management
     sops-nix = {

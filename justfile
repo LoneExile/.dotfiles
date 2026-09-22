@@ -84,10 +84,36 @@ home target_host=hostname: _omniwm-adopt
 
 # Upgrade Homebrew packages explicitly. `upgrade = false` in the homebrew config
 # keeps `just switch` fast by not upgrading on every activation; run this when
-# you actually want upgrades. Versions track the pinned taps, so run `just
-# update` first to pull newer formula/cask definitions.
-brew-upgrade:
-  HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade --yes
+# you actually want upgrades.
+# Formulae come from the taps nix-homebrew rsyncs out of the flake inputs during
+# `just switch` (mutableTaps) — never from `brew update`. Upgrading against taps
+# older than flake.lock fails for formulae with moving download URLs (lightpanda's
+# `nightly` asset: the pinned sha no longer matches the file). `just update`
+# always rewrites the lock (homebrew-core/cask move constantly), so when the lock
+# is newer than the active system, switch first. Symlink mtimes are compared
+# because store paths are epoch-dated.
+[macos]
+brew-upgrade target_host=hostname:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ "$(stat -f %m flake.lock)" -gt "$(stat -f %m /run/current-system)" ]; then
+    echo "flake.lock is newer than the active system: syncing Homebrew taps with 'just switch' first" >&2
+    just switch "{{target_host}}"
+  fi
+  # Casks that remove a launchctl service (VS Code, Discord) call sudo from
+  # Homebrew's Ruby, and sudo does not honour a ticket this shell obtained
+  # (a prior `sudo -v` was tested and changes nothing), so a password prompt can
+  # appear mid-run. Formula-only upgrades never need sudo.
+  export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1
+  if ! brew upgrade --yes; then
+    echo "brew upgrade finished with failures; still outdated:" >&2
+    brew outdated --verbose >&2
+    exit 1
+  fi
+
+# Update everything: flake inputs, then the system (which syncs the taps), then
+# Homebrew packages. `just update && just brew-upgrade` reaches the same state.
+update-all target_host=hostname: (update-system target_host) (brew-upgrade target_host)
 
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc:

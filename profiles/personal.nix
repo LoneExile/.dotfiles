@@ -16,20 +16,31 @@
     enable = true;
     onActivation = {
       cleanup = "zap";
-      # Do not auto-update taps here. Taps are pinned via nix-homebrew flake inputs
-      # and updated with `nix flake update`. Running `brew update` can cause
-      # permission errors on the read-only tap checkouts from the nix store.
+      # Do not auto-update taps here. Taps are pinned via nix-homebrew flake inputs:
+      # `just update` moves the pins, `just switch` syncs them into Library/Taps.
+      # Running `brew update` can cause permission errors on the read-only tap
+      # checkouts from the nix store.
       autoUpdate = false;
       # Don't run `brew upgrade` on every activation either: it hits the network
       # and rebuilds/downloads outdated formulae, slowing each switch. Consistent
-      # with autoUpdate=false above — upgrades are explicit. Run `brew upgrade`
-      # manually (or `just brew-upgrade`) when you actually want them.
+      # with autoUpdate=false above — upgrades are explicit: `just update-all`, or
+      # `just brew-upgrade` (it switches first while the taps are stale).
       upgrade = false;
     };
     # Disable Homebrew's own auto-update. Updates are driven by the flake lock.
     global.autoUpdate = false;
 
-    taps = builtins.attrNames config.nix-homebrew.taps;
+    # `trusted = true` emits `tap "...", trusted: true` in the Brewfile. That is
+    # the only tap trust that survives a switch: `brew bundle --force-cleanup`
+    # (cleanup = "zap") rewrites ~/.homebrew/trust.json from the Brewfile alone,
+    # discarding anything `brew trust` wrote earlier. Official taps are always
+    # trusted, so only third-party ones are marked.
+    taps =
+      map (name: {
+        inherit name;
+        trusted = !lib.hasPrefix "homebrew/" name;
+      })
+      (builtins.attrNames config.nix-homebrew.taps);
 
     brews = [
       "mas"
@@ -99,7 +110,6 @@
       "glab"
 
       # "powershell/tap/powershell" # disabled: tap not declared as flake input; nix-homebrew can't manage it.
-      # "steveyegge/beads/bd"
       # { name = "mole"; args = ["HEAD"]; }
     ];
 
