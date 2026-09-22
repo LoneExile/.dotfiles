@@ -11,3 +11,6 @@ test-results
 *.md
 !README.md
 .omc
+
+# omp writes a runtime lock next to the symlinked config
+home/omp/config.yml.lock
