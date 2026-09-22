@@ -63,10 +63,12 @@
       "type": "stdio"
     },
     "playwright": {
-      "command": "npx",
+      "type": "stdio",
+      "command": "/Users/le/.local/share/mise/installs/node/latest/bin/playwright-mcp",
       "args": [
-        "@playwright/mcp@latest"
-      ]
+        "--headless"
+      ],
+      "timeout": 120000
     },
     "atlassian": {
       "type": "http",
@@ -76,7 +78,11 @@
     "reactive-resume": {
       "type": "http",
       "url": "https://resume.0dl.me/mcp",
-      "enabled": true
+      "enabled": true,
+      "auth": {
+        "type": "oauth",
+        "resource": "https://resume.0dl.me"
+      }
     },
     "context-mode": {
       "type": "stdio",
