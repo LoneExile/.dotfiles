@@ -151,7 +151,7 @@
       "gimp"
       "logseq"
       "dbeaver-community"
-      "claude"
+      # "claude"
       "github"
       "wifiman"
       "zoom"
