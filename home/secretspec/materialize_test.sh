@@ -109,6 +109,8 @@ case $cmd in
       exit 1
     fi
     cat "$path"
+    # secretspec 0.20 `get` always appends a newline, even when redirected.
+    printf '\n'
     ;;
   set)
     printf '%s' "$value" >"$path"
@@ -303,6 +305,24 @@ else
   fail "ATUIN_KEY second apply" "$(cat "$APPLY_OUT")"
 fi
 cleanup
+
+setup
+apply >/dev/null
+printf 'edited-omp\n' >"$HOME/.omp/.env"
+cat "$HOME/.omp/.env" >"$FAKE_VAULT/OMP_ENV"
+printf '%s\n' "$(sha256_file "$HOME/.omp/.env")" >"$HOME/.local/state/dotfiles/secretspec/OMP_ENV.sha256"
+if apply; then
+  if grep -q 'pull OMP_ENV' "$APPLY_OUT"; then
+    fail "keep secret get newline is not a false pull" "$(cat "$APPLY_OUT")"
+  else
+    pass "keep secret get newline is not a false pull"
+  fi
+  assert_file_eq "keep secret dest has no extra newline after re-apply" "$HOME/.omp/.env" $'edited-omp\n'
+else
+  fail "keep secret get newline re-apply" "$(cat "$APPLY_OUT")"
+fi
+cleanup
+
 
 setup
 rm -f "$FAKE_VAULT/NPMRC"

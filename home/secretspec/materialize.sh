@@ -89,7 +89,28 @@ write_canonical() {
     printf '%s' "$raw" >"$dest"
   else
     ss_get "$name" >"$dest"
+    # secretspec 0.20 `get` always appends a newline (println), even when
+    # stdout is a file. Strip that one extra byte so keep-secrets match
+    # stored bytes. Command substitution would also drop real trailing
+    # newlines that belong in the file.
+    strip_one_trailing_newline "$dest"
   fi
+}
+
+strip_one_trailing_newline() {
+  local f=$1 size last body
+  size=$(wc -c <"$f" | tr -d ' ')
+  if [[ -z $size || $size -eq 0 ]]; then
+    return 0
+  fi
+  last=$(dd if="$f" bs=1 skip=$((size - 1)) count=1 2>/dev/null; printf x)
+  last=${last%x}
+  if [[ $last != $'\n' ]]; then
+    return 0
+  fi
+  body=$(dd if="$f" bs=1 count=$((size - 1)) 2>/dev/null; printf x)
+  body=${body%x}
+  printf '%s' "$body" >"$f"
 }
 
 record_hash() {

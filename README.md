@@ -48,7 +48,7 @@ Live path is **secretspec → homelab OpenBao**, not SOPS.
 
 - Manifest: `secretspec.toml` (`[profiles.default]`). Names and dest paths only.
 - Values: `secret/secretspec/dotfiles/default/<NAME>` on `https://openbao.home.0dl.me`.
-- Activation: `home.activation.secretspecSecrets` runs `home/secretspec/materialize.sh apply` on every `just home` / `just switch`. 3-way via `~/.local/state/dotfiles/secretspec/<NAME>.sha256` (on-disk bytes, not raw `secretspec get`): vault-newer → pull; local-newer → leave dest and hint `just secretspec-sync`; both changed → fail; equal (including first apply with no last-sync) → record hash. Missing secret → activation **fails**.
+- Activation: `home.activation.secretspecSecrets` runs `home/secretspec/materialize.sh apply` on every `just home` / `just switch`. 3-way via `~/.local/state/dotfiles/secretspec/<NAME>.sha256` (on-disk bytes, not raw `secretspec get`): vault-newer → pull; local-newer → leave dest and hint `just secretspec-sync`; both changed → fail; equal (including first apply with no last-sync) → record hash. Missing secret → activation **fails**. `secretspec` 0.20 `get` always appends a newline, even when redirected; apply/sync strip that one byte for keep secrets so a push is not seen as vault-newer on the next run.
 - Review / push: `just secretspec-sync` (TTY). `nvim -d` with swap/shada/undo disabled; if nvim is missing, `diff -u` for `OMP_ENV` / `ATUIN_CONFIG` / `NPMRC` and `bytes differ` for SSH keys + Atuin key.
 - Login: `just openbao-login` (recipe name is `openbao-login`, not `secretspec-login`).
 - Binary: `~/.cargo/bin/secretspec` (install script, not the nixpkgs package).
