@@ -311,6 +311,13 @@
         allowApplePersonalizedAdvertising = false;
       };
 
+      # Universal Clipboard off: copies on this Mac are no longer offered to
+      # the other Mac (or iPhone/iPad); Handoff itself stays on. Undocumented
+      # useractivityd key, read live (no logout). After copying something,
+      # `log show --last 1m --predicate 'process == "useractivityd"'` should
+      # show "Ignoring type updates, clipboard sharing disabled".
+      "com.apple.coreservices.useractivityd".ClipboardSharingEnabled = false;
+
       "com.apple.SoftwareUpdate" = {
         AutomaticCheckEnabled = true;
         ScheduleFrequency = 1;
