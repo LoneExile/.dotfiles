@@ -171,6 +171,29 @@ in {
     fi
   '';
 
+  # herdr ships no screen-detection manifest for omp, so omp's working/idle/
+  # blocked state comes only from this herdr-managed extension
+  # (~/.omp/agent/extensions/herdr-omp-agent-state.ts). Without it every omp
+  # pane reads idle and resume_agents_on_restore has no session to resume.
+  # Skip while `integration status` says current (herdr also reports a newer
+  # file as current, so a lagging binary never downgrades it); reinstall when
+  # missing or outdated. Running omp sessions load it only on restart. Same
+  # herdr lookup and missing-herdr skip as herdrPlusPlugin.
+  home.activation.herdrOmpIntegration = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    herdrBin=""
+    if [ -x "$HOME/.local/bin/herdr" ]; then
+      herdrBin="$HOME/.local/bin/herdr"
+    fi
+    if [ -z "$herdrBin" ]; then
+      echo "skip herdr omp integration: herdr not found at ~/.local/bin/herdr (mise install)" >&2
+    elif grep -q '^omp: current ' <<<"$("$herdrBin" integration status 2>/dev/null || true)"; then
+      echo "herdr omp integration current"
+    else
+      echo "installing herdr omp integration"
+      run "$herdrBin" integration install omp
+    fi
+  '';
+
   programs.gpg.enable = true;
 
   programs.direnv = {
