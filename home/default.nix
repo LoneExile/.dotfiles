@@ -4,7 +4,16 @@
   lib,
   unstablePkgs,
   ...
-}: {
+}: let
+  # atuin maps ATUIN_AI__API_TOKEN to ai.api_token (only when config.toml sets
+  # none). ~/.config/atuin/ai-token is materialized from OpenBao (ATUIN_AI_TOKEN).
+  # Only shells with a TTY export it; ones spawned without (agents, CI) don't.
+  atuinAiTokenExport = ''
+    if [[ -t 0 && -t 1 && -r $HOME/.config/atuin/ai-token ]]; then
+      export ATUIN_AI__API_TOKEN="$(<"$HOME/.config/atuin/ai-token")"
+    fi
+  '';
+in {
   home.stateVersion = "25.11";
 
   # Development tools packages
@@ -123,6 +132,19 @@
     export SECRETSPEC_FILE="${../secretspec.toml}"
     export SECRETSPEC_REASON="home-manager activation"
     bash ${./secretspec/materialize.sh} apply
+  '';
+
+  # Log in to the atuin sync server (atuin.home.0dl.me) as loneexile. Needs the
+  # key (secretspecSecrets) and config.toml (linkGeneration): run before the
+  # link, atuin would write its default config and log in to Atuin's hosted
+  # server instead. Silent when `atuin status` works; otherwise ATUIN_PASSWORD
+  # from OpenBao → `atuin login`. Login/network failures warn and never fail
+  # the switch; next run retries.
+  home.activation.atuinLogin = lib.hm.dag.entryAfter ["secretspecSecrets" "linkGeneration"] ''
+    export SECRETSPEC_BIN="$HOME/.cargo/bin/secretspec"
+    export SECRETSPEC_FILE="${../secretspec.toml}"
+    export SECRETSPEC_REASON="home-manager activation (atuin login)"
+    bash ${./secretspec/atuin-login.sh} ${config.programs.atuin.package}/bin/atuin loneexile
   '';
 
   # herdr-plus is a herdr plugin (https://github.com/cloudmanic/herdr-plus),
@@ -261,7 +283,10 @@
     settings = pkgs.lib.importTOML ./starship/starship.toml;
   };
 
-  programs.bash.enable = true;
+  programs.bash = {
+    enable = true;
+    initExtra = atuinAiTokenExport;
+  };
 
   programs.zsh = {
     enable = true;
@@ -285,6 +310,8 @@
         fi
       '')
       (lib.mkOrder 1000 (builtins.readFile ./zsh/zshrc))
+      # Before atuin's init (order 1500); the TTY check is inside the snippet.
+      (lib.mkOrder 1400 atuinAiTokenExport)
       # atuin's zsh init unconditionally PREPENDS itself to
       # ZSH_AUTOSUGGEST_STRATEGY, so suggestions come from `atuin search`
       # (its own SQLite DB, prefix mode, --author '$all-user') instead of
@@ -415,6 +442,30 @@
     enableZshIntegration = true;
     enableBashIntegration = true;
     flags = ["--disable-up-arrow" "--disable-ctrl-r"];
+    # config.toml is a read-only store symlink: `/model`, `atuin setup` and
+    # `atuin config set` cannot save into it, so change settings here.
+    # forceOverwriteSettings lets the link replace a regular file (atuin
+    # writes a default config.toml whenever it runs and finds none).
+    forceOverwriteSettings = true;
+    settings = {
+      sync_address = "https://atuin.home.0dl.me";
+      enter_accept = true;
+      # Tolerate a llama-swap cold model load (~30s) behind Atuin AI.
+      network_timeout = 180;
+      search_mode = "daemon-fuzzy";
+      sync.records = true;
+      daemon = {
+        enabled = true;
+        autostart = true;
+      };
+      # No api_token: a value here would override ATUIN_AI__API_TOKEN, which
+      # the shells export from the secretspec-managed ~/.config/atuin/ai-token.
+      ai = {
+        enabled = true;
+        endpoint = "https://atuin-ai.home.0dl.me";
+        model = "qwen3.5-9b";
+      };
+    };
   };
 
   programs.k9s = {

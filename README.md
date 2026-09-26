@@ -50,7 +50,8 @@ Live path is **secretspec → homelab OpenBao**, not SOPS.
 - Manifest: `secretspec.toml` (`[profiles.default]`). Names and dest paths only.
 - Values: `secret/secretspec/dotfiles/default/<NAME>` on `https://openbao.home.0dl.me`.
 - Activation: `home.activation.secretspecSecrets` runs `home/secretspec/materialize.sh apply` on every `just home` / `just switch`. 3-way via `~/.local/state/dotfiles/secretspec/<NAME>.sha256` (on-disk bytes, not raw `secretspec get`): vault-newer → pull; local-newer → leave dest and hint `just secretspec-sync`; both changed → fail; equal (including first apply with no last-sync) → record hash. Missing secret → activation **fails**. `secretspec` 0.20 `get` always appends a newline, even when redirected; apply/sync strip that one byte for keep secrets so a push is not seen as vault-newer on the next run.
-- Review / push: `just secretspec-sync` (TTY). `nvim -d` with swap/shada/undo disabled; if nvim is missing, `diff -u` for `OMP_ENV` / `ATUIN_CONFIG` / `NPMRC` and `bytes differ` for SSH keys + Atuin key.
+- Atuin sync login: `home.activation.atuinLogin` runs `home/secretspec/atuin-login.sh` after materialize and Home Manager's `linkGeneration` (it needs `config.toml`; any earlier, atuin writes its default config and targets Atuin's hosted server). `atuin status` OK → nothing (password not read). Otherwise `atuin login -u loneexile --key ""` with `ATUIN_PASSWORD` from OpenBao (argv only, never on disk); `--key ""` reuses the synced key file without rewriting it, so `ATUIN_KEY` stays in sync. Login/network failures print a `!!!!` banner and activation continues; `ATUIN_PASSWORD` missing while logged out fails activation.
+- Review / push: `just secretspec-sync` (TTY). `nvim -d` with swap/shada/undo disabled; if nvim is missing, `diff -u` for `OMP_ENV` / `NPMRC` and `bytes differ` for SSH keys + Atuin key / AI token.
 - Login: `just openbao-login` (recipe name is `openbao-login`, not `secretspec-login`).
 - Binary: `~/.cargo/bin/secretspec` (install script, not the nixpkgs package).
 
@@ -82,6 +83,8 @@ secretspec set NAME --reason "why" -- "$value"
 
 Activation will refuse if OpenBao is unreachable or a declared secret is missing.
 
+Atuin sync logs itself in during that activation (`atuinLogin`); no manual `atuin login`.
+
 ## New host
 
 1. `cp -r hosts/_template hosts/<hostname>` and fill hostname / username / home.
@@ -106,6 +109,7 @@ See `hosts/lex/default.nix` for the live example.
 - **Ctrl-R**: `atuin-fzf-widget` — Atuin's synced DB piped through real [fzf](https://github.com/junegunn/fzf) (`--scheme=history`). Enter fills the prompt; it does not run the command. Atuin is told `--disable-ctrl-r` so it never binds the key.
 - **Ctrl-T** / **Alt-C**: fzf file / directory widgets (`programs.fzf.historyWidget.command` is empty on purpose).
 - Native Atuin TUI: `atuin search -i`.
+- Atuin config: `programs.atuin.settings` in `home/default.nix`. `config.toml` is a read-only store symlink, so `/model`, `atuin setup` and `atuin config set` can't save; change settings in nix. The AI token is not in it: secretspec `ATUIN_AI_TOKEN` → `~/.config/atuin/ai-token`, exported as `ATUIN_AI__API_TOKEN` by zsh/bash shells that have a TTY (a token in `settings` would override it). New shells pick it up; `exec zsh` after it changes.
 - To give Ctrl-R back to Atuin: drop `"--disable-ctrl-r"` from `programs.atuin.flags` and delete the `atuin-fzf-widget` `mkOrder 2000` block in `home/default.nix`, then `just home` and `exec zsh`.
 
 ## Homebrew

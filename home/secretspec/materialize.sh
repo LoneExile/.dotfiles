@@ -25,7 +25,7 @@ SECRETS=(
   "SSH_LINE_PAYMENT_GATEWAY_PUB|.ssh/line-payment-gateway.pub|644|keep"
   "ATUIN_KEY|.local/share/atuin/key|600|strip"
   "NPMRC|.npmrc|600|keep"
-  "ATUIN_CONFIG|.config/atuin/config.toml|600|keep"
+  "ATUIN_AI_TOKEN|.config/atuin/ai-token|600|strip"
   "OMP_ENV|.omp/.env|600|keep"
   "TOFU_BACKBONE_CLUSTER_PASS|.config/tofu/backbone-cluster.pass|600|keep"
 
@@ -183,7 +183,7 @@ install_dest() {
 
 is_text_secret() {
   case $1 in
-    OMP_ENV | ATUIN_CONFIG | NPMRC) return 0 ;;
+    OMP_ENV | NPMRC) return 0 ;;
     *) return 1 ;;
   esac
 }
