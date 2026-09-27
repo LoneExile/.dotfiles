@@ -594,6 +594,11 @@ in {
         User = "git";
         IdentityFile = "~/.ssh/id_ed25519";
       };
+      "work" = {
+        HostName = "lex.local";
+        User = "lex";
+        IdentityFile = "~/.ssh/id_crypt";
+      };
 
       ## homelab
       "pxc_lab" = {
