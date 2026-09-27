@@ -626,6 +626,11 @@ in {
         User = "root";
         IdentityFile = "~/.ssh/id_crypt";
       };
+      "home 10.0.10.150" = {
+        HostName = "10.0.10.150";
+        User = "le";
+        IdentityFile = "~/.ssh/id_crypt";
+      };
 
       ## homelab-remote
       "dxc.0dl.me" = {
