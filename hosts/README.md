@@ -49,18 +49,18 @@ The system provides four predefined profiles that can be selected for each host:
 
 ## Creating a New Host Configuration
 
-1. Copy the template directory:
+1. Add the Mac to the `hosts` table in `flake.nix`, keyed by hostname:
+   ```nix
+   <hostname> = {username = "<id -un on that Mac>";};
+   ```
+   Hostname, computer name, user, home directory (`/Users/<username>`, or
+   `homeDirectory` in the entry), `system.primaryUser` and Home Manager all
+   derive from it. Never write a literal `/Users/<name>` path.
+
+2. Optional, for settings that belong to this machine only:
    ```bash
    cp -r hosts/_template hosts/{hostname}
    ```
-
-2. Edit `hosts/{hostname}/default.nix`:
-   - Replace `HOSTNAME` with your actual hostname
-   - Replace `USERNAME` with your actual username
-   - Select and enable one profile by setting its `enable` option to `true`
-   - Add host-specific customizations as needed
-
-3. Add the host to your flake configuration
 
 ## Profile Selection
 

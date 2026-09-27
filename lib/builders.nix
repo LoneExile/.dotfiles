@@ -10,6 +10,9 @@ in {
   mkDarwin = {
     hostname,
     username,
+    # macOS keeps a user's home at /Users/<short name>; pass this only for an
+    # account whose home folder is named differently.
+    homeDirectory ? "/Users/${username}",
     system ? "aarch64-darwin",
     modules ? [],
     profiles ? {},
@@ -20,12 +23,9 @@ in {
       config.allowUnfree = true;
     };
 
-    # Load host-specific configuration if it exists
-    hostConfigPath = ../hosts/${hostname};
-    hostConfig =
-      if builtins.pathExists hostConfigPath
-      then [(hostConfigPath + "/default.nix")]
-      else [];
+    # Load host-specific configuration if it exists (optional per host)
+    hostConfigPath = ../hosts/${hostname}/default.nix;
+    hostConfig = lib.optional (builtins.pathExists hostConfigPath) hostConfigPath;
 
     # Load common configuration
     commonConfig = [
@@ -53,10 +53,8 @@ in {
           networking.hostName = hostname;
 
           # Auto-derive user identity from the username arg so host files
-          # don't have to. Host files may still override `description`.
-          users.users.${username} = {
-            home = "/Users/${username}";
-          };
+          # don't have to.
+          users.users.${username}.home = homeDirectory;
           system.primaryUser = username;
 
           # Only overlay a package while it is broken upstream, and drop the
@@ -148,7 +146,7 @@ in {
       inherit system;
       specialArgs =
         {
-          inherit system inputs username unstablePkgs;
+          inherit system inputs hostname username unstablePkgs;
         }
         // extraSpecialArgs;
       modules = allModules;

@@ -31,7 +31,7 @@
         "mcp"
       ],
       "env": {
-        "OD_DATA_DIR": "/Users/lex/Library/Application Support/Open Design/namespaces/release-stable/data",
+        "OD_DATA_DIR": "${HOME}/Library/Application Support/Open Design/namespaces/release-stable/data",
         "OD_SIDECAR_IPC_PATH": "/tmp/open-design/ipc/release-stable/daemon.sock",
         "ELECTRON_RUN_AS_NODE": "1"
       },
@@ -55,16 +55,16 @@
       "enabled": false
     },
     "unsplash": {
-      "command": "/Users/lex/mcp-servers/unsplash-mcp-server/.venv/bin/python",
+      "command": "${HOME}/mcp-servers/unsplash-mcp-server/.venv/bin/python",
       "args": [
-        "/Users/lex/mcp-servers/unsplash-mcp-server/server.py"
+        "${HOME}/mcp-servers/unsplash-mcp-server/server.py"
       ],
       "enabled": false,
       "type": "stdio"
     },
     "playwright": {
       "type": "stdio",
-      "command": "/Users/le/.local/share/mise/installs/node/latest/bin/playwright-mcp",
+      "command": "${HOME}/.local/share/mise/installs/node/latest/bin/playwright-mcp",
       "args": [
         "--headless"
       ],
@@ -88,7 +88,7 @@
       "type": "stdio",
       "command": "node",
       "args": [
-        "/Users/le/.omp/plugins/node_modules/context-mode/server.bundle.mjs"
+        "${HOME}/.omp/plugins/node_modules/context-mode/server.bundle.mjs"
       ]
     }
   },

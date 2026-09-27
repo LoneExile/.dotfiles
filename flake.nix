@@ -114,32 +114,37 @@
         inherit system;
         config.allowUnfree = true;
       };
+
+    # Every Mac this flake manages, keyed by hostname: the name `just` and
+    # darwin-rebuild select by default, applied as the Mac's hostname on
+    # switch. `username` is the macOS account short name (`id -un`); its home
+    # directory, system.primaryUser, the Home Manager user, the Homebrew owner
+    # and nix trusted-users all derive from it, so nothing else in the repo
+    # names a user. Set `homeDirectory` only when the home folder is not
+    # /Users/<username>. Optional host-only tweaks: hosts/<hostname>/default.nix.
+    hosts = {
+      le = {username = "le";};
+      lex = {username = "lex";};
+    };
   in {
     # Export our custom library for use by other flakes
     inherit lib;
 
     # Darwin system configurations
-    darwinConfigurations = {
-      # Personal macOS configuration
-      le = lib.mkDarwin {
-        hostname = "le";
-        username = "le";
-        system = defaultSystem;
-        profiles = {
-          development = true;
-          personal = true;
-        };
-      };
-      lex = lib.mkDarwin {
-        hostname = "lex";
-        username = "lex";
-        system = defaultSystem;
-        profiles = {
-          development = true;
-          personal = true;
-        };
-      };
-    };
+    darwinConfigurations =
+      builtins.mapAttrs (
+        hostname: host:
+          lib.mkDarwin ({
+              inherit hostname;
+              system = defaultSystem;
+              profiles = {
+                development = true;
+                personal = true;
+              };
+            }
+            // host)
+      )
+      hosts;
 
     # Development shells for contributors
     devShells = forAllSystems (

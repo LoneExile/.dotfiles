@@ -93,7 +93,7 @@ lg()
 dk() {
     if [ "$1" = "start" ]; then
         colima start
-        sudo ln -s /Users/$USER/.colima/default/docker.sock /var/run/docker.sock
+        sudo ln -s "$HOME/.colima/default/docker.sock" /var/run/docker.sock
     elif [ "$1" = "stop" ]; then
         colima stop
         sudo rm /var/run/docker.sock

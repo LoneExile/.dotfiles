@@ -231,7 +231,7 @@
 
   # Keep sudo credentials alive through the whole `just switch` run.
   # The activation runs as root, but Homebrew's bundle step drops back to
-  # the regular user (`sudo --user=lex … brew bundle`), so any cask that
+  # the regular user (`sudo --user=<primary user> … brew bundle`), so any cask that
   # needs root (pkg installer, launchctl removal)
   # re-runs `sudo` as that user. The nix build between the initial
   # `sudo -v` and that point exceeds sudo's default 5-minute timeout,

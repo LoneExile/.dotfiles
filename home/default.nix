@@ -5,6 +5,11 @@
   unstablePkgs,
   ...
 }: let
+  # This checkout, target of the writable out-of-store links below. Those
+  # need an absolute path and a pure eval cannot see where the flake was
+  # cloned, so the repo lives at ~/.dotfiles on every Mac (README).
+  dotfiles = "${config.home.homeDirectory}/.dotfiles";
+
   # atuin maps ATUIN_AI__API_TOKEN to ai.api_token (only when config.toml sets
   # none). ~/.config/atuin/ai-token is materialized from OpenBao (ATUIN_AI_TOKEN).
   # Only shells with a TTY export it; ones spawned without (agents, CI) don't.
@@ -80,15 +85,15 @@ in {
       # 0444 and break writes; out-of-store links target this working tree.
       # .env is not here — OpenBao blob, written by secretspecSecrets.
       ".omp/agent/config.yml" = {
-        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/home/omp/config.yml";
+        source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/omp/config.yml";
         force = true;
       };
       ".omp/agent/models.yml" = {
-        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/home/omp/models.yml";
+        source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/omp/models.yml";
         force = true;
       };
       ".omp/agent/mcp.json" = {
-        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/home/omp/mcp.json";
+        source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/omp/mcp.json";
         force = true;
       };
     }
@@ -97,7 +102,7 @@ in {
       # 0444 and break writes; out-of-store link targets this working tree.
       # Runtime state stays in ~/.local/state/omniwm (not tracked).
       ".config/omniwm/settings.toml" = {
-        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/home/omniwm/settings.toml";
+        source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/omniwm/settings.toml";
         force = true;
       };
 

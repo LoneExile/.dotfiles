@@ -125,7 +125,7 @@ disabledProviders:
 skills:
   enableClaudeUser: false
   customDirectories:
-    - /Users/lex/.omp/plugins/node_modules/taste-skill/skills
+    - ~/.omp/plugins/node_modules/taste-skill/skills
 commands:
   enableClaudeUser: false
 terminal:

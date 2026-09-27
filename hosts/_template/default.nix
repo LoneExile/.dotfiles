@@ -10,31 +10,24 @@
   unstablePkgs,
   ...
 }: {
-  # Host configuration template.
+  # Optional host-only settings template.
   #
-  # To create a new host:
-  #   1. Copy this directory:  cp -r hosts/_template hosts/<your-hostname>
-  #   2. Replace HOSTNAME / USERNAME / "Full Name" below with real values.
-  #   3. Register the host in flake.nix under darwinConfigurations:
-  #        <your-hostname> = lib.mkDarwin {
-  #          hostname = "<your-hostname>";
-  #          username = "<your-username>";
-  #          system = "aarch64-darwin";  # or "x86_64-darwin"
-  #          profiles = { development = true; personal = true; };
-  #        };
-  #   4. Build:  just build <your-hostname>
-  #   5. Switch: just switch <your-hostname>
+  # A new Mac needs only an entry in flake.nix `hosts`:
+  #   <hostname> = {username = "<id -un on that Mac>";};
+  # That sets networking.hostName, networking.computerName (defaults to the
+  # hostname), users.users.<username>.home (/Users/<username>),
+  # system.primaryUser, the owner's full name, Home Manager, Homebrew and nix
+  # trusted-users. Copy this directory only for settings that belong to one
+  # machine:
+  #   cp -r hosts/_template hosts/<hostname>
+  # Use the `username` / `hostname` module args instead of literal names.
 
   imports = [
     ../common/default.nix
   ];
 
-  # `networking.hostName`, `users.users.<username>.home`, and
-  # `system.primaryUser` are set automatically by lib.mkDarwin from the
-  # hostname/username args you pass in flake.nix. You only need to set
-  # display-name overrides like the two below.
-  networking.computerName = "HOSTNAME"; # what shows in System Settings → About
-  users.users.USERNAME.description = "Full Name";
+  # Display name in System Settings → About, if not the hostname (optional)
+  # networking.computerName = "Alice's MacBook Pro";
 
   # Host-specific system packages (optional)
   environment.systemPackages = with pkgs; [
@@ -46,11 +39,9 @@
     # Add host-specific fonts here
   ];
 
-  # Host-specific Homebrew configuration (optional)
-  # See hosts/le/default.nix for an example with brews/casks/taps.
-  homebrew = {
-    enable = false;
-  };
+  # Extra Homebrew apps for this Mac only (the personal profile enables
+  # Homebrew and lists the shared ones in profiles/personal.nix) (optional)
+  # homebrew.casks = ["some-app"];
 
   # Host-specific macOS defaults (optional, overrides profile defaults)
   system.defaults = {
@@ -59,6 +50,6 @@
 
   # Host-specific activation scripts (optional)
   # system.activationScripts.extraActivation.text = ''
-  #   echo "Host-specific activation for HOSTNAME"
+  #   echo "Host-specific activation for ${hostname}"
   # '';
 }

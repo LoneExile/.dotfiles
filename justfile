@@ -2,6 +2,9 @@
 default: switch
 
 hostname := `hostname | cut -d "." -f 1`
+# Account running `just`: selects this Mac's Home Manager user, whatever the
+# host is called. Home Manager refuses to activate for anyone else anyway.
+user := `id -un`
 
 ### System Management
 # Build the nix-darwin system configuration without switching to it
@@ -71,14 +74,13 @@ update:
 # Update system configuration (flake update + rebuild)
 update-system target_host=hostname: update (switch target_host)
 
-# Build and activate home configuration only.
-# Convention: host name = primary username (e.g. host `le` → user `le`).
-# If a future host needs a different username, override target_host with the
-# username, or replace this recipe with one that reads system.primaryUser.
+# Build and activate home configuration only, for the user running `just`
+# (Home Manager rejects activating another user's home). Override with
+# `just user=<name> home`.
 [macos]
 home target_host=hostname: _omniwm-adopt
-  @echo "Building home config for {{target_host}}..."
-  nix build ".#darwinConfigurations.{{target_host}}.config.home-manager.users.{{target_host}}.home.activationPackage"
+  @echo "Building home config for {{user}}@{{target_host}}..."
+  nix build ".#darwinConfigurations.{{target_host}}.config.home-manager.users.{{user}}.home.activationPackage"
   @echo "Activating home configuration..."
   ./result/activate
 
@@ -124,6 +126,7 @@ gc:
 check:
   @echo "🔍 Checking flake configuration..."
   nix flake check --no-build
+  @! git grep -nE '/Users/[A-Za-z0-9._-]+' || { echo "hardcoded /Users/<name> above: use \$HOME, ~ or config.home.homeDirectory"; exit 1; }
 
 # Format all Nix files
 fmt:

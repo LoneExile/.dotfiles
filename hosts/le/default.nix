@@ -11,20 +11,13 @@
   ...
 }: {
   # Host config for "le".
-  # Software loadout (Homebrew, dev tools, UI prefs) lives in the profiles
-  # enabled by flake.nix#darwinConfigurations.le. Anything below should be
-  # genuinely host-specific.
+  # Identity (hostname, computerName, user, home) comes from flake.nix `hosts`
+  # and hosts/common; the software loadout from the profiles enabled in
+  # flake.nix. Anything below should be genuinely host-specific.
 
   imports = [
     ../common/default.nix
   ];
-
-  # Host identification (hostname is set automatically from `lib.mkDarwin`'s
-  # hostname arg; computerName is what shows in System Settings → About).
-  networking.computerName = "le";
-
-  # Owner display name (username/home/primaryUser are auto-set by mkDarwin)
-  users.users.le.description = "Apinant U-suwantim";
 
   # Set this MacBook's built-in display to its native resolution.
   # mode 13 (2560x1600) is correct for THIS machine — different MacBook =

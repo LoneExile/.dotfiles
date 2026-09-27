@@ -1,32 +1,29 @@
 # Host Template
 
-Starter template for adding a new MacBook to this flake.
+Optional per-host settings for a Mac in this flake.
 
-## Add a host in 4 steps
+## Add a host
+
+```nix
+# flake.nix, `hosts` table: this alone is a complete host
+<hostname> = {username = "<id -un on that Mac>";};
+```
+
+`lib.mkDarwin` derives `networking.hostName`, `users.users.<username>.home`
+(`/Users/<username>`, or `homeDirectory` if set in the entry),
+`system.primaryUser`, the Home Manager user, the Homebrew owner and nix
+`trusted-users` from that entry; `hosts/common` adds `computerName` and the
+owner's full name. No `/Users/<name>` path is written anywhere else.
+
+Only when a machine needs its own settings (display mode, extra packages,
+macOS defaults):
 
 ```bash
-# 1. Copy this directory using your new host's name
 cp -r hosts/_template hosts/<hostname>
-
-# 2. Edit default.nix:
-#    - replace USERNAME placeholder in users.users.<USERNAME>.description
-#    - replace HOSTNAME in networking.computerName
 $EDITOR hosts/<hostname>/default.nix
-
-# 3. Register the host in flake.nix under darwinConfigurations:
-#      "<hostname>" = lib.mkDarwin {
-#        hostname = "<hostname>";
-#        username = "<username>";
-#        system   = "aarch64-darwin";
-#        profiles = { development = true; personal = true; };
-#      };
-#    lib.mkDarwin auto-wires networking.hostName, users.users.<username>.home,
-#    and system.primaryUser from these args — no further plumbing needed.
-
-# 4. Build & switch
-just build <hostname>
-just switch <hostname>
 ```
+
+Then `just build <hostname>` / `just switch <hostname>`.
 
 ## What you get
 
@@ -34,11 +31,7 @@ just switch <hostname>
   Nix gc/optimisation, allowUnfree).
 - The `home/default.nix` Home Manager config is wired in by `lib.mkDarwin` for
   the user you specify in `username`. No per-user file is needed.
-- Profiles passed to `lib.mkDarwin` (`development`, `personal`, ...) load the
-  corresponding `profiles/<name>.nix`.
+- Profiles (`development`, `personal`, ...) load the corresponding
+  `profiles/<name>.nix`; set `profiles` in the `hosts` entry to change them.
 
-## Customising the template
-
-Heavy host-specific bits — Homebrew brews/casks, fonts, macOS dock prefs,
-displayplacer activation — live in the host file itself, not in a profile.
-See `hosts/le/default.nix` for a fully customised example.
+See `hosts/le/default.nix` for an example (display resolution).

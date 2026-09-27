@@ -10,6 +10,13 @@
   # Host-specific identity and display setup goes in hosts/<name>/default.nix.
   # Per-loadout software/UI preferences go in profiles/<name>.nix.
 
+  # Same owner on every Mac; only the account short name differs per host
+  # (flake.nix `hosts`). nix-darwin applies it only to users.knownUsers.
+  users.users.${config.system.primaryUser}.description = "Apinant U-suwantim";
+
+  # Name shown in System Settings → General → About; defaults to the hostname.
+  networking.computerName = lib.mkDefault config.networking.hostName;
+
   # System state version
   system.stateVersion = lib.mkDefault 5;
 

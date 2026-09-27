@@ -161,7 +161,7 @@ run_health_check() {
       config = {
         hostname = systemConfig.networking.hostName or \"$HOSTNAME\";
         system = \"$SYSTEM\";
-        username = \"le\"; # TODO: Extract from actual config
+        username = systemConfig.system.primaryUser;
         modules = systemConfig.modules or {};
         profiles = systemConfig.profiles or {};
       };
@@ -279,7 +279,7 @@ analyze_configuration() {
       config = {
         hostname = systemConfig.networking.hostName or \"$HOSTNAME\";
         system = \"$SYSTEM\";
-        username = \"le\"; # TODO: Extract from actual config
+        username = systemConfig.system.primaryUser;
         modules = systemConfig.modules or {};
         profiles = systemConfig.profiles or {};
       };

@@ -2,7 +2,7 @@
 
 Personal macOS config: **nix-darwin** (system) + **Home Manager** (user), driven by this flake.
 
-Live host is **`lex`** (hostname = username). `le` is the same shape, kept as a second darwinConfiguration.
+Hosts `le` and `lex` are entries in the `hosts` table in `flake.nix` (hostname → macOS username). Nothing else names a user or a `/Users/<name>` path: home directories, `system.primaryUser`, Home Manager, Homebrew and nix trusted-users derive from that entry, and `just check` fails on a hardcoded one.
 
 ## Daily commands
 
@@ -26,11 +26,11 @@ After `just home` / `just switch`, a **new shell** (or `exec zsh`) is required f
 ## Layout
 
 ```
-flake.nix                 darwinConfigurations.lex / .le
+flake.nix                 hosts table (hostname → username) → darwinConfigurations
 justfile                  the commands above
 lib/builders.nix          mkDarwin: HM, nix-homebrew, overlays
-hosts/<name>/             hostname, primaryUser, host-only tweaks
-hosts/common/             shared darwin defaults (nix, TouchID sudo, keyboard)
+hosts/<name>/             optional host-only tweaks (hosts/le: display mode)
+hosts/common/             shared darwin defaults (owner name, nix, TouchID sudo, keyboard)
 profiles/development.nix  CLI / k8s / fonts
 profiles/personal.nix     Homebrew casks + personal packages
 home/default.nix          Home Manager: packages, programs.*, activation
@@ -69,16 +69,16 @@ secretspec set NAME --reason "why" -- "$value"
 
 ## New machine
 
-1. Install Nix (Determinate), Xcode CLT, clone this repo to `~/.dotfiles`.
+1. Install Nix (Determinate), Xcode CLT, clone this repo to `~/.dotfiles` (fixed path: OMP and OmniWM config are live symlinks into this checkout).
 2. `curl -sSL https://install.secretspec.dev | sh`
 3. `just openbao-login`
 4. First activation (nix-darwin not on PATH yet):
 
    ```bash
-   nix run nix-darwin -- switch --flake .#lex
+   nix run nix-darwin -- switch --flake .#<hostname>
    ```
 
-   After that: `just switch`.
+   `<hostname>` is the `hosts` key for this Mac; the switch renames the Mac to it, so afterwards plain `just switch` / `just home` find it.
 5. `mise install` (language runtimes are mise, not nix packages).
 
 Activation will refuse if OpenBao is unreachable or a declared secret is missing.
@@ -87,21 +87,17 @@ Atuin sync logs itself in during that activation (`atuinLogin`); no manual `atui
 
 ## New host
 
-1. `cp -r hosts/_template hosts/<hostname>` and fill hostname / username / home.
-2. Register in `flake.nix`:
+1. Add the Mac to `hosts` in `flake.nix`, keyed by the hostname you want it to have:
 
    ```nix
-   <hostname> = lib.mkDarwin {
-     hostname = "<hostname>";
-     username = "<username>";   # just home assumes this equals hostname
-     system = "aarch64-darwin";
-     profiles = { development = true; personal = true; };
-   };
+   <hostname> = {username = "<id -un on that Mac>";};
    ```
 
-3. `just switch` (or `just switch <hostname>`).
+   Add `homeDirectory = "/Users/<folder>";` only if the home folder name differs from the username. Any `profiles`/`system` set there override the defaults.
+2. Optional: `cp -r hosts/_template hosts/<hostname>` for host-only settings (display mode, extra packages).
+3. First activation as in **New machine** step 4; `just switch` afterwards.
 
-See `hosts/lex/default.nix` for the live example.
+`just home` builds the Home Manager config of the user running it (`id -un`), not of a user named after the host.
 
 ## Shell
 
