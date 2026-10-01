@@ -22,24 +22,26 @@ _sudo:
   @sudo -v
 
 # Log in to the homelab OpenBao via Keycloak SSO and write ~/.vault-token.
-# Required once per machine (and before each token expiry) for secretspec to
-# resolve secrets like the SSH keys materialized on every switch.
+# Required once per machine (and before each token expiry) for dotfiles-secrets
+# to sync secrets like the SSH keys materialized on every switch.
 # Uses the OIDC mount default role — `secretspec-human` is OcinCloud-only.
 [macos]
 openbao-login:
   BAO_ADDR=https://openbao.home.0dl.me bao login -method=oidc -path=oidc
 
 
-# Review local vs OpenBao secret files (nvim -d, or diff -u) then y/N to push/pull.
-# Activation never pushes; run this after editing ~/.omp/.env and similar.
+# Read-only: every secret's sync state against OpenBao, then the secretspec CLI contract check
 [macos]
-secretspec-sync:
+secretspec-status:
   #!/usr/bin/env bash
   set -euo pipefail
-  export SECRETSPEC_BIN="${SECRETSPEC_BIN:-$HOME/.cargo/bin/secretspec}"
-  export SECRETSPEC_FILE="{{justfile_directory()}}/secretspec.toml"
-  export SECRETSPEC_REASON="just secretspec-sync"
-  exec bash "{{justfile_directory()}}/home/secretspec/materialize.sh" sync
+  dotfiles-secrets status
+  SECRETSPEC_FILE="{{justfile_directory()}}/secretspec.toml" bash "{{justfile_directory()}}/home/secretspec/contract-check.sh"
+
+# Review secrets against OpenBao and push or pull (needs a terminal; --push NAME pushes one, no prompts)
+[macos]
+secretspec-sync *ARGS:
+  dotfiles-secrets sync {{ARGS}}
 
 # If ~/.config/omniwm/settings.toml is a regular file, Home Manager will not
 # replace it. Review nvim -d / diff -u, then y to remove so the symlink can land.

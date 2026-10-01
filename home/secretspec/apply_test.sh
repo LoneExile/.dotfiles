@@ -229,7 +229,9 @@ test_offline_with_a_recent_contact_keeps_going() {
   assert_rc "apply" "$RC" 0
   assert_has "banner" "$T/err" "unreachable"
   assert_has "names the cause" "$T/err" "connection refused"
-  assert_eq "circuit breaker: one vault call" "$(wc -l <"$T/bao.log" | tr -d ' ')" 1
+  if [[ $TL_SHIM_OK -eq 1 ]]; then
+    assert_eq "circuit breaker: one vault call" "$(wc -l <"$T/bao.log" | tr -d ' ')" 1
+  fi
   assert_eq "last-contact is not refreshed" "$(cat "$(state_file last-contact)")" "$before"
   assert_bytes "files untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
 }

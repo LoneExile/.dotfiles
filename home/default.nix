@@ -10,6 +10,10 @@
   # cloned, so the repo lives at ~/.dotfiles on every Mac (README).
   dotfiles = "${config.home.homeDirectory}/.dotfiles";
 
+  # Secret sync with OpenBao: home/secretspec/materialize.sh behind one command
+  # that carries its own bao, jq and coreutils.
+  dotfilesSecrets = pkgs.callPackage ./secretspec/package.nix {};
+
   # atuin maps ATUIN_AI__API_TOKEN to ai.api_token (only when config.toml sets
   # none). ~/.config/atuin/ai-token is materialized from OpenBao (ATUIN_AI_TOKEN).
   # Only shells with a TTY export it; ones spawned without (agents, CI) don't.
@@ -47,6 +51,7 @@ in {
     unstablePkgs.gawk
     unstablePkgs.gnugrep
     unstablePkgs.git-filter-repo
+    dotfilesSecrets
 
     # terragrunt
   ];
@@ -127,16 +132,16 @@ in {
     })
   ];
 
-  # 3-way materialize from OpenBao on every switch. Never pushes.
-  # Vault-newer → pull; local-newer → leave dest; both changed → fail.
-  # Push/review: `just secretspec-sync`. Last-sync hashes live in
-  # ~/.local/state/dotfiles/secretspec (not the nix store). Missing secret
-  # fails activation. Values stay in OpenBao, never in this repo.
+  # Pull secrets from OpenBao on every switch (home/secretspec/materialize.sh,
+  # through the pinned dotfiles-secrets wrapper). It pulls what is safe, never
+  # writes the vault and never prompts; anything that needs a human prints one
+  # banner and the switch goes on. An unreachable vault is tolerated for 7 days
+  # after the last contact; a missing file or rejected credentials fail the
+  # switch. Review and push: `just secretspec-sync`. State lives in
+  # ~/.local/state/dotfiles/secretspec (not the nix store). Values stay in
+  # OpenBao, never in this repo.
   home.activation.secretspecSecrets = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    export SECRETSPEC_BIN="$HOME/.cargo/bin/secretspec"
-    export SECRETSPEC_FILE="${../secretspec.toml}"
-    export SECRETSPEC_REASON="home-manager activation"
-    bash ${./secretspec/materialize.sh} apply
+    ${dotfilesSecrets}/bin/dotfiles-secrets apply
   '';
 
   # Log in to the atuin sync server (atuin.home.0dl.me) as loneexile. Needs the
