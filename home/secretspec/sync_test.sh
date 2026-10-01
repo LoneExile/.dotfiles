@@ -152,6 +152,11 @@ test_diverged_merge_edits_a_private_copy_and_pushes_it() {
   assert_bytes "vault window shows the vault side" "$c/file3" "vault-side"
   assert_bytes "the editor started from the local bytes" "$c/file1" "local-side"
   assert_has "base and vault are read-only" "$c/argv" "setlocal readonly nomodifiable"
+  assert_eq "arguments before --" "$(sed '/^--$/q' "$c/argv" | tr '\n' ' ')" "--clean -n -d --cmd set noswapfile nowritebackup noundofile shadafile=NONE -c wincmd l -c setlocal readonly nomodifiable -c wincmd l -c setlocal readonly nomodifiable -c wincmd t -- "
+  for i in 1 2 3; do
+    assert_eq "window $i copy mode" "$(cat "$c/mode$i")" 600
+    assert_eq "window $i copy directory mode" "$(cat "$c/dirmode$i")" 700
+  done
   assert_eq "the live file was not what nvim edited" "$([[ $(cat "$c/path1") != "$(file_of NPMRC)" ]] && echo yes)" yes
   assert_has "pushed" "$T/out" "pushed NPMRC v2 → v3"
   assert_bytes "vault has the merge" "$(vget NPMRC 3)" "local-side+merged"
@@ -224,6 +229,29 @@ test_unknown_rows() {
   assert_has "pushed line" "$T/out" "pushed NPMRC v1 → v2"
   assert_bytes "took vault" "$(file_of OMP_ENV)" "v-OMP_ENV"
   assert_bytes "took vault: backup" "$(state_file backup/OMP_ENV)" "local-o"
+}
+
+# Enter alone must never choose on the unknown and rewound prompts (I4); the
+# diverged prompt has the same test above.
+test_unknown_and_rewound_have_no_default_on_enter() {
+  seed_all
+  printf '%s' "local-n" >"$(file_of NPMRC)"
+  tty_engine $'\n\ns\n' sync
+  assert_rc "unknown: sync" "$RC" 0
+  assert_eq "unknown: Enter asks again, twice" "$(grep -c 'answer one of: kts' "$T/out")" 2
+  assert_bytes "unknown: local untouched" "$(file_of NPMRC)" "local-n"
+  assert_eq "unknown: vault untouched" "$(vver NPMRC)" 1
+  assert_eq "unknown: nothing was saved over" "$([[ -e $(state_file backup/NPMRC) ]] && echo yes || echo no)" no
+  lput .npmrc "v-NPMRC"
+  settle
+  ba kv metadata delete -mount=secret "$TL_SECRET_PREFIX/OMP_ENV" >/dev/null
+  seed_s OMP_ENV "recreated-o"
+  tty_engine $'\n\ns\n' sync
+  assert_rc "rewound: sync" "$RC" 0
+  assert_has "rewound: the prompt is the rewound one" "$T/out" "this Mac last synced v1"
+  assert_eq "rewound: Enter asks again, twice" "$(grep -c 'answer one of: rts' "$T/out")" 2
+  assert_eq "rewound: vault untouched" "$(vver OMP_ENV)" 1
+  assert_bytes "rewound: local untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
 }
 
 test_rewound_rows() {
