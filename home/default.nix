@@ -12,6 +12,9 @@
 
   # Secret sync with OpenBao: home/secretspec/materialize.sh behind one command
   # that carries its own bao, jq and coreutils.
+  # The activation step runs with home.emptyActivationPath, so it sees only the wrapper's
+  # own tools (openbao, jq, coreutils) plus Home Manager's: no awk, and not the
+  # gawk/gnugrep in home.packages below, which only reach the login shell's PATH.
   dotfilesSecrets = pkgs.callPackage ./secretspec/package.nix {};
 
   # atuin maps ATUIN_AI__API_TOKEN to ai.api_token (only when config.toml sets

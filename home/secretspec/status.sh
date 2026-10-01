@@ -1,7 +1,8 @@
 # status.sh: the read-only overview (spec §5.8). Sourced, not run.
 # Needs the SECRETS table from materialize.sh plus common.sh kv.sh decide.sh
-# state.sh inspect.sh. It writes nothing: no state directory, no migration, no
-# last-contact record, no vault write.
+# state.sh inspect.sh. cmd_status writes nothing: no state directory, no
+# migration, no last-contact record, no vault write. status_table with COMMIT=1
+# (used by sync) does write bases and migrates legacy records.
 
 # Order of the states in the summary line.
 STATUS_ORDER="in-sync behind stale missing-local ahead diverged rewound unknown vault-missing blocked offline auth-failed"
