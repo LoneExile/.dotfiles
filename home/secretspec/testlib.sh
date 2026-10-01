@@ -28,6 +28,7 @@ else
 fi
 
 tl_mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1"; }
+tl_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
 
 # Hash and mtime of the real token, never its content.
 tl_fingerprint() {
@@ -133,13 +134,18 @@ ba() {
 
 # tl_begin NAME: new sandbox for one test; forget what earlier tests seeded.
 tl_begin() {
-  local n
+  local n pids
   mkdir -p "$TL_TMP/admin-home"
   if [[ -n $TL_MAIN_SRV ]]; then
     use_srv "$TL_MAIN_SRV"
+    pids=""
     for n in $(sort -u "$TL_TMP/touched"); do
-      ba kv metadata delete -mount=secret "$TL_SECRET_PREFIX/$n" >/dev/null 2>&1 || true
+      ba kv metadata delete -mount=secret "$TL_SECRET_PREFIX/$n" >/dev/null 2>&1 &
+      pids="$pids $!"
     done
+    # Wait for these jobs only: a bare `wait` would also wait for the server.
+    # shellcheck disable=SC2086
+    [[ -z $pids ]] || wait $pids
   fi
   : >"$TL_TMP/touched"
   T=$(mktemp -d "$TL_TMP/t.XXXXXX")

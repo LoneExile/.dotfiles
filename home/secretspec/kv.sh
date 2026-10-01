@@ -31,8 +31,10 @@ kv_init() {
 kv_bao() {
   (
     local v
-    for v in $(compgen -e | grep -E '^(BAO|VAULT)_[A-Za-z0-9_]*$' || true); do
-      unset "$v"
+    for v in $(compgen -e); do
+      case $v in
+        BAO_* | VAULT_*) unset "$v" ;;
+      esac
     done
     export BAO_ADDR=$KV_ADDR BAO_TOKEN=$KV_TOKEN BAO_CLIENT_TIMEOUT=$KV_TIMEOUT
     exec bao "$@"
