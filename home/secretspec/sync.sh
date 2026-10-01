@@ -246,6 +246,7 @@ sync_push_one() {
 }
 
 cmd_sync() {
+  umask 077
   local line state name
   local -a todo=()
   case ${1:-} in

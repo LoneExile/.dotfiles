@@ -94,6 +94,24 @@ EOF
   chmod +x "$T_SHIM/bao"
 }
 
+# shim_work_modes: every bao call first records the mode of each file in the
+# engine's scratch directories ($T/tmp/dotfiles-secrets.*) into $T/modes.log as
+# "NAME MODE", so a test can see what is on disk while a call is in flight.
+shim_work_modes() {
+  cat >"$T_SHIM/bao" <<EOF
+#!/bin/sh
+printf '%s\\n' "\$*" >>"$T/bao.log"
+for f in "$T"/tmp/dotfiles-secrets.*/*; do
+  [ -f "\$f" ] || continue
+  m=\$(stat -f %Lp "\$f" 2>/dev/null || stat -c %a "\$f")
+  echo "\$(basename "\$f") \$m" >>"$T/modes.log"
+done
+exec "$TL_BAO" "\$@"
+EOF
+  chmod +x "$T_SHIM/bao"
+  : >"$T/modes.log"
+}
+
 # shim_corrupt_readback: reads of a specific version (the read-back after a
 # push) come back with an extra byte.
 shim_corrupt_readback() {

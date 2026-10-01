@@ -373,6 +373,22 @@ test_push_flag() {
   assert_rc "rewound" "$RC" 0
 }
 
+test_the_write_request_is_private_while_the_call_is_in_flight() {
+  if [[ $TL_SHIM_OK -eq 0 ]]; then
+    skip "bao shim is bypassed under SS_ENGINE"
+    return 0
+  fi
+  umask 022
+  seed_all
+  settle
+  printf '%s' "edited" >"$(file_of NPMRC)"
+  shim_work_modes
+  engine sync --push NPMRC
+  assert_rc "sync --push" "$RC" 0
+  assert_eq "positive control: the probe saw the write request" "$(grep -c '^write.req ' "$T/modes.log" | awk '$1 > 0 { print "yes" }')" yes
+  assert_eq "every scratch file seen was 600" "$(awk '{ print $2 }' "$T/modes.log" | sort -u | tr '\n' ' ')" "600 "
+}
+
 test_push_flag_refuses_everything_else() {
   seed_all
   settle

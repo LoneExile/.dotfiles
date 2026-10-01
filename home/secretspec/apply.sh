@@ -56,6 +56,7 @@ apply_banner() { # ATTENTION-LIST
 }
 
 cmd_apply() {
+  umask 077
   local spec name rel mode dest rc answered=1 att="" fail="" auth="" auth_err="" offline_n=0 age line
   exec </dev/null
   require_bins

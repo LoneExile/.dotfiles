@@ -3,12 +3,13 @@
 
 # ensure_layout: parent directories that must exist, with their modes.
 ensure_layout() {
-  mkdir -p "$HOME/.ssh" "$HOME/.local/share/atuin"
-  chmod 700 "$HOME/.ssh" "$HOME/.local/share/atuin"
   (
+    # Every command runs with umask 077; parents that are new keep the usual modes.
     umask 022
+    mkdir -p "$HOME/.ssh" "$HOME/.local/share/atuin"
     mkdir -p "$HOME/.config/atuin" "$HOME/.omp" "$HOME/.config/tofu"
   )
+  chmod 700 "$HOME/.ssh" "$HOME/.local/share/atuin"
 }
 
 # install_file NAME DEST MODE SRC LSHA SHA

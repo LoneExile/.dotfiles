@@ -477,6 +477,40 @@ EOF
   assert_eq "positive control: a piped stdin is reported open" "$(tail -1 "$T/stdin.log")" open
 }
 
+# A run killed with SIGKILL leaves its scratch directory (value copies) behind.
+# The next run removes the ones that are over a day old and leaves a younger one
+# alone, because it may belong to a run in progress.
+test_stale_scratch_directories_are_removed() {
+  seed_all
+  mkdir -p "$T/tmp/dotfiles-secrets.OLDOLD" "$T/tmp/dotfiles-secrets.NEWNEW" "$T/tmp/unrelated.OLDOLD"
+  printf '%s' leftover >"$T/tmp/dotfiles-secrets.OLDOLD/val.X.1"
+  printf '%s' file >"$T/tmp/dotfiles-secrets.AFILE"
+  touch -t 202001010000 "$T/tmp/dotfiles-secrets.OLDOLD" "$T/tmp/unrelated.OLDOLD" "$T/tmp/dotfiles-secrets.AFILE"
+  engine apply
+  assert_rc "apply" "$RC" 0
+  assert_absent "the old scratch directory is gone" "$T/tmp/dotfiles-secrets.OLDOLD"
+  assert_eq "a young one is kept" "$([[ -d $T/tmp/dotfiles-secrets.NEWNEW ]] && echo yes)" yes
+  assert_eq "an old directory with another name is kept" "$([[ -d $T/tmp/unrelated.OLDOLD ]] && echo yes)" yes
+  assert_eq "an old plain file is kept" "$([[ -f $T/tmp/dotfiles-secrets.AFILE ]] && echo yes)" yes
+  assert_eq "this run's own directory is removed at exit" "$(find "$T/tmp" -maxdepth 1 -name 'dotfiles-secrets.*' -type d | sort | tr '\n' ' ')" "$T/tmp/dotfiles-secrets.NEWNEW "
+}
+
+# With a permissive caller umask the value copies and replies in the scratch
+# directory must still be private while a call is in flight.
+test_scratch_files_are_private_while_a_call_is_in_flight() {
+  if [[ $TL_SHIM_OK -eq 0 ]]; then
+    skip "bao shim is bypassed under SS_ENGINE"
+    return 0
+  fi
+  umask 022
+  seed_all
+  shim_work_modes
+  engine apply
+  assert_rc "apply" "$RC" 0
+  assert_eq "positive control: the probe saw the reply file" "$(grep -c '^read.json ' "$T/modes.log" | awk '$1 > 0 { print "yes" }')" yes
+  assert_eq "every scratch file seen was 600" "$(awk '{ print $2 }' "$T/modes.log" | sort -u | tr '\n' ' ')" "600 "
+}
+
 test_apply_never_reads_stdin() {
   seed_all
   settle

@@ -88,6 +88,7 @@ status_table() {
 }
 
 cmd_status() {
+  umask 077
   require_bins
   work_init
   kv_init

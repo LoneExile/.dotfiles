@@ -6,6 +6,7 @@
 # engine: an older engine, and the secretspec CLI's own writes, carry none.
 
 cmd_enforce_cas() {
+  umask 077
   local spec name failed=0 on
   require_bins
   work_init

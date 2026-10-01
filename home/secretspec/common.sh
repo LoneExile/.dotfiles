@@ -39,7 +39,11 @@ fmt_epoch() {
 }
 
 # work_init: private scratch dir (0700) removed on exit. Value copies live here.
+# A run killed with SIGKILL cannot remove its directory, so directories of this
+# user older than a day are swept first; a younger one may belong to a run in
+# progress and is left alone.
 work_init() {
+  find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'dotfiles-secrets.*' -user "$(id -un)" -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
   WORK=$(umask 077 && mktemp -d "${TMPDIR:-/tmp}/dotfiles-secrets.XXXXXX") || die "cannot create a temp dir"
   trap 'rm -rf "$WORK"' EXIT
 }
