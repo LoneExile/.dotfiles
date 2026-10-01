@@ -69,6 +69,26 @@ test_update_alone_is_not_enough_but_patch_is() {
   assert_eq "enforced" "$(vmeta NPMRC | jq -r .data.cas_required)" true
 }
 
+# An expired or wrong token and a token without the patch capability are both
+# 403s. One run must not print one line per path, and the likelier cause (an
+# expired login) must be named with its fix.
+test_a_refused_token_stops_at_the_first_path_and_names_both_causes() {
+  seed_all
+  ENGINE_ENV=(VAULT_TOKEN=bogus)
+  engine enforce-cas
+  assert_rc "enforce-cas with a bogus token" "$RC" 1
+  assert_eq "exactly one error line" "$(grep -c '^error:' "$T/err")" 1
+  assert_eq "nothing else on stderr" "$(wc -l <"$T/err" | tr -d ' ')" 1
+  assert_has "names the login fix" "$T/err" "just openbao-login"
+  assert_has "names the capability" "$T/err" "patch capability"
+  assert_eq "nothing enforced" "$(vmeta NPMRC | jq -r .data.cas_required)" false
+  assert_eq "no cas_required line" "$(grep -c '^cas_required ' "$T/out")" 0
+  # Positive control: with the dev server's own token the same run succeeds.
+  ENGINE_ENV=()
+  engine enforce-cas
+  assert_rc "positive control: a valid token" "$RC" 0
+}
+
 test_enforce_stops_when_the_vault_is_unreachable() {
   seed_all
   srv_spawn "$T/dead"
