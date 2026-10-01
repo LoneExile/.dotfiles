@@ -607,13 +607,18 @@ test_summaries_never_print_lines_of_a_multi_line_value() {
     printf "URLSAFE_B64='-----BEGIN-----\n"
     printf '%s\n' "$tail3"
     printf -- "-----END-----'\n"
+    printf 'BARE_URLSAFE=-----BEGIN-----\n'
+    printf 'zyx_wvuTSRqpoNML_kjiHGFecretyy==\n'
+    printf -- '-----END-----\n'
+    printf 'NOMARKER_B64=%s\n' "$cr"
+    printf 'UVdFUlRZVUlPUEFTREZHSA==%s\n' "$cr"
   } >"$T/vault"
   printf '%s\n' 'KEEP=1' 'NEW_KEY=PLANT-new' >"$T/local"
   summary_masked OMP_ENV "$T/local" "$T/vault" >"$T/out"
   assert_has "positive control: a real key is named" "$T/out" "CRLF_PEM"
   assert_has "positive control: an added key is named" "$T/out" "keys added (local vs OpenBao): NEW_KEY"
   local frag
-  for frag in QyNTUx c3VwZXIt QUJDREVG abc_defGHI b3BlbnNz MIIBVg; do
+  for frag in QyNTUx c3VwZXIt QUJDREVG abc_defGHI b3BlbnNz MIIBVg zyx_wvu UVdFUlRZ; do
     assert_lacks "no fragment '$frag' of a multi-line value is printed" "$T/out" "$frag"
   done
 }
