@@ -35,7 +35,7 @@ cmd_enforce_cas() {
         ;;
       hard)
         # A 401/403 is the same for every path: stop here with both causes.
-        die "OpenBao refused the token ($name: $KV_ERR). If the login expired: just openbao-login. If the token lacks the patch capability: ask for patch on secret/metadata/$KV_PREFIX/*"
+        die "OpenBao refused the token ($name: $KV_ERR). If the login expired: just openbao-login. If the token lacks the patch capability: ask for patch on secret/metadata/$KV_PREFIX/*. For a certificate error, install the CA that signed it"
         ;;
       *) die "OpenBao is unreachable: $KV_ERR" ;;
     esac

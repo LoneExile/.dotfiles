@@ -89,6 +89,20 @@ test_a_refused_token_stops_at_the_first_path_and_names_both_causes() {
   assert_rc "positive control: a valid token" "$RC" 0
 }
 
+# A certificate the Mac does not trust is class hard too, and reaches the same
+# message; it must say what to do about a certificate as well.
+test_an_untrusted_certificate_names_the_ca_fix() {
+  seed_all
+  srv_spawn "$T/tls" tls
+  use_srv "$T/tls"
+  engine enforce-cas
+  assert_rc "enforce-cas" "$RC" 1
+  assert_eq "exactly one error line" "$(grep -c '^error:' "$T/err")" 1
+  assert_has "mentions the certificate" "$T/err" "x509"
+  assert_has "names the CA fix" "$T/err" "install the CA that signed it"
+  assert_has "still names the login fix" "$T/err" "just openbao-login"
+}
+
 test_enforce_stops_when_the_vault_is_unreachable() {
   seed_all
   srv_spawn "$T/dead"
