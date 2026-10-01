@@ -34,6 +34,25 @@ test_in_sync_secrets_get_their_records_without_a_prompt() {
   assert_lacks "no prompt" "$T/out" "[y/N"
 }
 
+# last-contact is "the last run in which the vault answered every read": apply
+# and a sync that got that far both record it.
+test_a_clean_sync_records_the_contact() {
+  seed_all
+  assert_absent "no record before" "$(state_file last-contact)"
+  tty_engine "" sync
+  assert_rc "sync" "$RC" 0
+  assert_eq "last-contact recorded" "$([[ -s $(state_file last-contact) ]] && echo yes)" yes
+  assert_eq "and it is a recent time" "$([[ $(( $(date +%s) - $(cat "$(state_file last-contact)") )) -lt 120 ]] && echo yes)" yes
+  rm -f "$(state_file last-contact)"
+  srv_spawn "$T/dead"
+  use_srv "$T/dead"
+  kill -9 "$(cat "$T/dead/pid")"
+  wait "$(cat "$T/dead/pid")" 2>/dev/null
+  tty_engine "" sync
+  assert_rc "sync with the vault down" "$RC" 1
+  assert_absent "an unanswered run records nothing" "$(state_file last-contact)"
+}
+
 test_pulls_are_automatic_and_quiet() {
   seed_all
   settle

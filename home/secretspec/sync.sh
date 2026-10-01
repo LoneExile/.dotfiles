@@ -276,6 +276,8 @@ cmd_sync() {
   if grep -q '^auth-failed ' <<<"$STATUS_LIST"; then
     die "OpenBao refused the credentials; run: just openbao-login"
   fi
+  # Every read was answered (a missing secret is an answer): the same record apply keeps.
+  contact_write
   echo
   while read -r state name; do
     [[ -n $name ]] || continue
