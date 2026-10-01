@@ -45,7 +45,8 @@ work_init() {
 }
 
 # Test seam: SECRETSPEC_TEST_CRASH_AT=<point> kills the run with SIGKILL there,
-# so the tests can prove that a re-run converges.
+# so the tests can prove that a re-run converges. Call it only from the main
+# flow, never inside a pipeline or $(...): it kills $$, the main shell.
 crash_point() {
   if [[ ${SECRETSPEC_TEST_CRASH_AT:-} == "$1" ]]; then
     kill -9 $$
