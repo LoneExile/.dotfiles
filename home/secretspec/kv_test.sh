@@ -476,7 +476,7 @@ test_no_value_in_argv() {
   assert_lacks "value never appears in a bao argv" "$T/bao.log" "$plant"
   assert_lacks "token never appears in a bao argv" "$T/bao.log" "$S_TOK"
   # Positive control: the log does catch a value passed in argv.
-  bao kv put -mount=secret leak/x "v=$plant" >/dev/null 2>&1
+  BAO_ADDR=$S_ADDR BAO_TOKEN=$S_TOK bao kv put -mount=secret leak/x "v=$plant" >/dev/null 2>&1
   assert_has "positive control: argv log sees a leaky call" "$T/bao.log" "$plant"
   ba kv metadata delete -mount=secret leak/x >/dev/null 2>&1
 }

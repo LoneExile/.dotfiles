@@ -32,7 +32,7 @@ tl_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1"; }
 
 # Hash and mtime of the real token, never its content.
 tl_fingerprint() {
-  local f=$HOME/.vault-token
+  local f=${TL_REAL_HOME:-$HOME}/.vault-token
   if [[ -e $f ]]; then
     printf '%s %s\n' "$(shasum -a 256 <"$f" | cut -c1-64)" "$(tl_mtime "$f")"
   else
@@ -163,6 +163,18 @@ tl_cleanup() {
   fi
 }
 
+# tl_isolate: the test bodies run with a HOME of their own and an environment
+# that names nothing real: no token, an address nothing listens on, no proxy.
+# Only tl_fingerprint still looks at the real HOME.
+tl_isolate() {
+  TL_REAL_HOME=$HOME
+  mkdir -p "$TL_TMP/home"
+  export HOME=$TL_TMP/home
+  unset BAO_TOKEN VAULT_TOKEN
+  export BAO_ADDR=http://127.0.0.1:9 VAULT_ADDR=http://127.0.0.1:9
+  export HTTP_PROXY= http_proxy= HTTPS_PROXY= https_proxy= ALL_PROXY= all_proxy= NO_PROXY= no_proxy=
+}
+
 tl_init() {
   TL_BAO=$(command -v bao) || {
     echo "bao not found on PATH" >&2
@@ -175,6 +187,7 @@ tl_init() {
   TL_FP_BEFORE=$(tl_fingerprint)
   TL_TMP=$(mktemp -d "${TMPDIR:-/tmp}/ss-test.XXXXXX")
   trap tl_cleanup EXIT
+  tl_isolate
   srv_spawn "$TL_TMP/srv" || {
     echo "could not start bao server -dev" >&2
     exit 2
@@ -189,6 +202,7 @@ tl_init_pure() {
   TL_FP_BEFORE=$(tl_fingerprint)
   TL_TMP=$(mktemp -d "${TMPDIR:-/tmp}/ss-test.XXXXXX")
   trap tl_cleanup EXIT
+  tl_isolate
   : >"$TL_TMP/touched"
 }
 
