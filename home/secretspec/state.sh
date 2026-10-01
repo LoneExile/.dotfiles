@@ -138,15 +138,20 @@ contact_write() {
   state_put "$STATE_DIR/last-contact" <"$WORK/contact.new"
 }
 
-# contact_age: seconds since the last full contact; nothing when unknown.
+# contact_age: seconds since the last full contact; nothing when unknown or
+# when the recorded time is in the future (that is no contact, and a negative
+# age would pass the 7-day bound for ever).
 contact_age() {
-  local t
+  local t now
   if [[ ! -f $STATE_DIR/last-contact ]]; then
     return 0
   fi
   t=$(tr -d ' \n' <"$STATE_DIR/last-contact")
-  if [[ $t =~ ^[0-9]+$ ]]; then
-    echo $(($(date +%s) - t))
+  if [[ $t =~ ^[0-9]{1,15}$ ]]; then
+    now=$(date +%s)
+    if ((t <= now)); then
+      echo $((now - t))
+    fi
   fi
 }
 

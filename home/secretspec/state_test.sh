@@ -90,6 +90,13 @@ test_last_contact_bound() {
   assert_eq "age is reported in seconds" "$([[ $(contact_age) -ge 604860 && $(contact_age) -le 604900 ]] && echo yes)" yes
   printf 'garbage' >"$STATE_DIR/last-contact"
   contact_fresh && bad "garbage is not fresh" || ok "garbage is not fresh"
+  # A time in the future (clock set back, file edited) would give a negative
+  # age and never trip the bound: it is not a contact.
+  printf '%s\n' $((now + 90 * 86400)) >"$STATE_DIR/last-contact"
+  contact_fresh && bad "90 days in the future is not fresh" || ok "90 days in the future is not fresh"
+  assert_eq "no age is reported for the future" "$(contact_age)" ""
+  printf '%s\n' 99999999999 >"$STATE_DIR/last-contact"
+  contact_fresh && bad "year 5138 is not fresh" || ok "year 5138 is not fresh"
 }
 
 test_backup_has_one_slot() {
