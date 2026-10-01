@@ -11,6 +11,12 @@ SECRETSPEC_FILE="${SECRETSPEC_FILE:-$REPO_ROOT/secretspec.toml}"
 SECRETSPEC_REASON="${SECRETSPEC_REASON:-secretspec materialize}"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/secretspec"
 PROVIDER="openbao"
+# The bao/jq engine (status now; apply and sync follow). Its helpers replace the
+# duplicates further down when apply and sync move over.
+for lib in common kv decide state inspect status; do
+  # shellcheck source=/dev/null
+  . "$SCRIPT_DIR/$lib.sh"
+done
 # 1 when this secretspec's `get` appends a newline to redirected output
 # (< 0.21), 0 when it writes the exact value (0.21+, secretspec CHANGELOG
 # 0.21.0). Set by detect_get_newline before any secret is read.
@@ -382,12 +388,25 @@ cmd_sync() {
   done
 }
 
+# list: NAME PATH-FROM-HOME MODE per secret, from the table above.
+cmd_list() {
+  local spec name rel mode
+  for spec in "${SECRETS[@]}"; do
+    IFS='|' read -r name rel mode _ <<<"$spec"
+    printf '%s %s %s\n' "$name" "$rel" "$mode"
+  done
+}
+
 main() {
   case ${1:-} in
     apply) cmd_apply ;;
     sync) cmd_sync ;;
-    *) die "usage: materialize.sh apply|sync" ;;
+    status) cmd_status ;;
+    list) cmd_list ;;
+    *) die "usage: materialize.sh apply|sync|status|list" ;;
   esac
 }
 
-main "$@"
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  main "$@"
+fi

@@ -211,13 +211,51 @@ lput() {
   chmod "${3:-600}" "$T_HOME/$1"
 }
 
-# engine ARGS...: run the engine in the sandbox. Sets RC; output in $T/out, $T/err.
-engine() {
+# sandbox_run CMD...: run CMD in the sandbox environment, stdin from /dev/null.
+# Sets RC; output in $T/out and $T/err. ENGINE_ENV holds extra NAME=value pairs.
+sandbox_run() {
   RC=0
   env -i HOME="$T_HOME" PATH="$T_SHIM:$PATH" XDG_STATE_HOME="$T_STATE" TMPDIR="$T/tmp" TERM=dumb TZ=UTC \
     SECRETSPEC_SYNC_ADDR="$S_ADDR" VAULT_TOKEN="$S_TOK" ${ENGINE_ENV[@]+"${ENGINE_ENV[@]}"} \
-    "${TL_ENGINE[@]}" "$@" >"$T/out" 2>"$T/err" </dev/null || RC=$?
+    "$@" >"$T/out" 2>"$T/err" </dev/null || RC=$?
 }
+# engine ARGS...: run the engine under test in the sandbox.
+engine() { sandbox_run "${TL_ENGINE[@]}" "$@"; }
+
+# The 14 secrets as NAME PATH-FROM-HOME MODE. materialize.sh holds the real
+# table; a test keeps this copy honest.
+TL_TABLE='SSH_ID_ED25519 .ssh/id_ed25519 600
+SSH_ID_ED25519_PUB .ssh/id_ed25519.pub 644
+SSH_ID_ED25519_OC .ssh/id_ed25519.oc 600
+SSH_ID_ED25519_OC_PUB .ssh/id_ed25519.oc.pub 644
+SSH_ID_ED25519_UNIT_PX .ssh/id_ed25519_unit_px 600
+SSH_ID_CRYPT .ssh/id_crypt 600
+SSH_ID_CRYPT_PUB .ssh/id_crypt.pub 644
+SSH_LINE_PAYMENT_GATEWAY .ssh/line-payment-gateway 600
+SSH_LINE_PAYMENT_GATEWAY_PUB .ssh/line-payment-gateway.pub 644
+ATUIN_KEY .local/share/atuin/key 600
+NPMRC .npmrc 600
+ATUIN_AI_TOKEN .config/atuin/ai-token 600
+OMP_ENV .omp/.env 600
+TOFU_BACKBONE_CLUSTER_PASS .config/tofu/backbone-cluster.pass 600'
+rel_of() { awk -v n="$1" '$1 == n { print $2 }' <<<"$TL_TABLE"; }
+mode_of() { awk -v n="$1" '$1 == n { print $3 }' <<<"$TL_TABLE"; }
+
+# Fixtures for the Mac's own state.
+put_base() { # put_base NAME VERSION SHA CREATED_TIME
+  local d=$T_STATE/dotfiles/secretspec
+  mkdir -p "$d"
+  chmod 700 "$d"
+  jq -nc --argjson v "$2" --arg s "$3" --arg c "$4" '{version: $v, sha256: $s, created_time: $c}' >"$d/$1.base.json"
+}
+put_legacy() { # put_legacy NAME SHA
+  local d=$T_STATE/dotfiles/secretspec
+  mkdir -p "$d"
+  chmod 700 "$d"
+  printf '%s\n' "$2" >"$d/$1.sha256"
+}
+# vct NAME VERSION: created_time the vault gave that version.
+vct() { vmeta "$1" | jq -r --arg v "$2" '.data.versions[$v].created_time'; }
 
 # in_sandbox: export what the in-process tests need to source the scripts.
 in_sandbox() {
