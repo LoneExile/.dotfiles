@@ -52,8 +52,9 @@ take_vault() {
 }
 
 # sync_merge NAME DEST MODE: three windows in nvim (local editable, base and
-# vault read-only) on temp copies. Returns 0 done, 1 error, 2 check-and-set
-# mismatch, 3 nothing merged (ask again).
+# vault read-only) on temp copies. The merged copy is pushed first and only then
+# saved over the local file. Returns 0 done, 1 error, 2 check-and-set mismatch
+# (the local file is untouched), 3 nothing merged (ask again).
 sync_merge() {
   local name=$1 dest=$2 mode=$3 d=$WORK/merge sha
   local -a views=(-c 'wincmd l' -c 'setlocal readonly nomodifiable')
@@ -89,11 +90,14 @@ sync_merge() {
     echo "  merge discarded, your file is unchanged"
     return 3
   fi
-  sha=$(file_sha256 "$d/$name.local")
+  sha=$(file_sha256 "$d/$name.local") || die "cannot hash the merged copy of $name"
+  # Push first, install second: when the vault moved (return 2) or the push
+  # fails, the local file is exactly what it was, and the one backup slot is
+  # still free for the "take vault" that may follow.
+  push_local "$name" "$d/$name.local" "$D_CUR" "$sha" || return $?
   backup_put "$name" "$dest"
   echo "  your file is saved in $STATE_DIR/backup/$name"
   install_file "$name" "$dest" "$mode" "$d/$name.local" "$D_LSHA" "$sha" || return 1
-  push_local "$name" "$dest" "$D_CUR" "$sha"
 }
 
 sync_ahead() {

@@ -160,6 +160,43 @@ test_diverged_merge_edits_a_private_copy_and_pushes_it() {
   assert_eq "no temp directory left behind" "$(find "$T/tmp" -mindepth 1 | wc -l | tr -d ' ')" 0
 }
 
+# The merge is pushed first and installed second: a check-and-set race must leave
+# the local file exactly as it was, so the one backup slot still gets the original
+# when the user then takes the vault.
+test_a_merge_that_loses_the_cas_race_leaves_the_local_file_alone() {
+  seed_all
+  settle
+  seed_s NPMRC "vault-side"
+  printf '%s' "local-side-ORIGINAL" >"$(file_of NPMRC)"
+  nvim_stub
+  printf '%s' "+merged" >"$T/nvim.edit"
+  shim_race NPMRC racer
+  tty_engine $'m\ny\ns\n' sync
+  assert_rc "sync" "$RC" 0
+  assert_has "the race is noticed" "$T/out" "OpenBao changed while you were deciding"
+  assert_bytes "local file is still the original" "$(file_of NPMRC)" "local-side-ORIGINAL"
+  assert_absent "no backup was needed" "$(state_file backup/NPMRC)"
+  assert_bytes "the vault has the racer's value, nothing of the merge" "$(vget NPMRC 3)" "racer"
+  assert_eq "vault has exactly three versions" "$(vver NPMRC)" 3
+}
+
+test_merge_then_cas_race_then_take_vault_keeps_the_original_local_bytes() {
+  seed_all
+  settle
+  seed_s NPMRC "vault-side"
+  printf '%s' "local-side-ORIGINAL" >"$(file_of NPMRC)"
+  nvim_stub
+  printf '%s' "merged-result-without-the-original-text" >"$T/nvim.edit"
+  sed -i.bak 's|>>"${files\[0\]}"|>"${files[0]}"|' "$T_SHIM/nvim"
+  rm -f "$T_SHIM/nvim.bak"
+  shim_race NPMRC racer
+  # m = merge, y = push the merge (loses the race), t = take vault on the re-decided state
+  tty_engine $'m\ny\nt\n' sync
+  assert_rc "sync" "$RC" 0
+  assert_bytes "local now follows the vault" "$(file_of NPMRC)" "racer"
+  assert_bytes "the original local bytes are in the backup slot" "$(state_file backup/NPMRC)" "local-side-ORIGINAL"
+}
+
 test_diverged_merge_without_edits_asks_again() {
   seed_all
   settle
