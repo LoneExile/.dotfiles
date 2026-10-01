@@ -5,6 +5,13 @@ hostname := `hostname | cut -d "." -f 1`
 # Account running `just`: selects this Mac's Home Manager user, whatever the
 # host is called. Home Manager refuses to activate for anyone else anyway.
 user := `id -un`
+# Home Manager's own profile for this user, chosen the way its activation script
+# does (genProfilePath): $XDG_STATE_HOME/nix/profiles if that directory exists,
+# else the global per-user profiles directory. Both `just home` and `just switch`
+# link the new generation here; /etc/profiles/per-user (PATH) only follows
+# `just switch`.
+hm_profile := `d="${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles"; [ -d "$d" ] || d="${NIX_STATE_DIR:-/nix/var/nix}/profiles/per-user/$(id -un)"; echo "$d/home-manager"`
+dotfiles_secrets := hm_profile / "home-path/bin/dotfiles-secrets"
 
 ### System Management
 # Build the nix-darwin system configuration without switching to it
@@ -30,23 +37,36 @@ openbao-login:
   BAO_ADDR=https://openbao.home.0dl.me bao login -method=oidc -path=oidc
 
 
+# The three recipes below run the dotfiles-secrets wrapper of the active Home
+# Manager generation (so they work right after `just home`), falling back to the
+# one on PATH.
 # Read-only: every secret's sync state against OpenBao, then the secretspec CLI contract check
 [macos]
 secretspec-status:
   #!/usr/bin/env bash
   set -euo pipefail
-  dotfiles-secrets status
+  ds="{{dotfiles_secrets}}"
+  [[ -x $ds ]] || ds=$(command -v dotfiles-secrets) || { echo "error: dotfiles-secrets is not installed yet: run just home" >&2; exit 1; }
+  "$ds" status
   SECRETSPEC_FILE="{{justfile_directory()}}/secretspec.toml" bash "{{justfile_directory()}}/home/secretspec/contract-check.sh"
 
 # Review secrets against OpenBao and push or pull (needs a terminal; --push NAME pushes one, no prompts)
 [macos]
 secretspec-sync *ARGS:
-  dotfiles-secrets sync {{ARGS}}
+  #!/usr/bin/env bash
+  set -euo pipefail
+  ds="{{dotfiles_secrets}}"
+  [[ -x $ds ]] || ds=$(command -v dotfiles-secrets) || { echo "error: dotfiles-secrets is not installed yet: run just home" >&2; exit 1; }
+  "$ds" sync {{ARGS}}
 
 # Once, after every Mac runs this engine: OpenBao then refuses writes to the secrets without check-and-set
 [macos]
 secretspec-enforce-cas:
-  dotfiles-secrets enforce-cas
+  #!/usr/bin/env bash
+  set -euo pipefail
+  ds="{{dotfiles_secrets}}"
+  [[ -x $ds ]] || ds=$(command -v dotfiles-secrets) || { echo "error: dotfiles-secrets is not installed yet: run just home" >&2; exit 1; }
+  "$ds" enforce-cas
 
 # If ~/.config/omniwm/settings.toml is a regular file, Home Manager will not
 # replace it. Review nvim -d / diff -u, then y to remove so the symlink can land.

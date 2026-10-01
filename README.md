@@ -48,7 +48,7 @@ Profiles are boolean toggles on `lib.mkDarwin` in `flake.nix`, not files under `
 
 ## Secrets
 
-Live path is **homelab OpenBao**, not SOPS. `home/secretspec/materialize.sh` keeps the 14 secret files in sync with it. The nix wrapper `dotfiles-secrets` (in `home.packages`) pins its `bao`, `jq` and coreutils, so your own `bao` is left alone.
+Live path is **homelab OpenBao**, not SOPS. `home/secretspec/materialize.sh` keeps the 14 secret files in sync with it. The nix wrapper `dotfiles-secrets` (in `home.packages`) pins its `bao`, `jq` and coreutils, so your own `bao` is left alone. The `just secretspec-*` recipes run the wrapper of the active Home Manager generation, so they work right after `just home`; a bare `dotfiles-secrets` on PATH only follows `just switch`.
 
 - Manifest: `secretspec.toml` (`[profiles.default]`) lists the names. The table of names, paths and modes is in `materialize.sh`; a test keeps the two lists equal.
 - Values: `secret/secretspec/dotfiles/default/<NAME>` on `https://openbao.home.0dl.me` (KV v2, field `value`). Every file is byte-exact, trailing newlines included.
