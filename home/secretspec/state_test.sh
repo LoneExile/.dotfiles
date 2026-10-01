@@ -109,6 +109,30 @@ test_backup_has_one_slot() {
   assert_eq "one file in the slot dir" "$(find "$STATE_DIR/backup" -type f | wc -l | tr -d ' ')" 1
 }
 
+# The backup slot is the only copy of the user's file once "take vault" or a
+# merge replaces it: it must be flushed and verified before anyone relies on it.
+test_backup_matches_its_source() {
+  st_ready
+  printf '%s' original >"$T/src"
+  backup_put NAME1 "$T/src"
+  assert_bytes "positive control: the slot holds the bytes" "$STATE_DIR/backup/NAME1" original
+  mkdir -p "$T/failing"
+  printf '#!/bin/sh\nexit 1\n' >"$T/failing/cmp"
+  chmod +x "$T/failing/cmp"
+  printf '%s' second >"$T/src2"
+  local rc=0
+  (PATH=$T/failing:$PATH backup_put NAME2 "$T/src2") 2>"$T/err" || rc=$?
+  assert_eq "a slot that does not compare equal to its source fails" "$([[ $rc -ne 0 ]] && echo failed)" failed
+  assert_has "says so" "$T/err" "backup"
+  rm -f "$T/failing/cmp"
+  printf '#!/bin/sh\nexit 1\n' >"$T/failing/sync"
+  chmod +x "$T/failing/sync"
+  rc=0
+  (PATH=$T/failing:$PATH backup_put NAME3 "$T/src2") 2>"$T/err" || rc=$?
+  assert_eq "a slot that cannot be flushed fails" "$([[ $rc -ne 0 ]] && echo failed)" failed
+  assert_absent "and leaves no temp file behind" "$(find "$STATE_DIR/backup" -name '.tmp.*' | head -1)"
+}
+
 test_state_init_removes_stale_temp_files() {
   st_ready
   : >"$STATE_DIR/.tmp.AAAAAA"

@@ -33,6 +33,10 @@ state_put() {
     die "cannot write $dest"
   fi
   chmod 600 "$tmp"
+  sync "$tmp" || {
+    rm -f "$tmp"
+    die "cannot flush $dest to disk"
+  }
   crash_point state-tmp-written
   mv -f "$tmp" "$dest"
 }
@@ -162,7 +166,10 @@ contact_fresh() {
   [[ -n $age && $age -le $CONTACT_MAX_AGE ]]
 }
 
-# backup_put NAME FILE: the single backup slot for NAME.
+# backup_put NAME FILE: the single backup slot for NAME. The slot is flushed and
+# compared with FILE before this returns: after "take vault" or a merge it is the
+# only copy of the user's bytes, and a failure here ends the run.
 backup_put() {
   state_put "$STATE_DIR/backup/$1" <"$2"
+  cmp -s "$2" "$STATE_DIR/backup/$1" || die "the backup of $1 does not match the file it was made from; nothing was changed after it"
 }
