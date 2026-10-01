@@ -16,13 +16,22 @@ join_sorted() {
   sort -u | awk '{ printf "%s%s", (NR > 1 ? ", " : ""), $0 } END { if (NR) print "" }'
 }
 
-# summary_keys LOCAL VAULT: env-style files. Key = text before the first "=".
+# summary_keys LOCAL VAULT: env-style files. A line is a "KEY=..." line only when
+# the text before the first "=" looks like an environment key (letters, digits,
+# underscore, at most 64 characters, not starting with a digit) and the line is
+# not the padded tail of a base64 block. Only those names are printed. Every other
+# changed line, such as the lines of a PEM block or an npmrc registry line, is
+# counted and never shown, because there is no telling a name from a secret there.
 # Values are never printed.
 summary_keys() {
   local tags kind line
   tags=$(awk '
-    function iskv(s) { return s ~ /^[ \t]*[^# \t][^=]*=/ }
     function keyof(s,   k) { k = s; sub(/=.*/, "", k); gsub(/^[ \t]+|[ \t]+$/, "", k); return k }
+    function iskv(s) {
+      if (s !~ /^[ \t]*[A-Za-z_][A-Za-z0-9_]*[ \t]*=/) return 0
+      if (s ~ /^[ \t]*[A-Za-z0-9+\/]+==?[ \t]*$/) return 0
+      return length(keyof(s)) <= 64
+    }
     FILENAME == ARGV[1] { if (iskv($0)) lk[keyof($0)] = $0; else lo[$0]++; next }
     { if (iskv($0)) vk[keyof($0)] = $0; else vo[$0]++ }
     END {

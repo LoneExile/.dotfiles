@@ -479,6 +479,41 @@ test_summaries_hide_values() {
   assert_lacks "no value" "$T/out" "AAAA"
 }
 
+# A multi-line value (a PEM block inside an env file) has lines of base64 whose
+# padding "=" looks like "KEY=". Only names that look like environment keys are
+# printed; every other changed line is only counted.
+test_summaries_print_only_names_that_look_like_keys() {
+  # shellcheck source=/dev/null
+  . "$ROOT/common.sh"
+  # shellcheck source=/dev/null
+  . "$ROOT/summary.sh"
+  local long
+  long=$(printf 'k%.0s' $(seq 1 70))
+  printf '%s\n' 'KEEP=1' \
+    'PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----' \
+    'b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW' \
+    'QyNTUxOQAAACD3c3VwZXItc2VjcmV0LXBsYW50ZWQtdmFsdWUtMTIzNDU2Nzg5MA==' \
+    'shortPlantedTail9==' \
+    'tailOnePad7=' \
+    '-----END OPENSSH PRIVATE KEY-----' \
+    "$long=PLANT-long" \
+    '//registry.example.org/:_authToken=PLANT-npm' \
+    'export EXPORTED=PLANT-exp' >"$T/vault"
+  printf '%s\n' 'KEEP=1' 'NEW_KEY=PLANT-new' >"$T/local"
+  summary_masked OMP_ENV "$T/local" "$T/vault" >"$T/out"
+  assert_has "positive control: a real key is still named" "$T/out" "PRIVATE_KEY"
+  assert_has "positive control: an added key is named" "$T/out" "keys added (local vs OpenBao): NEW_KEY"
+  local frag
+  for frag in QyNTUx c3VwZXItc2VjcmV0 b3BlbnNzaC1 shortPlantedTail tailOnePad kkkkkkkkkk registry.example PLANT EXPORTED; do
+    assert_lacks "no fragment '$frag' of a value or odd line is printed" "$T/out" "$frag"
+  done
+  assert_has "the odd lines are only counted" "$T/out" "other changed lines: 8 (values are not shown)"
+  printf '%s\n' 'KEEP=1' 'NEW_KEY=PLANT-new' >"$T/l2"
+  printf '%s\n' 'KEEP=1' 'EMPTY=' >"$T/v2"
+  summary_masked NPMRC "$T/l2" "$T/v2" >"$T/out"
+  assert_has "npmrc uses the same rule" "$T/out" "keys added (local vs OpenBao): NEW_KEY"
+}
+
 test_no_value_reaches_the_transcript_or_argv() {
   local plant="PLANT-$RANDOM-$RANDOM-secret"
   seed_all
