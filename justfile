@@ -148,8 +148,13 @@ deadnix:
   @echo "🔍 Checking for dead code..."
   deadnix .
 
+# Test the secret-sync engine against a throwaway `bao server -dev` (no network)
+test-secrets:
+  @echo "🔐 Testing the secret-sync engine..."
+  bash home/secretspec/materialize_test.sh
+
 # Run all validation checks
-validate: check fmt-check lint deadnix
+validate: check fmt-check lint deadnix test-secrets
   @echo "✅ All validation checks completed!"
 
 ### Documentation
