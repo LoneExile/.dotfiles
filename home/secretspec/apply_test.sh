@@ -230,6 +230,15 @@ test_a_404_from_something_else_reads_as_offline() {
   assert_lacks "not vault-missing" "$T/err" "vault-missing"
   assert_eq "last-contact is not refreshed" "$(cat "$(state_file last-contact)")" "$before"
   assert_bytes "files untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
+  # The same with the default no-route answer, a 404 with no body at all.
+  srv404_spawn "$T/s404e" empty
+  S_ADDR=$(cat "$T/s404e/addr")
+  engine apply
+  assert_rc "empty-body 404: apply" "$RC" 0
+  assert_has "empty-body 404: banner says unreachable" "$T/err" "unreachable"
+  assert_lacks "empty-body 404: not vault-missing" "$T/err" "vault-missing"
+  assert_eq "empty-body 404: last-contact is not refreshed" "$(cat "$(state_file last-contact)")" "$before"
+  assert_bytes "empty-body 404: files untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
 }
 
 test_offline_bounds() {

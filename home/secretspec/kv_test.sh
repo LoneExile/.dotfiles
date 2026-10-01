@@ -249,6 +249,23 @@ test_a_404_from_something_else_is_not_missing() {
   assert_eq "read leaves no missing kind" "$KV_MISSING" ""
   kv_meta NOPE
   assert_eq "metadata class" "$KV_CLASS" soft
+  # The default "no route" answer of a gateway has no body at all; bao turns it
+  # into "No value found at <path>" without the mount, which a real KV v2 never prints.
+  srv404_spawn "$T/s404e" empty
+  SECRETSPEC_SYNC_ADDR=$(cat "$T/s404e/addr")
+  kv_init
+  kv_read NOPE
+  assert_eq "empty-body 404: read class" "$KV_CLASS" soft
+  assert_eq "empty-body 404: no missing kind" "$KV_MISSING" ""
+  printf 'Error reading secretspec/dotfiles/default/NOPE: \nNo value found at secretspec/dotfiles/default/NOPE\n' >"$T/err.nomount"
+  kv_classify 2 "$T/err.nomount"
+  assert_eq "No value found at without the mount is not missing" "$KV_CLASS" soft
+  printf 'No value found at secret/data/secretspec/dotfiles/default/NOPE\n' >"$T/err.data"
+  kv_classify 2 "$T/err.data"
+  assert_eq "a KV v2 data path is missing" "$KV_CLASS" missing
+  printf 'No value found at secret/metadata/secretspec/dotfiles/default/NOPE\n' >"$T/err.meta"
+  kv_classify 2 "$T/err.meta"
+  assert_eq "a KV v2 metadata path is missing" "$KV_CLASS" missing
   SECRETSPEC_SYNC_ADDR=$S_ADDR
   kv_init
   kv_enforce_cas NO-SUCH-PATH

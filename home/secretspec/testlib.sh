@@ -82,18 +82,19 @@ srv_stop() {
   rm -f "$1/pid"
 }
 
-# srv404_spawn DIR: a stand-in that answers 404 "404 page not found" to every
-# request (a gateway with no route; with an empty body bao would print "No
-# value found at"). Writes DIR/addr and DIR/pid; tl_cleanup
+# srv404_spawn DIR [empty]: a stand-in that answers 404 to every request, with the
+# body "404 page not found", or with an empty body when the second argument is
+# "empty" (the default no-route answer of Envoy and cloudflared; bao then prints
+# "No value found at <path>" without the mount). Writes DIR/addr and DIR/pid; tl_cleanup
 # stops it. Not OpenBao: bao must not read its 404 as "the secret is missing".
 srv404_spawn() {
   local dir=$1 i
   mkdir -p "$dir"
   python3 -c '
-import http.server
+import http.server, sys
 class H(http.server.BaseHTTPRequestHandler):
     def _a(self):
-        body = b"404 page not found\n"
+        body = b"" if sys.argv[1] == "empty" else b"404 page not found\n"
         self.send_response(404)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -104,7 +105,7 @@ class H(http.server.BaseHTTPRequestHandler):
 s = http.server.HTTPServer(("127.0.0.1", 0), H)
 print(s.server_port, flush=True)
 s.serve_forever()
-' >"$dir/port" &
+' "${2:-body}" >"$dir/port" &
   printf '%s\n' "$!" >"$dir/pid"
   for i in $(seq 1 50); do
     [[ -s $dir/port ]] && break
