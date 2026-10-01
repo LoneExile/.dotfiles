@@ -354,6 +354,43 @@ test_proxy_variables_cannot_redirect_a_call() {
   done
 }
 
+# The keys of the metadata "versions" map are text from the network too. Only
+# plain positive integers of up to 9 digits are versions; "nan", "1e999", "0" or
+# a number bash would wrap at 64 bits must not turn into anything else.
+test_odd_version_keys_are_ignored() {
+  kv_ready
+  local v='{"created_time":"2026-01-01T00:00:00Z","deletion_time":"","destroyed":false}'
+  printf '{"data":{"current_version":12,"versions":{"1":%s,"2":%s,"10":%s,"12":%s}}}' "$v" "$v" "$v" "$v" >"$T/meta.plain"
+  printf '{"data":{"current_version":12,"versions":{"1":%s,"2":%s,"10":%s,"12":%s,"nan":%s,"NaN":%s,"1e999":%s,"1.5":%s,"0":%s,"07":%s,"-5":%s,"18446744073709551617":%s,"1234567890":%s}}}' \
+    "$v" "$v" "$v" "$v" "$v" "$v" "$v" "$v" "$v" "$v" "$v" "$v" "$v" >"$T/meta.odd"
+  KV_META_FILE=$T/meta.plain
+  assert_eq "positive control: the plain map" "$(kv_meta_live_versions | tr '\n' ' ')" "12 10 2 1 "
+  KV_META_FILE=$T/meta.odd
+  assert_eq "the odd keys change nothing" "$(kv_meta_live_versions | tr '\n' ' ')" "12 10 2 1 "
+}
+
+# bash arithmetic wraps at 64 bits: 18446744073709551617 compares equal to 1.
+test_an_oversized_version_is_rejected() {
+  kv_ready
+  seed_s BIGV $'value\n'
+  echo BIGV >>"$TL_TMP/touched"
+  proxy_rewrite_spawn "$T/px" "$S_ADDR" 18446744073709551617
+  SECRETSPEC_SYNC_ADDR=$(cat "$T/px/addr")
+  kv_init
+  kv_read BIGV
+  assert_eq "read class" "$KV_CLASS" soft
+  assert_eq "read error" "$KV_ERR" "malformed response from OpenBao"
+  kv_meta BIGV
+  assert_eq "metadata class" "$KV_CLASS" soft
+  kill "$(cat "$T/px/pid")"
+  proxy_rewrite_spawn "$T/px2" "$S_ADDR" 123456789
+  SECRETSPEC_SYNC_ADDR=$(cat "$T/px2/addr")
+  kv_init
+  kv_read BIGV
+  assert_eq "positive control: nine digits pass" "$KV_CLASS" ok
+  assert_eq "positive control: and are used as they are" "$KV_VERSION" 123456789
+}
+
 test_bad_token_is_hard() {
   kv_ready
   VAULT_TOKEN=bogus

@@ -110,9 +110,10 @@ kv_classify() {
   fi
 }
 
-# kv_malformed: a number taken from a reply is not a plain positive integer.
-# Bash evaluates such strings as arithmetic wherever versions are compared, so
-# nothing from a reply is used before this check. Sets the soft class.
+# kv_malformed: a number taken from a reply is not a plain positive integer of at
+# most 9 digits (bash arithmetic wraps at 64 bits). Bash evaluates such strings
+# as arithmetic wherever versions are compared, so nothing from a reply is used
+# before this check. Sets the soft class.
 kv_malformed() {
   KV_CLASS=soft
   KV_ERR="malformed response from OpenBao"
@@ -149,7 +150,7 @@ kv_read() {
       ((.data.data.writer // "") | tostring | gsub("[^A-Za-z0-9._-]"; "?"))
     ] | join("|")' "$out") || die "unreadable bao response for $name"
   IFS='|' read -r KV_VERSION KV_CT del destroyed dtype vtype KV_WRITER <<<"$fields"
-  if [[ ! $KV_VERSION =~ ^[1-9][0-9]*$ ]]; then
+  if [[ ! $KV_VERSION =~ ^[1-9][0-9]{0,8}$ ]]; then
     KV_VERSION=0 KV_CT="" KV_WRITER=""
     kv_malformed
     return 0
@@ -198,7 +199,7 @@ kv_meta() {
     return 0
   fi
   KV_CUR=$(jq -r '.data.current_version | tostring' "$KV_META_FILE") || die "unreadable metadata for $name"
-  if [[ ! $KV_CUR =~ ^[1-9][0-9]*$ ]]; then
+  if [[ ! $KV_CUR =~ ^[1-9][0-9]{0,8}$ ]]; then
     KV_CUR=0
     kv_malformed
     return 0
@@ -213,7 +214,7 @@ kv_meta_ct() { jq -r --arg v "$1" '.data.versions[$v].created_time // empty' "$K
 # Retained versions whose bytes still exist, newest first, one per line.
 kv_meta_live_versions() {
   jq -r '.data.versions | to_entries
-    | map(select(.value.deletion_time == "" and (.value.destroyed | not)))
+    | map(select(.value.deletion_time == "" and (.value.destroyed | not) and (.key | test("^[1-9][0-9]{0,8}$"))))
     | map(.key | tonumber) | sort | reverse | .[] | tostring' "$KV_META_FILE"
 }
 
@@ -256,7 +257,7 @@ kv_write() {
   fields=$(jq -r '[(.data.version | tostring), .data.created_time] | join("|")' "$WORK/write.json") || die "unreadable write response for $name"
   IFS='|' read -r KV_NEWVERSION KV_CT <<<"$fields"
   KV_META_NAME=""
-  if [[ ! $KV_NEWVERSION =~ ^[1-9][0-9]*$ ]]; then
+  if [[ ! $KV_NEWVERSION =~ ^[1-9][0-9]{0,8}$ ]]; then
     KV_NEWVERSION=0 KV_CT=""
     kv_malformed
   fi
