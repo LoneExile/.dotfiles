@@ -2,6 +2,18 @@
 # Behavior tests for materialize.sh. Uses a fake secretspec; no live vault.
 set -euo pipefail
 
+# Run the whole suite once per secretspec CLI behaviour: < 0.21 `get` appends
+# a newline even when redirected to a file; 0.21+ writes the exact value
+# (secretspec CHANGELOG 0.21.0).
+if [[ -z ${FAKE_SECRETSPEC_VERSION:-} ]]; then
+  rc=0
+  for v in 0.18.0 0.21.1; do
+    echo "== fake secretspec $v"
+    FAKE_SECRETSPEC_VERSION=$v bash "${BASH_SOURCE[0]}" || rc=1
+  done
+  exit "$rc"
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT="$ROOT/materialize.sh"
 FAILS=0
@@ -67,6 +79,11 @@ write_fake_secretspec() {
 #!/usr/bin/env bash
 set -euo pipefail
 vault=${FAKE_VAULT:?}
+version=${FAKE_SECRETSPEC_VERSION:?}
+if [[ ${1:-} == --version ]]; then
+  printf '%s\n' "${FAKE_SECRETSPEC_VERSION_OUTPUT:-secretspec $version}"
+  exit 0
+fi
 cmd=
 filtered=()
 while [[ $# -gt 0 ]]; do
@@ -109,8 +126,12 @@ case $cmd in
       exit 1
     fi
     cat "$path"
-    # secretspec 0.20 `get` always appends a newline, even when redirected.
-    printf '\n'
+    # secretspec < 0.21 `get` appends a newline even when redirected to a
+    # file; 0.21+ writes the exact value to a pipe or file.
+    IFS=. read -r major minor _ <<<"$version"
+    if ((major == 0 && minor < 21)); then
+      printf '\n'
+    fi
     ;;
   set)
     printf '%s' "$value" >"$path"
@@ -373,6 +394,43 @@ if apply; then
 else
   fail "apply without awk" "$(cat "$APPLY_OUT")"
 fi
+cleanup
+
+setup
+printf 'two\n\n' >"$FAKE_VAULT/OMP_ENV"
+printf 'none' >"$FAKE_VAULT/NPMRC"
+printf 'one\n' >"$FAKE_VAULT/TOFU_BACKBONE_CLUSTER_PASS"
+if apply; then
+  assert_file_eq "keep secret keeps two trailing newlines" "$HOME/.omp/.env" $'two\n\n'
+  assert_file_eq "keep secret keeps no trailing newline" "$HOME/.npmrc" 'none'
+  assert_file_eq "keep secret keeps one trailing newline" "$HOME/.config/tofu/backbone-cluster.pass" $'one\n'
+  if apply && ! grep -qE 'pull|drifted|conflict' "$APPLY_OUT"; then
+    pass "exact bytes are stable on re-apply"
+  else
+    fail "exact bytes are stable on re-apply" "$(cat "$APPLY_OUT")"
+  fi
+else
+  fail "exact trailing newlines apply" "$(cat "$APPLY_OUT")"
+fi
+cleanup
+
+setup
+export FAKE_SECRETSPEC_VERSION_OUTPUT='secretspec dev-build'
+if apply_fails; then
+  if grep -q 'unrecognized secretspec version' "$APPLY_OUT"; then
+    pass "unrecognized secretspec version fails"
+  else
+    fail "unrecognized secretspec version fails" "$(cat "$APPLY_OUT")"
+  fi
+  if [[ -e $HOME/.omp/.env ]]; then
+    fail "unrecognized secretspec version writes nothing" "dest written"
+  else
+    pass "unrecognized secretspec version writes nothing"
+  fi
+else
+  fail "unrecognized secretspec version fails" "apply succeeded"
+fi
+unset FAKE_SECRETSPEC_VERSION_OUTPUT
 cleanup
 
 if [[ $FAILS -ne 0 ]]; then

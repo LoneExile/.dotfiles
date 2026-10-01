@@ -11,6 +11,10 @@ SECRETSPEC_FILE="${SECRETSPEC_FILE:-$REPO_ROOT/secretspec.toml}"
 SECRETSPEC_REASON="${SECRETSPEC_REASON:-secretspec materialize}"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/secretspec"
 PROVIDER="openbao"
+# 1 when this secretspec's `get` appends a newline to redirected output
+# (< 0.21), 0 when it writes the exact value (0.21+, secretspec CHANGELOG
+# 0.21.0). Set by detect_get_newline before any secret is read.
+GET_APPENDS_NEWLINE=""
 
 # name|relpath-from-HOME|mode|keep|strip
 SECRETS=(
@@ -41,6 +45,21 @@ require_bin() {
     echo "error: secretspec not found at $SECRETSPEC_BIN; SSH keys not materialized" >&2
     echo "install it with: curl -sSL https://install.secretspec.dev | sh" >&2
     exit 1
+  fi
+}
+
+detect_get_newline() {
+  local out
+  if ! out=$("$SECRETSPEC_BIN" --version 2>&1); then
+    die "could not run $SECRETSPEC_BIN --version"
+  fi
+  if [[ ! $out =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
+    die "unrecognized secretspec version: $out"
+  fi
+  if ((10#${BASH_REMATCH[1]} == 0 && 10#${BASH_REMATCH[2]} < 21)); then
+    GET_APPENDS_NEWLINE=1
+  else
+    GET_APPENDS_NEWLINE=0
   fi
 }
 
@@ -89,11 +108,15 @@ write_canonical() {
     printf '%s' "$raw" >"$dest"
   else
     ss_get "$name" >"$dest"
-    # secretspec 0.20 `get` always appends a newline (println), even when
-    # stdout is a file. Strip that one extra byte so keep-secrets match
-    # stored bytes. Command substitution would also drop real trailing
-    # newlines that belong in the file.
-    strip_one_trailing_newline "$dest"
+    # secretspec < 0.21 `get` appends a newline (println) even when stdout
+    # is a file; 0.21+ writes the exact value. Strip that one extra byte only
+    # on < 0.21 so keep-secrets match stored bytes. Command substitution
+    # would also drop real trailing newlines that belong in the file.
+    case $GET_APPENDS_NEWLINE in
+      1) strip_one_trailing_newline "$dest" ;;
+      0) ;;
+      *) die "internal: secretspec get newline behaviour not detected" ;;
+    esac
   fi
 }
 
@@ -245,6 +268,7 @@ classify_dest() {
 
 cmd_apply() {
   require_bin
+  detect_get_newline
   ensure_layout
   MATERIALIZE_WORKDIR=$(mktemp -d)
   trap 'rm -rf "$MATERIALIZE_WORKDIR"' EXIT
@@ -305,6 +329,7 @@ cmd_sync() {
     die "just secretspec-sync requires a TTY"
   fi
   require_bin
+  detect_get_newline
   ensure_layout
   MATERIALIZE_WORKDIR=$(mktemp -d)
   trap 'rm -rf "$MATERIALIZE_WORKDIR"' EXIT
