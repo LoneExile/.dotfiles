@@ -382,6 +382,11 @@ test_an_oversized_version_is_rejected() {
   assert_eq "read error" "$KV_ERR" "malformed response from OpenBao"
   kv_meta BIGV
   assert_eq "metadata class" "$KV_CLASS" soft
+  printf x >"$T/in"
+  kv_write BIGW 0 "$T/in"
+  echo BIGW >>"$TL_TMP/touched"
+  assert_eq "write class" "$KV_CLASS" soft
+  assert_eq "write version is reset" "$KV_NEWVERSION" 0
   kill "$(cat "$T/px/pid")"
   proxy_rewrite_spawn "$T/px2" "$S_ADDR" 123456789
   SECRETSPEC_SYNC_ADDR=$(cat "$T/px2/addr")
