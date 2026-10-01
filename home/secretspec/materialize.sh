@@ -2,17 +2,19 @@
 # Keeps the secret files on this Mac in sync with OpenBao (KV v2, through bao
 # and jq). Run it as `dotfiles-secrets`, the nix wrapper that pins both.
 #
-#   apply   Home Manager activation: pulls what is safe, never writes the vault,
-#           never prompts
-#   status  read-only overview of every secret
-#   list    the table below
+#   apply            Home Manager activation: pulls what is safe, never writes
+#                    the vault, never prompts
+#   status           read-only overview of every secret
+#   sync             interactive review, push and pull (needs a terminal)
+#   sync --push NAME push the local file of one secret, no prompts
+#   list             the table below
 #
 # Design: docs/superpowers/specs/2026-10-01-secretspec-smart-sync-design.md
 # (local, untracked).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-for lib in common kv decide state inspect pull status apply; do
+for lib in common kv decide state inspect pull summary push status apply sync; do
   # shellcheck source=/dev/null
   . "$SCRIPT_DIR/$lib.sh"
 done
@@ -35,6 +37,18 @@ SECRETS=(
   "TOFU_BACKBONE_CLUSTER_PASS|.config/tofu/backbone-cluster.pass|600"
 )
 
+# lookup_secret NAME: sets S_REL and S_MODE, or dies.
+lookup_secret() {
+  local spec n
+  for spec in "${SECRETS[@]}"; do
+    IFS='|' read -r n S_REL S_MODE <<<"$spec"
+    if [[ $n == "$1" ]]; then
+      return 0
+    fi
+  done
+  die "unknown secret '$1' (dotfiles-secrets list shows them)"
+}
+
 # list: NAME PATH-FROM-HOME MODE per secret.
 cmd_list() {
   local spec name rel mode
@@ -48,8 +62,12 @@ main() {
   case ${1:-} in
     apply) cmd_apply ;;
     status) cmd_status ;;
+    sync)
+      shift
+      cmd_sync "$@"
+      ;;
     list) cmd_list ;;
-    *) die "usage: materialize.sh apply|status|list" ;;
+    *) die "usage: materialize.sh apply|status|sync [--push NAME]|list" ;;
   esac
 }
 

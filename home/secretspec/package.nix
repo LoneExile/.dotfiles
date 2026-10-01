@@ -20,8 +20,11 @@
       ./state.sh
       ./inspect.sh
       ./pull.sh
+      ./summary.sh
+      ./push.sh
       ./status.sh
       ./apply.sh
+      ./sync.sh
     ];
   };
 in

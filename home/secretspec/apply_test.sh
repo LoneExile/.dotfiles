@@ -5,29 +5,8 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=testlib.sh
 . "$ROOT/testlib.sh" || exit 1
 
-NAMES=$(awk '{print $1}' <<<"$TL_TABLE")
-STATE_REL=dotfiles/secretspec
-
-# seed_all: every secret at v1 = "v-NAME", with the same bytes on disk.
-seed_all() {
-  local n pids=""
-  for n in $NAMES; do
-    seed_s "$n" "v-$n" &
-    pids="$pids $!"
-    lput "$(rel_of "$n")" "v-$n" "$(mode_of "$n")"
-  done
-  # shellcheck disable=SC2086
-  wait $pids
-}
-# settle: run apply once so every secret has a base record (all in sync).
-settle() {
-  engine apply
-  assert_rc "settle run" "$RC" 0
-}
-file_of() { printf '%s/%s' "$T_HOME" "$(rel_of "$1")"; }
-state_file() { printf '%s/%s/%s' "$T_STATE" "$STATE_REL" "$1"; }
-base_version() { jq -r .version "$(state_file "$1.base.json")" 2>/dev/null; }
-vault_writes() { grep -cE '^(write|kv put|kv delete|kv destroy|kv undelete|kv metadata (put|patch|delete)) ' "$T/bao.log" || true; }
+# shellcheck source=testlib_engine.sh
+. "$ROOT/testlib_engine.sh" || exit 1
 
 test_first_run_pulls_everything_byte_exact() {
   local n i=0

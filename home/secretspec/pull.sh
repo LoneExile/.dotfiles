@@ -11,13 +11,13 @@ ensure_layout() {
   )
 }
 
-# pull_file NAME DEST MODE SRC LSHA VERSION CT SHA
-# Replaces DEST with the bytes of SRC (sha256 SHA, vault version VERSION created
-# at CT), then records the base. LSHA is the hash of DEST when it was decided
+# install_file NAME DEST MODE SRC LSHA SHA
+# Replaces DEST with the bytes of SRC (sha256 SHA): temp file in DEST's directory,
+# verified, flushed, then renamed. LSHA is the hash of DEST when it was decided
 # ("" for absent or empty). Returns 1 without touching DEST when DEST changed
 # since then, or became a symlink or directory.
-pull_file() {
-  local name=$1 dest=$2 mode=$3 src=$4 lsha=$5 version=$6 ct=$7 sha=$8 parent base tmp cur
+install_file() {
+  local name=$1 dest=$2 mode=$3 src=$4 lsha=$5 sha=$6 parent base tmp cur
   parent=$(dirname "$dest")
   base=$(basename "$dest")
   mkdir -p "$parent"
@@ -30,7 +30,7 @@ pull_file() {
   chmod "$mode" "$tmp"
   if [[ $(file_sha256 "$tmp") != "$sha" ]]; then
     rm -f "$tmp"
-    die "the copy of $name written to $parent does not match the vault bytes"
+    die "the copy of $name written to $parent does not match the expected bytes"
   fi
   sync "$tmp" || {
     rm -f "$tmp"
@@ -45,12 +45,18 @@ pull_file() {
   fi
   if [[ $cur != "$lsha" ]]; then
     rm -f "$tmp"
-    echo "skipped $name: $dest changed while it was being pulled" >&2
+    echo "skipped $name: $dest changed while it was being written" >&2
     return 1
   fi
   mv -f "$tmp" "$dest"
+}
+
+# pull_file NAME DEST MODE SRC LSHA VERSION CT SHA
+# install_file, then record the base: vault version VERSION, created at CT.
+pull_file() {
+  install_file "$1" "$2" "$3" "$4" "$5" "$8" || return 1
   crash_point pull-renamed
-  base_write "$name" "$version" "$sha" "$ct"
+  base_write "$1" "$6" "$8" "$7"
 }
 
 # settle_auto NAME DEST MODE: after inspect, handle the rows that need no human.

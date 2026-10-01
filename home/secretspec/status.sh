@@ -38,7 +38,7 @@ status_row() {
   printf '%-30s %-14s %-24s %-40s %s\n' "$I_NAME" "$D_STATE" "$localcol" "$vaultcol" "$basecol"
 }
 
-# status_summary STATES: counts and the next command.
+# status_summary STATES [quiet]: counts and, unless quiet, the next command.
 status_summary() {
   local states=$1 s n total=0 parts="" next
   for s in $STATUS_ORDER; do
@@ -63,22 +63,35 @@ status_summary() {
   fi
   echo
   echo "$total secrets: $parts"
-  echo "next: $next"
+  if [[ ${2:-} != quiet ]]; then
+    echo "next: $next"
+  fi
+}
+
+# status_table COMMIT: header and one row per secret. Sets STATUS_LIST ("STATE
+# NAME" per line). COMMIT=1 (sync) may migrate legacy records and records the
+# base of in-sync secrets as it goes; COMMIT=0 changes nothing.
+status_table() {
+  local commit=$1 spec name rel mode dest
+  STATUS_LIST=""
+  printf '%-30s %-14s %-24s %-40s %s\n' NAME STATE LOCAL VAULT BASE
+  for spec in "${SECRETS[@]}"; do
+    IFS='|' read -r name rel mode <<<"$spec"
+    dest=$HOME/$rel
+    inspect "$name" "$dest" "$commit"
+    status_row
+    STATUS_LIST="$STATUS_LIST$D_STATE $name"$'\n'
+    if [[ $commit == 1 && $D_STATE == in-sync ]]; then
+      settle_auto "$name" "$dest" "$mode"
+    fi
+  done
 }
 
 cmd_status() {
-  local spec name rel mode dest states=""
   require_bins
   work_init
   kv_init
   state_dir_init
-  printf '%-30s %-14s %-24s %-40s %s\n' NAME STATE LOCAL VAULT BASE
-  for spec in "${SECRETS[@]}"; do
-    IFS='|' read -r name rel mode _ <<<"$spec"
-    dest=$HOME/$rel
-    inspect "$name" "$dest" 0
-    status_row
-    states="$states$D_STATE"$'\n'
-  done
-  status_summary "$states"
+  status_table 0
+  status_summary "$(awk '{ print $1 }' <<<"$STATUS_LIST")"
 }
