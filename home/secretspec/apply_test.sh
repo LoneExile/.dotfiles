@@ -407,6 +407,76 @@ test_pull_refuses_when_the_destination_changed_since_decide() {
   assert_absent "no base written" "$STATE_DIR/X.base.json"
 }
 
+# install_file must not write through or over a symlink or a directory that
+# took the place of the destination after decide() looked (the hash alone cannot
+# see it when the link points at an empty or missing file).
+test_pull_refuses_a_symlink_or_directory_at_the_destination() {
+  # shellcheck source=/dev/null
+  . "$ROOT/common.sh"
+  # shellcheck source=/dev/null
+  . "$ROOT/state.sh"
+  # shellcheck source=/dev/null
+  . "$ROOT/pull.sh"
+  in_sandbox
+  work_init
+  state_init
+  printf '%s' incoming >"$T/src"
+  : >"$T/empty-target"
+  ln -s "$T/empty-target" "$T/link-empty"
+  ln -s "$T/does-not-exist" "$T/link-dangling"
+  mkdir "$T/dir"
+  printf '%s' keep >"$T/dir/inside"
+  local d
+  for d in link-empty link-dangling dir; do
+    pull_file X "$T/$d" 600 "$T/src" "" 2 t "$(sha_of incoming)" 2>"$T/err.$d"
+    assert_rc "$d: pull_file refuses" "$?" 1
+    assert_has "$d: says why" "$T/err.$d" "changed while it was being written"
+    assert_absent "$d: no base written" "$STATE_DIR/X.base.json"
+  done
+  assert_eq "link to an empty file is still a symlink" "$([[ -L $T/link-empty ]] && echo yes)" yes
+  assert_eq "dangling link is still a symlink" "$([[ -L $T/link-dangling ]] && echo yes)" yes
+  assert_eq "the empty target stayed empty" "$(wc -c <"$T/empty-target" | tr -d ' ')" 0
+  assert_absent "nothing written through the dangling link" "$T/does-not-exist"
+  assert_eq "directory untouched" "$(find "$T/dir" | sort | tr '\n' ' ')" "$T/dir $T/dir/inside "
+  assert_bytes "directory content untouched" "$T/dir/inside" keep
+  assert_eq "no temp files left" "$(find "$T" -name '*.sspull.*' | wc -l | tr -d ' ')" 0
+  # Positive control: with the destination as decided (absent) the same call installs.
+  pull_file X "$T/fresh" 600 "$T/src" "" 2 t "$(sha_of incoming)"
+  assert_rc "positive control: a plain absent destination is pulled" "$?" 0
+  assert_bytes "positive control: bytes" "$T/fresh" incoming
+}
+
+# The silent-fifo test above cannot fail: apply contains no read. This one asks
+# every bao call what its own stdin is.
+test_every_vault_call_of_apply_has_stdin_on_dev_null() {
+  if [[ $TL_SHIM_OK -eq 0 ]]; then
+    skip "bao shim is bypassed under SS_ENGINE"
+    return 0
+  fi
+  seed_all
+  settle
+  seed_s OMP_ENV "v2"
+  cat >"$T_SHIM/bao" <<EOF
+#!/bin/sh
+if [ /dev/stdin -ef /dev/null ]; then echo null >>"$T/stdin.log"; else echo open >>"$T/stdin.log"; fi
+exec "$TL_BAO" "\$@"
+EOF
+  chmod +x "$T_SHIM/bao"
+  : >"$T/stdin.log"
+  mkfifo "$T/fifo"
+  exec 9<>"$T/fifo"
+  env -i HOME="$T_HOME" PATH="$T_SHIM:$PATH" XDG_STATE_HOME="$T_STATE" TMPDIR="$T/tmp" TZ=UTC \
+    SECRETSPEC_SYNC_ADDR="$S_ADDR" VAULT_TOKEN="$S_TOK" "${TL_ENGINE[@]}" apply <&9 >"$T/out" 2>"$T/err" &
+  wait $!
+  assert_rc "apply" "$?" 0
+  exec 9<&-
+  assert_eq "bao was called" "$([[ $(wc -l <"$T/stdin.log") -ge 14 ]] && echo yes)" yes
+  assert_eq "every call had /dev/null on stdin" "$(sort -u "$T/stdin.log")" null
+  # Positive control: the probe does see an open stdin.
+  echo x | "$T_SHIM/bao" version >/dev/null 2>&1
+  assert_eq "positive control: a piped stdin is reported open" "$(tail -1 "$T/stdin.log")" open
+}
+
 test_apply_never_reads_stdin() {
   seed_all
   settle
