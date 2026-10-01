@@ -486,22 +486,55 @@ EOF
   assert_eq "positive control: a piped stdin is reported open" "$(tail -1 "$T/stdin.log")" open
 }
 
-# A run killed with SIGKILL leaves its scratch directory (value copies) behind.
-# The next run removes the ones that are over a day old and leaves a younger one
-# alone, because it may belong to a run in progress.
+# age_dir DIR HOURS: set the mtime of DIR to HOURS hours ago.
+age_dir() {
+  python3 -c 'import os, sys, time; t = time.time() - float(sys.argv[2]) * 3600; os.utime(sys.argv[1], (t, t))' "$1" "$2"
+}
+
+# A run killed with SIGKILL leaves its scratch directory behind. The next run
+# removes the engine's own directories (dotfiles-secrets. + the six characters
+# of the mktemp template) that are over a day old, and nothing else: a younger
+# one may belong to a run in progress.
 test_stale_scratch_directories_are_removed() {
   seed_all
-  mkdir -p "$T/tmp/dotfiles-secrets.OLDOLD" "$T/tmp/dotfiles-secrets.NEWNEW" "$T/tmp/unrelated.OLDOLD"
+  mkdir -p "$T/tmp/dotfiles-secrets.OLDOLD" "$T/tmp/dotfiles-secrets.OLD25H" "$T/tmp/dotfiles-secrets.NEW2HR" \
+    "$T/tmp/dotfiles-secrets.BAK" "$T/tmp/dotfiles-secrets.SPACE x" "$T/tmp/unrelated.OLDOLD"
   printf '%s' leftover >"$T/tmp/dotfiles-secrets.OLDOLD/val.X.1"
-  printf '%s' file >"$T/tmp/dotfiles-secrets.AFILE"
-  touch -t 202001010000 "$T/tmp/dotfiles-secrets.OLDOLD" "$T/tmp/unrelated.OLDOLD" "$T/tmp/dotfiles-secrets.AFILE"
+  printf '%s' file >"$T/tmp/dotfiles-secrets.AFILE1"
+  age_dir "$T/tmp/dotfiles-secrets.OLDOLD" 72
+  age_dir "$T/tmp/dotfiles-secrets.OLD25H" 25
+  age_dir "$T/tmp/dotfiles-secrets.NEW2HR" 2
+  age_dir "$T/tmp/dotfiles-secrets.BAK" 72
+  age_dir "$T/tmp/dotfiles-secrets.SPACE x" 72
+  age_dir "$T/tmp/unrelated.OLDOLD" 72
+  age_dir "$T/tmp/dotfiles-secrets.AFILE1" 72
   engine apply
   assert_rc "apply" "$RC" 0
-  assert_absent "the old scratch directory is gone" "$T/tmp/dotfiles-secrets.OLDOLD"
-  assert_eq "a young one is kept" "$([[ -d $T/tmp/dotfiles-secrets.NEWNEW ]] && echo yes)" yes
-  assert_eq "an old directory with another name is kept" "$([[ -d $T/tmp/unrelated.OLDOLD ]] && echo yes)" yes
-  assert_eq "an old plain file is kept" "$([[ -f $T/tmp/dotfiles-secrets.AFILE ]] && echo yes)" yes
-  assert_eq "this run's own directory is removed at exit" "$(find "$T/tmp" -maxdepth 1 -name 'dotfiles-secrets.*' -type d | sort | tr '\n' ' ')" "$T/tmp/dotfiles-secrets.NEWNEW "
+  assert_absent "a 3 day old scratch directory is gone" "$T/tmp/dotfiles-secrets.OLDOLD"
+  assert_absent "a 25 hour old scratch directory is gone" "$T/tmp/dotfiles-secrets.OLD25H"
+  assert_eq "a 2 hour old one is kept" "$([[ -d $T/tmp/dotfiles-secrets.NEW2HR ]] && echo yes)" yes
+  assert_eq "an old directory that is not one of the engine's names is kept" "$([[ -d $T/tmp/dotfiles-secrets.BAK ]] && echo yes)" yes
+  assert_eq "an old directory with a space in its name is kept" "$([[ -d "$T/tmp/dotfiles-secrets.SPACE x" ]] && echo yes)" yes
+  assert_eq "an old directory with another prefix is kept" "$([[ -d $T/tmp/unrelated.OLDOLD ]] && echo yes)" yes
+  assert_eq "an old plain file is kept" "$([[ -f $T/tmp/dotfiles-secrets.AFILE1 ]] && echo yes)" yes
+  assert_eq "this run's own directory is removed at exit" "$(find "$T/tmp" -maxdepth 1 -name 'dotfiles-secrets.??????' -type d | sort | tr '\n' ' ')" "$T/tmp/dotfiles-secrets.NEW2HR "
+}
+
+# On macOS /tmp is a symlink, and an activation may run with TMPDIR unset or
+# naming a symlink: find must follow the one it is given (-H), or the sweep
+# silently does nothing.
+test_the_sweep_follows_a_symlinked_tmpdir() {
+  seed_all
+  mkdir -p "$T/realtmp/dotfiles-secrets.OLDOLD" "$T/realtmp/dotfiles-secrets.NEW2HR"
+  age_dir "$T/realtmp/dotfiles-secrets.OLDOLD" 72
+  age_dir "$T/realtmp/dotfiles-secrets.NEW2HR" 2
+  ln -s realtmp "$T/linktmp"
+  ENGINE_ENV=("TMPDIR=$T/linktmp")
+  engine apply
+  assert_rc "apply" "$RC" 0
+  assert_absent "the old directory behind the symlink is gone" "$T/realtmp/dotfiles-secrets.OLDOLD"
+  assert_eq "the young one is kept" "$([[ -d $T/realtmp/dotfiles-secrets.NEW2HR ]] && echo yes)" yes
+  assert_eq "TMPDIR is still a symlink" "$([[ -L $T/linktmp ]] && echo yes)" yes
 }
 
 # With a permissive caller umask the value copies and replies in the scratch
