@@ -108,6 +108,14 @@ test_row_8_behind() {
   H_CTS="5=t5"
   H_LIVE="6=B 5=A"
   expect "8 wins over 9" 8 behind
+  # Here a live version newer than the base (v5) really does hold the local
+  # bytes, so row 9 would match too; row 8 must still win because the local
+  # file equals the base.
+  inp ok regular A 6 t6 B 4 A t4
+  H_CTS="4=t4"
+  H_LIVE="6=B 5=A 4=A"
+  expect "8 wins over 9 even when row 9 would match" 8 behind
+  assert_eq "row 9's lookup was never needed" "$H_STALE_CALLS" 0
 }
 
 test_row_9_stale() {
