@@ -113,6 +113,21 @@ s.serve_forever()
   printf 'http://127.0.0.1:%s\n' "$(cat "$dir/port")" >"$dir/addr"
 }
 
+# proxy_rewrite_spawn DIR TARGET PAYLOAD: a pass-through proxy in front of the
+# dev server at TARGET that puts PAYLOAD into the version number of every
+# reply (rewrite_proxy.py). Writes DIR/addr and DIR/pid; tl_cleanup stops it.
+proxy_rewrite_spawn() {
+  local dir=$1 i
+  mkdir -p "$dir"
+  python3 "$TL_ROOT/rewrite_proxy.py" "$2" "$3" >"$dir/port" &
+  printf '%s\n' "$!" >"$dir/pid"
+  for i in $(seq 1 50); do
+    [[ -s $dir/port ]] && break
+    sleep 0.1
+  done
+  printf 'http://127.0.0.1:%s\n' "$(cat "$dir/port")" >"$dir/addr"
+}
+
 # use_srv DIR: point S_ADDR / S_TOK at that server.
 use_srv() {
   S_ADDR=$(cat "$1/addr")

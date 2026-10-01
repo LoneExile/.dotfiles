@@ -106,6 +106,14 @@ kv_classify() {
   fi
 }
 
+# kv_malformed: a number taken from a reply is not a plain positive integer.
+# Bash evaluates such strings as arithmetic wherever versions are compared, so
+# nothing from a reply is used before this check. Sets the soft class.
+kv_malformed() {
+  KV_CLASS=soft
+  KV_ERR="malformed response from OpenBao"
+}
+
 # kv_read NAME [VERSION]
 kv_read() {
   local name=$1 ver=${2:-} out err rc=0 fields del destroyed dtype vtype
@@ -137,6 +145,11 @@ kv_read() {
       ((.data.data.writer // "") | tostring | gsub("[^A-Za-z0-9._-]"; "?"))
     ] | join("|")' "$out") || die "unreadable bao response for $name"
   IFS='|' read -r KV_VERSION KV_CT del destroyed dtype vtype KV_WRITER <<<"$fields"
+  if [[ ! $KV_VERSION =~ ^[1-9][0-9]*$ ]]; then
+    KV_VERSION=0 KV_CT="" KV_WRITER=""
+    kv_malformed
+    return 0
+  fi
   if [[ $dtype == null ]]; then
     KV_CLASS=missing
     if [[ $destroyed == true ]]; then
@@ -180,7 +193,12 @@ kv_meta() {
   if [[ $KV_CLASS != ok ]]; then
     return 0
   fi
-  KV_CUR=$(jq -r '.data.current_version' "$KV_META_FILE") || die "unreadable metadata for $name"
+  KV_CUR=$(jq -r '.data.current_version | tostring' "$KV_META_FILE") || die "unreadable metadata for $name"
+  if [[ ! $KV_CUR =~ ^[1-9][0-9]*$ ]]; then
+    KV_CUR=0
+    kv_malformed
+    return 0
+  fi
   KV_META_NAME=$name
 }
 kv_meta_reset() { KV_META_NAME=""; }
@@ -234,6 +252,10 @@ kv_write() {
   fields=$(jq -r '[(.data.version | tostring), .data.created_time] | join("|")' "$WORK/write.json") || die "unreadable write response for $name"
   IFS='|' read -r KV_NEWVERSION KV_CT <<<"$fields"
   KV_META_NAME=""
+  if [[ ! $KV_NEWVERSION =~ ^[1-9][0-9]*$ ]]; then
+    KV_NEWVERSION=0 KV_CT=""
+    kv_malformed
+  fi
 }
 
 # kv_enforce_cas NAME: cas_required=true on the path, its other settings kept.

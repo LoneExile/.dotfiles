@@ -255,6 +255,55 @@ test_a_404_from_something_else_is_not_missing() {
   assert_eq "enforce-cas on a real vault's missing path" "$KV_CLASS" missing
 }
 
+# A version number in a reply is data from the network, and bash evaluates it
+# as arithmetic wherever the engine compares versions. Anything that is not a
+# plain positive integer is a malformed reply (soft), never a value.
+test_hostile_version_is_rejected() {
+  kv_ready
+  local hostile='D_LOCAL[$(touch PWNED)]' D_LOCAL=0 # a name the engine's own arithmetic has set
+  seed_s HV $'value\n'
+  proxy_rewrite_spawn "$T/px" "$S_ADDR" "$hostile"
+  SECRETSPEC_SYNC_ADDR=$(cat "$T/px/addr")
+  kv_init
+  cd "$T" || return 1
+  # What a consumer does with the numbers it gets; reached only when a call says ok.
+  KV_CUR=0 KV_NEWVERSION=0
+  consume() { ((KV_VERSION > 0)) || true; ((KV_CUR > 0)) || true; ((KV_NEWVERSION > 0)) || true; }
+
+  kv_read HV
+  assert_eq "read class" "$KV_CLASS" soft
+  assert_eq "read error" "$KV_ERR" "malformed response from OpenBao"
+  assert_eq "read leaves no value file" "$(find "$WORK" -name 'val.*' | wc -l | tr -d ' ')" 0
+  assert_eq "read version is reset" "$KV_VERSION" 0
+  if [[ $KV_CLASS == ok ]]; then consume; fi
+
+  kv_meta HV
+  assert_eq "metadata class" "$KV_CLASS" soft
+  assert_eq "metadata error" "$KV_ERR" "malformed response from OpenBao"
+  assert_eq "metadata version is reset" "$KV_CUR" 0
+  if [[ $KV_CLASS == ok ]]; then consume; fi
+
+  printf 'x' >"$T/in"
+  kv_write HV2 0 "$T/in"
+  echo HV2 >>"$TL_TMP/touched"
+  assert_eq "write class" "$KV_CLASS" soft
+  assert_eq "write error" "$KV_ERR" "malformed response from OpenBao"
+  assert_eq "write version is reset" "$KV_NEWVERSION" 0
+  if [[ $KV_CLASS == ok ]]; then consume; fi
+
+  assert_absent "nothing was executed" "$T/PWNED"
+  assert_eq "no file named after the payload" "$(find "$WORK" "$T" -name '*PWNED*' | wc -l | tr -d ' ')" 0
+
+  # Positive control: through the same proxy a plain integer is accepted.
+  kill "$(cat "$T/px/pid")"
+  proxy_rewrite_spawn "$T/px2" "$S_ADDR" 7
+  SECRETSPEC_SYNC_ADDR=$(cat "$T/px2/addr")
+  kv_init
+  kv_read HV
+  assert_eq "positive control: an integer version passes" "$KV_CLASS" ok
+  assert_eq "positive control: and is used" "$KV_VERSION" 7
+}
+
 test_bad_token_is_hard() {
   kv_ready
   VAULT_TOKEN=bogus
