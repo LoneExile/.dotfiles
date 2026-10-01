@@ -14,6 +14,8 @@ TL_BASH=${BASH:-bash}
 TL_FAILED=0
 TL_RAN=0
 TL_SECRET_PREFIX=secretspec/dotfiles/default
+TL_MAIN_SRV=""
+TL_BAO=""
 
 # The engine under test: SS_ENGINE (one executable, e.g. the nix wrapper) or
 # materialize.sh run by the same bash that runs the tests.
@@ -116,6 +118,14 @@ tl_init() {
   : >"$TL_TMP/touched"
 }
 
+# tl_init_pure: for test files that never talk to a vault (no server).
+tl_init_pure() {
+  TL_FP_BEFORE=$(tl_fingerprint)
+  TL_TMP=$(mktemp -d "${TMPDIR:-/tmp}/ss-test.XXXXXX")
+  trap tl_cleanup EXIT
+  : >"$TL_TMP/touched"
+}
+
 # ba ARGS...: bao as an admin client of the current server, scrubbed env.
 ba() {
   env -i HOME="$TL_TMP/admin-home" PATH="$PATH" BAO_ADDR="$S_ADDR" BAO_TOKEN="$S_TOK" "$TL_BAO" "$@"
@@ -125,10 +135,12 @@ ba() {
 tl_begin() {
   local n
   mkdir -p "$TL_TMP/admin-home"
-  use_srv "$TL_MAIN_SRV"
-  for n in $(sort -u "$TL_TMP/touched"); do
-    ba kv metadata delete -mount=secret "$TL_SECRET_PREFIX/$n" >/dev/null 2>&1 || true
-  done
+  if [[ -n $TL_MAIN_SRV ]]; then
+    use_srv "$TL_MAIN_SRV"
+    for n in $(sort -u "$TL_TMP/touched"); do
+      ba kv metadata delete -mount=secret "$TL_SECRET_PREFIX/$n" >/dev/null 2>&1 || true
+    done
+  fi
   : >"$TL_TMP/touched"
   T=$(mktemp -d "$TL_TMP/t.XXXXXX")
   T_HOME=$T/home
