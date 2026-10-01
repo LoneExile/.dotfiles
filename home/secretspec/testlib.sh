@@ -128,6 +128,25 @@ proxy_rewrite_spawn() {
   printf 'http://127.0.0.1:%s\n' "$(cat "$dir/port")" >"$dir/addr"
 }
 
+# listener_spawn DIR SECONDS: a listener (raw_listener.py) on 127.0.0.1 that
+# records a connection in DIR/seen. Writes DIR/port and DIR/pid; tl_cleanup stops it.
+listener_spawn() {
+  local dir=$1 i
+  mkdir -p "$dir"
+  rm -f "$dir/seen"
+  python3 "$TL_ROOT/raw_listener.py" "$dir/seen" "$2" >"$dir/port" &
+  printf '%s\n' "$!" >"$dir/pid"
+  for i in $(seq 1 50); do
+    [[ -s $dir/port ]] && break
+    sleep 0.1
+  done
+}
+listener_stop() {
+  kill "$(cat "$1/pid")" 2>/dev/null
+  wait "$(cat "$1/pid")" 2>/dev/null
+  return 0
+}
+
 # use_srv DIR: point S_ADDR / S_TOK at that server.
 use_srv() {
   S_ADDR=$(cat "$1/addr")

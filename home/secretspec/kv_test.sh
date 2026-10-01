@@ -304,6 +304,39 @@ test_hostile_version_is_rejected() {
   assert_eq "positive control: and is used" "$KV_VERSION" 7
 }
 
+# HTTP(S)_PROXY make bao send the call (and, for http, the token) to whatever
+# the proxy variable names. kv_bao must not pass them on. The proxy here is a
+# listener on loopback; the target is a non-loopback address, because loopback
+# targets bypass proxies.
+test_proxy_variables_cannot_redirect_a_call() {
+  kv_ready
+  local scheme var lvar port
+  unset NO_PROXY no_proxy
+  for scheme in https http; do
+    if [[ $scheme == https ]]; then var=HTTPS_PROXY lvar=https_proxy; else var=HTTP_PROXY lvar=http_proxy; fi
+    listener_spawn "$T/l-$scheme" 5
+    port=$(cat "$T/l-$scheme/port")
+    export "$var=http://127.0.0.1:$port" "$lvar=http://127.0.0.1:$port" ALL_PROXY="http://127.0.0.1:$port" all_proxy="http://127.0.0.1:$port"
+    SECRETSPEC_SYNC_ADDR=$scheme://192.0.2.10:8200 SECRETSPEC_SYNC_TIMEOUT=2s
+    kv_init
+    kv_read PX
+    assert_eq "$scheme: the call fails (nothing answers)" "$KV_CLASS" soft
+    kv_meta PX
+    assert_eq "$scheme: metadata too" "$KV_CLASS" soft
+    listener_stop "$T/l-$scheme"
+    assert_absent "$scheme: the proxy listener saw no connection" "$T/l-$scheme/seen"
+
+    # Positive control: the same environment on an unscrubbed bao does connect.
+    listener_spawn "$T/c-$scheme" 5
+    port=$(cat "$T/c-$scheme/port")
+    export "$var=http://127.0.0.1:$port" "$lvar=http://127.0.0.1:$port"
+    env -i HOME="$T/home" PATH="$PATH" "$var=http://127.0.0.1:$port" BAO_ADDR=$scheme://192.0.2.10:8200 BAO_TOKEN=x \
+      BAO_CLIENT_TIMEOUT=2s "$TL_BAO" kv get -mount=secret px/x >/dev/null 2>&1
+    listener_stop "$T/c-$scheme"
+    assert_has "$scheme: positive control: an unscrubbed bao reaches the proxy" "$T/c-$scheme/seen" "192.0.2.10:8200"
+  done
+}
+
 test_bad_token_is_hard() {
   kv_ready
   VAULT_TOKEN=bogus

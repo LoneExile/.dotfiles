@@ -2,7 +2,9 @@
 # Needs common.sh (file_sha256, WORK) plus the bao and jq binaries.
 #
 # Every vault call goes through kv_bao, which clears each BAO_* / VAULT_*
-# variable of the caller and then sets only the address, token and timeout
+# variable of the caller and every proxy variable (HTTP_PROXY, HTTPS_PROXY,
+# ALL_PROXY, NO_PROXY, in both cases: bao would send the call, and for http the
+# token, wherever they point), then sets only the address, token and timeout
 # resolved by kv_init. Secret values travel in files and on stdin, never in
 # argv or in shell variables.
 #
@@ -33,7 +35,7 @@ kv_bao() {
     local v
     for v in $(compgen -e); do
       case $v in
-        BAO_* | VAULT_*) unset "$v" ;;
+        BAO_* | VAULT_* | HTTP_PROXY | http_proxy | HTTPS_PROXY | https_proxy | ALL_PROXY | all_proxy | NO_PROXY | no_proxy) unset "$v" ;;
       esac
     done
     export BAO_ADDR=$KV_ADDR BAO_TOKEN=$KV_TOKEN BAO_CLIENT_TIMEOUT=$KV_TIMEOUT
