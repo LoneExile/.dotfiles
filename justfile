@@ -43,6 +43,11 @@ secretspec-status:
 secretspec-sync *ARGS:
   dotfiles-secrets sync {{ARGS}}
 
+# Once, after every Mac runs this engine: OpenBao then refuses writes to the secrets without check-and-set
+[macos]
+secretspec-enforce-cas:
+  dotfiles-secrets enforce-cas
+
 # If ~/.config/omniwm/settings.toml is a regular file, Home Manager will not
 # replace it. Review nvim -d / diff -u, then y to remove so the symlink can land.
 _omniwm-adopt:

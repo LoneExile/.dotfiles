@@ -220,3 +220,12 @@ kv_write() {
   IFS='|' read -r KV_NEWVERSION KV_CT <<<"$fields"
   KV_META_NAME=""
 }
+
+# kv_enforce_cas NAME: cas_required=true on the path, its other settings kept.
+# Needs the patch capability on secret/metadata/... (update alone gets a 403).
+kv_enforce_cas() {
+  local name=$1 rc=0
+  kv_have_token || return 0
+  kv_bao kv metadata patch -cas-required=true "-mount=$KV_MOUNT" "$KV_PREFIX/$name" >"$WORK/patch.out" 2>"$WORK/patch.err" || rc=$?
+  kv_classify "$rc" "$WORK/patch.err"
+}

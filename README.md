@@ -11,7 +11,10 @@ Hosts `le` and `lex` are entries in the `hosts` table in `flake.nix` (hostname �
 | `just switch` | Full nix-darwin rebuild + activate. Needs sudo. Same OmniWM settings.toml preflight as `just home`. |
 | `just home` | Home Manager only. No sudo. Use for zsh / `home.file` / secretspec materialization. If `~/.config/omniwm/settings.toml` is a regular file, reviews the diff then y/N before replacing it with the repo symlink. |
 | `just openbao-login` | Keycloak SSO → `~/.vault-token`. Required before activation can pull secrets. |
-| `just secretspec-sync` | Review local vs OpenBao secret files, then y/N to push/pull. |
+| `just secretspec-status` | Read-only: each secret's sync state against OpenBao (in-sync, behind, ahead, …), then a check that the `secretspec` CLI still reads the values this engine writes. |
+| `just secretspec-sync` | Review the secrets that need a decision and push or pull them. Needs a terminal. `just secretspec-sync --push NAME` pushes the local file of one secret without prompts. |
+| `just test-secrets` | Engine tests against a throwaway `bao server -dev` (needs `bao`, `jq`, `python3`; no network). Part of `just validate`. |
+| `just secretspec-enforce-cas` | Once, after both Macs run this engine: OpenBao then refuses writes to the secrets without check-and-set. Needs the `patch` capability on `secret/metadata/secretspec/dotfiles/default/*`. |
 | `just update-all` | `just update` → `just switch` → `just brew-upgrade`. |
 | `just brew-upgrade` | `brew upgrade` on demand. `just switch` does **not** upgrade Homebrew. Runs `just switch` first when `flake.lock` is newer than the active system (taps sync on switch). Casks that remove launchctl services (VS Code, Discord) prompt for sudo mid-run; a shell `sudo -v` can't pre-authorise Homebrew's own sudo. |
 | `just update` | `nix flake update` (lockfile only). |
@@ -36,7 +39,7 @@ profiles/personal.nix     Homebrew casks + personal packages
 home/default.nix          Home Manager: packages, programs.*, activation
 home/zsh/                 zshrc + aliases / options / keybindings
 secretspec.toml           secret *names* only (no values)
-home/secretspec/          secretspec provider aliases → OpenBao
+home/secretspec/          secret-sync engine (materialize.sh + libs, tests), nix wrapper, secretspec provider aliases
 home/omniwm/              OmniWM settings.toml (out-of-store symlink) + adopt.sh
 home/herdr/               herdr config.toml + herdr-plus quick-actions
 ```
@@ -45,27 +48,23 @@ Profiles are boolean toggles on `lib.mkDarwin` in `flake.nix`, not files under `
 
 ## Secrets
 
-Live path is **secretspec → homelab OpenBao**, not SOPS.
+Live path is **homelab OpenBao**, not SOPS. `home/secretspec/materialize.sh` keeps the 14 secret files in sync with it. The nix wrapper `dotfiles-secrets` (in `home.packages`) pins its `bao`, `jq` and coreutils, so your own `bao` is left alone.
 
-- Manifest: `secretspec.toml` (`[profiles.default]`). Names and dest paths only.
-- Values: `secret/secretspec/dotfiles/default/<NAME>` on `https://openbao.home.0dl.me`.
-- Activation: `home.activation.secretspecSecrets` runs `home/secretspec/materialize.sh apply` on every `just home` / `just switch`. 3-way via `~/.local/state/dotfiles/secretspec/<NAME>.sha256` (on-disk bytes, not raw `secretspec get`): vault-newer → pull; local-newer → leave dest and hint `just secretspec-sync`; both changed → fail; equal (including first apply with no last-sync) → record hash. Missing secret → activation **fails**. `secretspec` < 0.21 `get` appends a newline even when redirected; 0.21+ (what the install script ships) writes the exact value. apply/sync read `secretspec --version` and strip that one byte for keep secrets only on < 0.21; an unrecognized version fails. Tests: `bash home/secretspec/materialize_test.sh` (fake secretspec, runs once per `get` behaviour).
+- Manifest: `secretspec.toml` (`[profiles.default]`) lists the names. The table of names, paths and modes is in `materialize.sh`; a test keeps the two lists equal.
+- Values: `secret/secretspec/dotfiles/default/<NAME>` on `https://openbao.home.0dl.me` (KV v2, field `value`). Every file is byte-exact, trailing newlines included.
+- Direction is proven, not guessed. Each Mac keeps one record per secret, `~/.local/state/dotfiles/secretspec/<NAME>.base.json`: the vault version and bytes both sides last agreed on. KV v2 version numbers and bytes decide; clocks are display only.
+- Activation: `home.activation.secretspecSecrets` runs `dotfiles-secrets apply` on every `just home` / `just switch`. It pulls what is safe (no local file, or only the vault changed), never writes the vault and never prompts. Anything that needs a human (local edits, both sides changed, vault rewound or empty, no record, a symlink in the way) prints one banner that points at `just secretspec-sync`, and the switch goes on.
+- Vault unreachable (network, timeout, 5xx, 429, sealed): files are kept and the switch goes on for up to 7 days after the last successful contact. Rejected credentials (401/403) or a TLS error fail with the fix (`just openbao-login`). A secret missing from both the vault and this Mac always fails.
 - Atuin sync login: `home.activation.atuinLogin` runs `home/secretspec/atuin-login.sh` after materialize and Home Manager's `linkGeneration` (it needs `config.toml`; any earlier, atuin writes its default config and targets Atuin's hosted server). `atuin status` OK → nothing (password not read). Otherwise `atuin login -u loneexile --key ""` with `ATUIN_PASSWORD` from OpenBao (argv only, never on disk); `--key ""` reuses the synced key file without rewriting it, so `ATUIN_KEY` stays in sync. Login/network failures print a `!!!!` banner and activation continues; `ATUIN_PASSWORD` missing while logged out fails activation.
-- Review / push: `just secretspec-sync` (TTY). `nvim -d` with swap/shada/undo disabled; if nvim is missing, `diff -u` for `OMP_ENV` / `NPMRC` and `bytes differ` for SSH keys + Atuin key / AI token.
+- Status, review, push: `just secretspec-status` (read-only). `just secretspec-sync` (terminal): masked summaries that never print values, `v` for a raw `nvim` diff, `m` to merge, and a one-slot backup in `~/.local/state/dotfiles/secretspec/backup/<NAME>` before "take vault". `just secretspec-sync --push NAME` pushes one file without prompts. Every push is check-and-set and is read back.
+- **Never `secretspec delete` these keys.** It destroys every version and the history the engine reasons from. `secretspec set` drops the `writer` field and writes without check-and-set; use `just secretspec-sync --push NAME` instead.
 - Login: `just openbao-login` (recipe name is `openbao-login`, not `secretspec-login`).
-- Binary: `~/.cargo/bin/secretspec` (install script, not the nixpkgs package).
+- Binary: `~/.cargo/bin/secretspec` (install script, not the nixpkgs package) is still used by `atuin-login.sh` (`ATUIN_PASSWORD`) and by the contract check in `just secretspec-status`. The sync engine does not call it.
+- Tests: `just test-secrets`.
 
 SOPS is leftover, not live: no `secrets/secrets.yaml`, no `sops.secrets.*` in any host/profile. What remains is the `sops-nix` input, `mkDarwin`'s unused darwin module, `.sops.yaml`, and `secrets/note.md`. Ignore those; do not put tokens in `programs.atuin.settings` or git.
 
-Prefer `just secretspec-sync`. Manual set (keeps trailing newlines):
-
-```bash
-value=$(cat /path/to/file; printf x)
-value=${value%x}
-secretspec set NAME --reason "why" -- "$value"
-```
-
-
+Edited a secret file? `just secretspec-sync --push NAME` (or `just secretspec-sync` to review everything).
 
 ## New machine
 

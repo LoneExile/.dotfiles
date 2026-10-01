@@ -430,14 +430,6 @@ test_no_value_leaks_into_output_or_argv() {
   assert_has "positive control: the leak detector sees a leaky log" <(printf 'kv put x v=%s\n' "$plant") "$plant"
 }
 
-test_engine_never_calls_the_secretspec_cli() {
-  local f hits=""
-  for f in materialize common kv decide state inspect pull status apply; do
-    if grep -nE 'SECRETSPEC_BIN|secretspec (get|set|--version)|\.cargo/bin/secretspec' "$ROOT/$f.sh" >>"$T/hits"; then hits=$f; fi
-  done
-  assert_eq "no CLI usage in the engine scripts" "$hits" ""
-}
-
 tl_init
 tl_run_all
 tl_done

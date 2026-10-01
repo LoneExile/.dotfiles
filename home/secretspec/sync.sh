@@ -16,7 +16,7 @@ ask() {
       ANSWER=${default:-s}
       return 0
     fi
-    line=$(printf '%s' "$line" | tr 'A-Z' 'a-z')
+    line=$(printf '%s' "$line" | tr '[:upper:]' '[:lower:]')
     line=${line:0:1}
     if [[ -z $line && -n $default ]]; then
       ANSWER=$default

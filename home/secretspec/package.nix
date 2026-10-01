@@ -25,6 +25,7 @@
       ./status.sh
       ./apply.sh
       ./sync.sh
+      ./enforce.sh
     ];
   };
 in

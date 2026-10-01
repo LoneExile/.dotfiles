@@ -7,6 +7,8 @@
 #   status           read-only overview of every secret
 #   sync             interactive review, push and pull (needs a terminal)
 #   sync --push NAME push the local file of one secret, no prompts
+#   enforce-cas      make OpenBao refuse writes without check-and-set (run once,
+#                    after every Mac runs this engine)
 #   list             the table below
 #
 # Design: docs/superpowers/specs/2026-10-01-secretspec-smart-sync-design.md
@@ -14,7 +16,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-for lib in common kv decide state inspect pull summary push status apply sync; do
+for lib in common kv decide state inspect pull summary push status apply sync enforce; do
   # shellcheck source=/dev/null
   . "$SCRIPT_DIR/$lib.sh"
 done
@@ -66,8 +68,9 @@ main() {
       shift
       cmd_sync "$@"
       ;;
+    enforce-cas) cmd_enforce_cas ;;
     list) cmd_list ;;
-    *) die "usage: materialize.sh apply|status|sync [--push NAME]|list" ;;
+    *) die "usage: materialize.sh apply|status|sync [--push NAME]|enforce-cas|list" ;;
   esac
 }
 
