@@ -225,6 +225,68 @@ test_contract_check() {
   assert_has "says it was skipped" "$T/out" "contract: skipped"
 }
 
+# B1: an edit back to an older value is the user's edit, not a stale copy. Row 9
+# only counts live versions newer than the base (d_stale's bound).
+test_b1_with_a_moving_vault() {
+  seed_s NPMRC A
+  seed_s NPMRC B
+  put_base NPMRC 2 "$(sha_of B)" "$(vct NPMRC 2)"
+  lput .npmrc A
+  engine status
+  assert_rc "status" "$RC" 0
+  assert_eq "local equals v1 but the base is v2: ahead, not stale" "$(state_of NPMRC)" ahead
+  seed_s NPMRC C
+  engine status
+  assert_eq "the vault moved on to v3: diverged" "$(state_of NPMRC)" diverged
+}
+
+# M1: the vault history was deleted and rebuilt. A retained version number with
+# another created_time is another epoch, so the base is not that version.
+test_recreated_history_with_a_higher_version() {
+  local i
+  seed_s NPMRC one
+  seed_s NPMRC two
+  put_base NPMRC 2 "$(sha_of two)" "$(vct NPMRC 2)"
+  lput .npmrc two
+  ba kv metadata delete -mount=secret "$TL_SECRET_PREFIX/NPMRC" >/dev/null
+  for i in 1 2 3 4; do seed_s NPMRC "new$i"; done
+  engine status
+  assert_eq "v2 still exists but under another epoch: rewound" "$(state_of NPMRC)" rewound
+}
+
+# A metadata call that fails after the read succeeded is not an answer: the
+# secret is decided again as offline, and the breaker covers the next ones.
+test_a_failing_metadata_call_reads_as_offline() {
+  cat >"$T_SHIM/bao" <<SHIM
+#!/bin/sh
+printf '%s\\n' "\$*" >>"$T/bao.log"
+case "\$*" in
+  *"kv metadata get"*)
+    printf 'Error making API request.\\n\\nURL: GET http://x/v1/secret/metadata/p\\nCode: 503. Errors:\\n\\n* Vault is sealed\\n' >&2
+    exit 2
+    ;;
+esac
+exec "$TL_BAO" "\$@"
+SHIM
+  chmod +x "$T_SHIM/bao"
+  seed_s NPMRC A
+  seed_s NPMRC B
+  seed_s NPMRC C
+  put_base NPMRC 1 "$(sha_of A)" "$(vct NPMRC 1)"
+  lput .npmrc A # behind, if the failed call were ignored
+  seed_s OMP_ENV X
+  seed_s OMP_ENV Y
+  lput .omp/.env Y
+  if [[ $TL_SHIM_OK -eq 0 ]]; then
+    skip "bao shim is bypassed under SS_ENGINE"
+    return 0
+  fi
+  engine status
+  assert_eq "the failed call decides NPMRC as offline" "$(state_of NPMRC)" offline
+  assert_eq "the breaker makes the next secret offline" "$(state_of OMP_ENV)" offline
+  assert_has "says why" "$T/out" "sealed"
+}
+
 tl_init
 tl_run_all
 tl_done
