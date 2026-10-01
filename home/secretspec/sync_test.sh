@@ -188,6 +188,10 @@ test_diverged_merge_edits_a_private_copy_and_pushes_it() {
 # the local file exactly as it was, so the one backup slot still gets the original
 # when the user then takes the vault.
 test_a_merge_that_loses_the_cas_race_leaves_the_local_file_alone() {
+  [[ $TL_SHIM_OK -eq 1 ]] || {
+    skip "bao shim is bypassed under SS_ENGINE"
+    return 0
+  }
   seed_all
   settle
   seed_s NPMRC "vault-side"
@@ -205,6 +209,10 @@ test_a_merge_that_loses_the_cas_race_leaves_the_local_file_alone() {
 }
 
 test_merge_then_cas_race_then_take_vault_keeps_the_original_local_bytes() {
+  [[ $TL_SHIM_OK -eq 1 ]] || {
+    skip "bao shim is bypassed under SS_ENGINE"
+    return 0
+  }
   seed_all
   settle
   seed_s NPMRC "vault-side"
