@@ -32,8 +32,21 @@ summary_keys() {
       if (s ~ /^[ \t]*[A-Za-z0-9+\/]+==?[ \t]*$/) return 0
       return length(keyof(s)) <= 64
     }
-    FILENAME == ARGV[1] { if (iskv($0)) lk[keyof($0)] = $0; else lo[$0]++; next }
-    { if (iskv($0)) vk[keyof($0)] = $0; else vo[$0]++ }
+    # kind(line): 1 for a KEY=... line, 0 for everything else. NS is the line without
+    # its CR, NK its key. Lines inside an open quote or a PEM block are never keys.
+    function kind(s,   v, c) {
+      sub(/\r$/, "", s); NS = s; NK = keyof(s)
+      if (inq != "") { if (index(s, inq)) inq = ""; return 0 }
+      if (inpem) { if (s ~ /-----END/) inpem = 0; return 0 }
+      if (!iskv(s)) return 0
+      v = s; sub(/^[^=]*=[ \t]*/, "", v); c = substr(v, 1, 1)
+      if (c == "\"" || c == "\047") { if (index(substr(v, 2), c) == 0) inq = c }
+      else if (v ~ /^-----BEGIN/ && v !~ /-----END/) inpem = 1
+      return 1
+    }
+    FNR == 1 { inq = ""; inpem = 0 }
+    FILENAME == ARGV[1] { if (kind($0)) lk[NK] = NS; else lo[NS]++; next }
+    { if (kind($0)) vk[NK] = NS; else vo[NS]++ }
     END {
       for (k in lk) {
         if (!(k in vk)) print "added\t" k

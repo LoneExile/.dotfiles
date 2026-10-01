@@ -585,6 +585,39 @@ test_summaries_print_only_names_that_look_like_keys() {
   assert_has "npmrc uses the same rule" "$T/out" "keys added (local vs OpenBao): NEW_KEY"
 }
 
+# F10c (review-4): the base64 tail of a multi-line value must not be printed when the file has
+# CRLF line ends, when a closing quote follows the padding, or when the block is base64url.
+test_summaries_never_print_lines_of_a_multi_line_value() {
+  # shellcheck source=/dev/null
+  . "$ROOT/common.sh"
+  # shellcheck source=/dev/null
+  . "$ROOT/summary.sh"
+  local cr=$'\r' tail1 tail2 tail3
+  tail1='QyNTUxOQAAACD3c3VwZXItc2VjcmV0LXBsYW50ZWQtdmFsdWUtMTIzNDU2Nzg5MA=='
+  tail2='QUJDREVGR0hJSktMTU5PUA=='
+  tail3='abc_defGHIjklMNO_pqrSTUsecretzz=='
+  {
+    printf 'KEEP=1%s\n' "$cr"
+    printf 'CRLF_PEM=-----BEGIN OPENSSH PRIVATE KEY-----%s\n' "$cr"
+    printf '%s%s\n' 'b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW' "$cr"
+    printf '%s%s\n' "$tail1" "$cr"
+    printf -- '-----END OPENSSH PRIVATE KEY-----%s\n' "$cr"
+    printf 'QUOTED_B64="MIIBVgIBADANBgkqhkiG9w0BAQEFAASCAUAwggE8AgEAAkEA\n'
+    printf '%s"\n' "$tail2"
+    printf "URLSAFE_B64='-----BEGIN-----\n"
+    printf '%s\n' "$tail3"
+    printf -- "-----END-----'\n"
+  } >"$T/vault"
+  printf '%s\n' 'KEEP=1' 'NEW_KEY=PLANT-new' >"$T/local"
+  summary_masked OMP_ENV "$T/local" "$T/vault" >"$T/out"
+  assert_has "positive control: a real key is named" "$T/out" "CRLF_PEM"
+  assert_has "positive control: an added key is named" "$T/out" "keys added (local vs OpenBao): NEW_KEY"
+  local frag
+  for frag in QyNTUx c3VwZXIt QUJDREVG abc_defGHI b3BlbnNz MIIBVg; do
+    assert_lacks "no fragment '$frag' of a multi-line value is printed" "$T/out" "$frag"
+  done
+}
+
 test_no_value_reaches_the_transcript_or_argv() {
   local plant="PLANT-$RANDOM-$RANDOM-secret"
   seed_all
