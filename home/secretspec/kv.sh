@@ -51,16 +51,28 @@ kv_have_token() {
   return 1
 }
 
-# kv_err_line ERRFILE: "Code 503: Vault is sealed", or the first line.
+# kv_err_line ERRFILE: "Code 503: Vault is sealed", or the first line. Bash
+# builtins only: the Home Manager activation PATH has no awk.
 kv_err_line() {
-  awk '
-    /Code: [0-9]+/ && code == "" { code = $0; sub(/.*Code: /, "", code); sub(/\..*/, "", code) }
-    /^[ \t]*\* / && star == "" { star = $0; sub(/^[ \t]*\* /, "", star) }
-    NF && first == "" { first = $0 }
-    END {
-      if (code != "") { print "Code " code (star != "" ? ": " star : "") }
-      else { print first }
-    }' "$1" | cut -c1-200
+  local line code="" star="" first="" out
+  local code_re='Code: ([0-9]+)' star_re='^[[:space:]]*\*[[:space:]](.*)$'
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ -z $code && $line =~ $code_re ]]; then
+      code=${BASH_REMATCH[1]}
+    fi
+    if [[ -z $star && $line =~ $star_re ]]; then
+      star=${BASH_REMATCH[1]}
+    fi
+    if [[ -z $first && $line == *[![:space:]]* ]]; then
+      first=$line
+    fi
+  done <"$1"
+  if [[ -n $code ]]; then
+    out="Code $code${star:+: $star}"
+  else
+    out=$first
+  fi
+  printf '%s\n' "${out:0:200}"
 }
 
 # kv_classify RC ERRFILE
@@ -85,7 +97,7 @@ kv_classify() {
   else
     KV_CLASS=soft
   fi
-  KV_ERR=$(kv_err_line "$err")
+  KV_ERR=$(kv_err_line "$err") || KV_ERR=""
   if [[ -z $KV_ERR ]]; then
     KV_ERR="bao exited with status $rc"
   fi

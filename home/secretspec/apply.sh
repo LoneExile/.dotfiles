@@ -25,11 +25,16 @@ add_to() {
 }
 
 apply_banner() { # ATTENTION-LIST
-  local s names only_offline=1 age
+  local s st nm names only_offline=1 age
   echo >&2
   echo "!!!!!!!! secrets: needs attention !!!!!!!!" >&2
   for s in $ATTENTION_ORDER; do
-    names=$(awk -v s="$s" '$1 == s { printf "%s%s", sep, $2; sep = " " }' <<<"$1")
+    names=""
+    while read -r st nm; do
+      if [[ $st == "$s" ]]; then
+        names="$names${names:+ }$nm"
+      fi
+    done <<<"$1"
     if [[ -z $names ]]; then
       continue
     fi

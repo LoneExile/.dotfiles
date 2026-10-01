@@ -430,6 +430,74 @@ test_no_value_leaks_into_output_or_argv() {
   assert_has "positive control: the leak detector sees a leaky log" <(printf 'kv put x v=%s\n' "$plant") "$plant"
 }
 
+# The Home Manager activation PATH has no awk (home.emptyActivationPath): bash,
+# coreutils, diffutils, findutils, gnugrep, gnused, jq. apply must follow D1/D2
+# on every outcome with only those tools.
+test_apply_runs_on_the_activation_path() {
+  local t p n farm=$T/actbin
+  mkdir -p "$farm"
+  for t in bash cat chmod cp cut date dirname basename find grep head ln ls mkdir mktemp mv od rm sed sleep sort stat sync tail tee touch tr uniq wc cmp diff jq id readlink sha256sum shasum; do
+    p=$(command -v "$t" 2>/dev/null) || continue
+    [[ $p == /* ]] && ln -s "$p" "$farm/$t"
+  done
+  ln -s "$T_SHIM/bao" "$farm/bao"
+  assert_eq "positive control: awk is absent from the activation PATH" "$(PATH=$farm command -v awk || echo none)" none
+  assert_eq "positive control: jq is on it" "$([[ $(PATH=$farm command -v jq) == "$farm/jq" ]] && echo yes)" yes
+  ENGINE_ENV=("PATH=$farm")
+
+  # pulls: the vault has everything, this Mac has nothing
+  for n in $NAMES; do seed_s "$n" "v-$n"; done
+  engine apply
+  assert_rc "first run pulls" "$RC" 0
+  assert_eq "14 pulled lines" "$(grep -c '^pulled ' "$T/out")" 14
+  assert_lacks "pulls: no missing tool" "$T/err" "not found"
+
+  # ahead banner
+  printf '%s' "edited locally" >"$(file_of OMP_ENV)"
+  engine apply
+  assert_rc "ahead" "$RC" 0
+  assert_has "ahead banner names the secret" "$T/err" "OMP_ENV"
+  assert_has "ahead banner names the state" "$T/err" "ahead"
+  assert_lacks "ahead: no missing tool" "$T/err" "not found"
+  lput .omp/.env "v-OMP_ENV"
+
+  # not in the vault, local copy present
+  ba kv metadata delete -mount=secret "$TL_SECRET_PREFIX/NPMRC" >/dev/null
+  engine apply
+  assert_rc "404 on one path" "$RC" 0
+  assert_has "vault-missing banner" "$T/err" "vault-missing"
+  assert_lacks "404: no missing tool" "$T/err" "not found"
+  seed_s NPMRC "v-NPMRC"
+
+  # sealed
+  srv_spawn "$T/sealed"
+  use_srv "$T/sealed"
+  ba operator seal >/dev/null
+  engine apply
+  assert_rc "sealed" "$RC" 0
+  assert_has "sealed banner" "$T/err" "sealed"
+  assert_lacks "sealed: no missing tool" "$T/err" "not found"
+
+  # killed server
+  srv_spawn "$T/dead"
+  use_srv "$T/dead"
+  kill -9 "$(cat "$T/dead/pid")"
+  wait "$(cat "$T/dead/pid")" 2>/dev/null
+  engine apply
+  assert_rc "killed server" "$RC" 0
+  assert_has "offline banner" "$T/err" "unreachable"
+  assert_lacks "killed: no missing tool" "$T/err" "not found"
+
+  # bad token
+  use_srv "$TL_MAIN_SRV"
+  ENGINE_ENV=("PATH=$farm" VAULT_TOKEN=bogus)
+  engine apply
+  assert_rc "bad token" "$RC" 1
+  assert_has "bad token names the fix" "$T/err" "just openbao-login"
+  assert_lacks "bad token: no missing tool" "$T/err" "not found"
+  assert_bytes "files untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
+}
+
 tl_init
 tl_run_all
 tl_done

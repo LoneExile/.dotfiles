@@ -225,8 +225,28 @@ sandbox_run() {
     SECRETSPEC_SYNC_ADDR="$S_ADDR" VAULT_TOKEN="$S_TOK" ${ENGINE_ENV[@]+"${ENGINE_ENV[@]}"} \
     "$@" >"$T/out" 2>"$T/err" </dev/null || RC=$?
 }
-# engine ARGS...: run the engine under test in the sandbox.
-engine() { sandbox_run "${TL_ENGINE[@]}" "$@"; }
+# engine ARGS...: run the engine under test in the sandbox. Every `apply` run gets
+# an awk that fails with 127 in front of PATH: the Home Manager activation PATH
+# has no awk, so apply must never need one. (A test that sets PATH itself in
+# ENGINE_ENV keeps full control of it.) status and sync may use awk.
+engine() {
+  local e has=0
+  local -a saved=()
+  if [[ -n ${ENGINE_ENV[*]+x} ]]; then saved=("${ENGINE_ENV[@]}"); fi
+  if [[ ${1:-} == apply ]]; then
+    for e in ${ENGINE_ENV[@]+"${ENGINE_ENV[@]}"}; do
+      if [[ $e == PATH=* ]]; then has=1; fi
+    done
+    if ((!has)); then
+      mkdir -p "$T/noawk"
+      printf '#!/bin/sh\necho "awk: command not found (apply must not use awk)" >&2\nexit 127\n' >"$T/noawk/awk"
+      chmod +x "$T/noawk/awk"
+      ENGINE_ENV=(${ENGINE_ENV[@]+"${ENGINE_ENV[@]}"} "PATH=$T/noawk:$T_SHIM:$PATH")
+    fi
+  fi
+  sandbox_run "${TL_ENGINE[@]}" "$@"
+  ENGINE_ENV=(${saved[@]+"${saved[@]}"})
+}
 
 # The 14 secrets as NAME PATH-FROM-HOME MODE. materialize.sh holds the real
 # table; a test keeps this copy honest.
