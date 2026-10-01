@@ -75,18 +75,21 @@ kv_err_line() {
   printf '%s\n' "${out:0:200}"
 }
 
-# kv_classify RC ERRFILE
-#   hard: 401, 403, TLS/certificate errors. missing: path or version not found.
+# kv_classify RC ERRFILE [404=missing]
+#   hard: 401, 403, TLS/certificate errors. missing: path or version not found
+#   ("No value found at"). A bare "Code: 404." is missing only when the caller
+#   passes 404=missing (the kv metadata patch of a missing path prints it);
+#   anywhere else it can come from a gateway with no route, which is no answer.
 #   cas: check-and-set refused. soft: everything else (5xx, 429, sealed,
 #   refused, no such host, unreachable, timeouts, unexpected status).
 kv_classify() {
-  local rc=$1 err=$2
+  local rc=$1 err=$2 bare404=${3:-}
   KV_ERR=""
   if [[ $rc -eq 0 ]]; then
     KV_CLASS=ok
     return 0
   fi
-  if grep -q 'No value found at' "$err" || grep -Eq 'Code: 404\.' "$err"; then
+  if grep -q 'No value found at' "$err" || { [[ $bare404 == 404=missing ]] && grep -Eq 'Code: 404\.' "$err"; }; then
     KV_CLASS=missing
   elif grep -Eq 'Code: 40[13]\.' "$err"; then
     KV_CLASS=hard
@@ -239,5 +242,5 @@ kv_enforce_cas() {
   local name=$1 rc=0
   kv_have_token || return 0
   kv_bao kv metadata patch -cas-required=true "-mount=$KV_MOUNT" "$KV_PREFIX/$name" >"$WORK/patch.out" 2>"$WORK/patch.err" || rc=$?
-  kv_classify "$rc" "$WORK/patch.err"
+  kv_classify "$rc" "$WORK/patch.err" 404=missing
 }

@@ -204,7 +204,8 @@ test_classify_table() {
 ok|0|
 missing|2|No value found at secret/data/secretspec/dotfiles/default/NOPE\n
 missing|2|No value found at secret/metadata/secretspec/dotfiles/default/NOPE\n
-missing|2|Error making API request.\n\nURL: PUT http://x/v1/secret/metadata/p\nCode: 404. Raw Message:\n
+soft|2|Error making API request.\n\nURL: PUT http://x/v1/secret/metadata/p\nCode: 404. Raw Message:\n
+soft|2|Error making API request.\n\nURL: GET http://x/v1/secret/data/p\nCode: 404. Raw Message:\n
 hard|2|Error making API request.\n\nURL: GET http://x/v1/sys/internal/ui/mounts/secret\nCode: 403. Errors:\n\n* permission denied\n
 hard|2|Error making API request.\n\nURL: GET http://x/v1/sys/internal/ui/mounts/secret\nCode: 401. Errors:\n\n* missing client token\n
 hard|2|Get "https://h/v1/sys/internal/ui/mounts/secret": tls: failed to verify certificate: x509: certificate is not trusted\n
@@ -225,6 +226,33 @@ soft|2|Code: 400. Raw Message:\n\nClient sent an HTTP request to an HTTPS server
 soft|2|Code: 400. Errors:\n\n* some other 400 without the cas marker\n
 soft|1|something unexpected\n
 EOF
+}
+
+# A 404 that is not OpenBao's "No value found at" (a gateway with no route, a
+# wrong host) is not an answer from the vault. Only the metadata patch of
+# enforce-cas, which prints a bare 404 for a missing path, opts in.
+test_a_404_from_something_else_is_not_missing() {
+  kv_ready
+  printf 'Error making API request.\n\nURL: PUT http://x/v1/secret/metadata/p\nCode: 404. Raw Message:\n' >"$T/err.patch"
+  kv_classify 2 "$T/err.patch"
+  assert_eq "bare 404 by default" "$KV_CLASS" soft
+  kv_classify 2 "$T/err.patch" 404=missing
+  assert_eq "bare 404 when the caller opts in" "$KV_CLASS" missing
+  printf 'Code: 503. Errors:\n\n* Vault is sealed\n' >"$T/err.sealed"
+  kv_classify 2 "$T/err.sealed" 404=missing
+  assert_eq "opt-in does not change other classes" "$KV_CLASS" soft
+  srv404_spawn "$T/s404"
+  SECRETSPEC_SYNC_ADDR=$(cat "$T/s404/addr")
+  kv_init
+  kv_read NOPE
+  assert_eq "read class" "$KV_CLASS" soft
+  assert_eq "read leaves no missing kind" "$KV_MISSING" ""
+  kv_meta NOPE
+  assert_eq "metadata class" "$KV_CLASS" soft
+  SECRETSPEC_SYNC_ADDR=$S_ADDR
+  kv_init
+  kv_enforce_cas NO-SUCH-PATH
+  assert_eq "enforce-cas on a real vault's missing path" "$KV_CLASS" missing
 }
 
 test_bad_token_is_hard() {

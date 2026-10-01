@@ -82,6 +82,37 @@ srv_stop() {
   rm -f "$1/pid"
 }
 
+# srv404_spawn DIR: a stand-in that answers 404 "404 page not found" to every
+# request (a gateway with no route; with an empty body bao would print "No
+# value found at"). Writes DIR/addr and DIR/pid; tl_cleanup
+# stops it. Not OpenBao: bao must not read its 404 as "the secret is missing".
+srv404_spawn() {
+  local dir=$1 i
+  mkdir -p "$dir"
+  python3 -c '
+import http.server
+class H(http.server.BaseHTTPRequestHandler):
+    def _a(self):
+        body = b"404 page not found\n"
+        self.send_response(404)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    do_GET = do_PUT = do_POST = do_DELETE = do_LIST = _a
+    def log_message(self, *a):
+        pass
+s = http.server.HTTPServer(("127.0.0.1", 0), H)
+print(s.server_port, flush=True)
+s.serve_forever()
+' >"$dir/port" &
+  printf '%s\n' "$!" >"$dir/pid"
+  for i in $(seq 1 50); do
+    [[ -s $dir/port ]] && break
+    sleep 0.1
+  done
+  printf 'http://127.0.0.1:%s\n' "$(cat "$dir/port")" >"$dir/addr"
+}
+
 # use_srv DIR: point S_ADDR / S_TOK at that server.
 use_srv() {
   S_ADDR=$(cat "$1/addr")

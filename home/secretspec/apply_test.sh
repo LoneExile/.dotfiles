@@ -215,6 +215,23 @@ test_offline_with_a_recent_contact_keeps_going() {
   assert_bytes "files untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
 }
 
+test_a_404_from_something_else_reads_as_offline() {
+  seed_all
+  settle
+  local before
+  before=$(cat "$(state_file last-contact)")
+  sleep 1
+  srv404_spawn "$T/s404"
+  use_srv "$TL_MAIN_SRV"
+  S_ADDR=$(cat "$T/s404/addr")
+  engine apply
+  assert_rc "apply" "$RC" 0
+  assert_has "banner says unreachable" "$T/err" "unreachable"
+  assert_lacks "not vault-missing" "$T/err" "vault-missing"
+  assert_eq "last-contact is not refreshed" "$(cat "$(state_file last-contact)")" "$before"
+  assert_bytes "files untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
+}
+
 test_offline_bounds() {
   seed_all
   settle
