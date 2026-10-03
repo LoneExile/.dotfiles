@@ -207,6 +207,28 @@ in {
     fi
   '';
 
+  # OmniWM opens its command palette on Control+Option+Space
+  # (openCommandPalette in omniwm/settings.toml). macOS ships the same chord as
+  # "Select next source in Input menu" (symbolic hotkey 61), so both fire and
+  # OmniWM's Health page warns. Turn the macOS one off. `-dict-add` rewrites
+  # key 61 only: setting AppleSymbolicHotKeys through CustomUserPreferences or
+  # targets.darwin.defaults replaces the whole dict and resets every other
+  # system shortcut to its default. activateSettings -u applies it without a
+  # logout. The read ends in "|| true": a Mac that never stored key 61 makes
+  # plutil fail, and activation runs under set -eu -o pipefail, so the failure
+  # would stop it before the later steps.
+  home.activation.omniwmPaletteChord = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (
+    lib.hm.dag.entryAfter ["writeBoundary"] ''
+      enabled="$(/usr/bin/defaults export com.apple.symbolichotkeys - 2>/dev/null | /usr/bin/plutil -extract AppleSymbolicHotKeys.61.enabled raw -o - - 2>/dev/null || true)"
+      if [ "$enabled" != false ]; then
+        echo "disabling macOS Control+Option+Space (Select next source in Input menu) for the OmniWM command palette"
+        run /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 61 \
+          '<dict><key>enabled</key><false/><key>value</key><dict><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>786432</integer></array><key>type</key><string>standard</string></dict></dict>'
+        run /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+      fi
+    ''
+  );
+
   programs.gpg.enable = true;
 
   programs.direnv = {
