@@ -1128,3 +1128,265 @@ providers:
         contextWindow: 1048576
         maxTokens: 32768
         cost: { input: 0.0713, output: 0.2375, cacheRead: 0.0142, cacheWrite: 0 }
+  # --- KodeKey (KodeKloud AI playground, kodekloud.com/ai-playgrounds/kodekey)
+  #   — LiteLLM 1.91.4 proxy at https://api.ai.kodekloud.com/v1 (base URL from
+  #   the playground's API Keys page); key in .env as KODEKEY_API_KEY. NOT
+  #   bundled in OMP (absent from `omp models`, verified 2026-10-01). Every id
+  #   routes upstream through Requesty (x-litellm-model-api-base:
+  #   router.requesty.ai).
+  #   TRANSPORTS (2026-10-01: every id passed an omp text turn AND a read-tool
+  #   round-trip at default thinking): chat/completions for most ids. Claude
+  #   ids use the proxy's Anthropic route (api: anthropic-messages, baseUrl
+  #   without /v1; x-api-key and Bearer both accepted) because the proxy's
+  #   chat/completions STREAM drops Claude tool-call arguments (name arrives,
+  #   arguments "") and omp re-calls the tool until it times out. gpt-5.4 /
+  #   gpt-5.4-mini use /v1/responses (api: openai-responses) because on
+  #   chat/completions reasoning_effort + tools streams no tool call at all.
+  #   MODEL ARMOR: every prompt is screened by Google Model Armor
+  #   (x-litellm-applied-guardrails: model-armor); a hit returns HTTP 400
+  #   "Content blocked by Model Armor" before any model runs. Its injection
+  #   filter reacts to omp's first-turn <system-reminder> date/cwd preamble
+  #   (not configurable): with it, 4/14 sampled "read/open/show <file>"
+  #   prompts were blocked (0/14 without it), and a cwd path containing
+  #   "kodekey" was blocked every time. Rephrase or retry; nothing in this
+  #   file can change it.
+  #   PLAN-GATED: the key sits in LiteLLM access group `kodekey-pro` (Pro
+  #   plan). GET /v1/models lists 57 ids; only the 26 below serve on this key
+  #   (live chat probe 2026-10-01). 403 "user not allowed" (higher plan):
+  #   GPT-5.5, GPT-5.6 Luna/Sol, GPT-6 Astra, Claude Opus 5/5.5, Claude Fable
+  #   5/5.1, the kodekloud/claude-* aliases, gpt-4.1, gpt-5, gpt-5-mini,
+  #   gpt-5.2, gpt-5.4-nano, o4-mini, gemini-2.5-*, kimi-k2,
+  #   grok-code-fast-1, qwen3-coder-plus — re-probe before adding after a
+  #   plan change. Omitted although they answer: moonshot/kimi-k2.5 (404
+  #   upstream "Not found the model"), typesafe/jev-1.13.0 (400: requires
+  #   response_format type "questions" — not a chat model),
+  #   google/gemini-3-flash-preview (corrupted output: an arithmetic prompt
+  #   streamed unrelated Chinese text or a stray "2" prefix in 4/4 calls),
+  #   text-embedding-3-large, openai/gpt-5-image-mini and
+  #   google/gemini-3.1-flash-lite-image (embedding / image generation).
+  #   COST: KodeKey meters LiteLLM $ spend (x-litellm-response-cost per call)
+  #   against the plan's shared monthly balance (resets on the 1st), no
+  #   overage billing -> cost: 0, drawn from the plan, same convention as the
+  #   opencode-go subscription block. /model/info and /key/info are 403 for
+  #   this key (only llm_api_routes allowed), so no balance readout here.
+  #   LIMITS: contextWindow = KodeKey's /v1/models max_input_tokens where
+  #   published. Otherwise the upstream route's window, found by matching each
+  #   probe's x-litellm-response-cost against Requesty's public catalog
+  #   prices, taking the smallest window when matching routes tie:
+  #   claude-sonnet-5-5 1M (also Anthropic's models overview),
+  #   deepseek-V3.2 vertex 163840, gemini-3.1-*/3.5-flash 1048576, qwen
+  #   alibaba 1048576, mimo 1048576, MiniMax-M2.5 128000 (minimaxi 200K vs
+  #   nebius 128K tie). No exact price match for gpt-oss-120b / minimax-m3:
+  #   smallest Requesty window (128000 / 512000). KodeKey advertises
+  #   max_output_tokens 8192 for both DeepSeek V4 ids, but v4-flash returned
+  #   a 14,001-token completion (finish=stop) under max_completion_tokens
+  #   32768, so the house 32768 applies (v4-pro inferred from the same stale
+  #   metadata; its matching routes allow >=131072).
+  #   INPUT: [text, image] only where a 64x64 solid-green PNG was named
+  #   correctly; deepseek/*, gpt-oss-120b, MiniMax-M2.5, glm-5.1 and
+  #   glm-5.3-flash did not see it (glm-5.3-flash is multimodal elsewhere,
+  #   text-only on this route).
+  #   REASONING: reasoning_effort high/low returned HTTP 200 on all 26 (qwen
+  #   ids get OMP's enable_thinking dialect: on/off both 200). reasoning:
+  #   false on deepseek-V3.2, deepseek-v4-flash, gemini-3.1-flash-lite and
+  #   gemini-3.5-flash — 0 reasoning tokens even at reasoning_effort=high.
+  #   No compat block: on the chat/completions ids OMP's unknown-host
+  #   defaults (store:false + max_completion_tokens +
+  #   stream_options.include_usage) and every advertised thinking level
+  #   (minimal..max) returned HTTP 200.
+  kodekey:
+    baseUrl: https://api.ai.kodekloud.com/v1
+    apiKey: KODEKEY_API_KEY
+    api: openai-completions
+    auth: apiKey
+    models:
+      - id: claude-haiku-4-5-20251001
+        name: Claude Haiku 4.5 (KodeKey)
+        api: anthropic-messages
+        baseUrl: https://api.ai.kodekloud.com
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: claude-sonnet-5
+        name: Claude Sonnet 5 (KodeKey)
+        api: anthropic-messages
+        baseUrl: https://api.ai.kodekloud.com
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: claude-sonnet-5-5
+        name: Claude Sonnet 5.5 (KodeKey)
+        api: anthropic-messages
+        baseUrl: https://api.ai.kodekloud.com
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: deepseek/deepseek-V3.2
+        name: DeepSeek V3.2 (KodeKey)
+        reasoning: false
+        input: [text]
+        contextWindow: 163840
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: deepseek/deepseek-v4-flash
+        name: DeepSeek V4 Flash (KodeKey)
+        reasoning: false
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: deepseek/deepseek-v4-pro
+        name: DeepSeek V4 Pro (KodeKey)
+        reasoning: true
+        input: [text]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: google/gemini-3.1-flash-lite
+        name: Gemini 3.1 Flash Lite (KodeKey)
+        reasoning: false
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: google/gemini-3.1-pro-preview
+        name: Gemini 3.1 Pro Preview (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: google/gemini-3.5-flash
+        name: Gemini 3.5 Flash (KodeKey)
+        reasoning: false
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: google/gemini-3.8-flash
+        name: Gemini 3.8 Flash (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: gpt-5.4
+        name: GPT-5.4 (KodeKey)
+        api: openai-responses
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1050000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: gpt-5.4-mini
+        name: GPT-5.4 Mini (KodeKey)
+        api: openai-responses
+        reasoning: true
+        input: [text, image]
+        contextWindow: 272000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: gpt-6-luna
+        name: GPT-6 Luna (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 922000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: gpt-6-sol
+        name: GPT-6 Sol (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 922000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: gpt-oss-120b
+        name: GPT-OSS 120B (KodeKey)
+        reasoning: true
+        input: [text]
+        contextWindow: 128000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: minimax/MiniMax-M2.5
+        name: MiniMax M2.5 (KodeKey)
+        reasoning: true
+        input: [text]
+        contextWindow: 128000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: minimax/minimax-m3
+        name: MiniMax M3 (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 512000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: moonshot/kimi-k3
+        name: Kimi K3 (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: qwen/qwen3.7-plus
+        name: Qwen3.7 Plus (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: qwen/qwen3.8-flash
+        name: Qwen3.8 Flash (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: xai/grok-4.3
+        name: Grok 4.3 (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: xai/grok-4.7
+        name: Grok 4.7 (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 500000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: xiaomi/mimo-v2.6-flash
+        name: MiMo V2.6 Flash (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: xiaomi/mimo-v2.6-pro
+        name: MiMo V2.6 Pro (KodeKey)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: zai/glm-5.1
+        name: GLM 5.1 (KodeKey)
+        reasoning: true
+        input: [text]
+        contextWindow: 200000
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      - id: zai/glm-5.3-flash
+        name: GLM 5.3 Flash (KodeKey)
+        reasoning: true
+        input: [text]
+        contextWindow: 1048576
+        maxTokens: 32768
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
