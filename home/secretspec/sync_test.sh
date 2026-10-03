@@ -16,6 +16,17 @@ vault_bytes_equal() { # label NAME VERSION WANT
   assert_bytes "$1" "$(vget "$2" "$3")" "$4"
 }
 vault_writer() { ba kv get -format=json -mount=secret "$TL_SECRET_PREFIX/$1" | jq -r '.data.data.writer // ""'; }
+# nvim_windows CALLDIR: the basenames of the files one recorded nvim call was
+# given, in window order, each followed by a space.
+nvim_windows() {
+  local f
+  for f in "$1"/path[0-9]*; do
+    basename "$(cat "$f")"
+  done | tr '\n' ' '
+}
+# count_in FILE TEXT: how many times TEXT appears in FILE (typed-ahead answers
+# keep the prompts on one line, so lines cannot be counted).
+count_in() { grep -oF -- "$2" "$1" | wc -l | tr -d ' '; }
 
 test_sync_needs_a_terminal() {
   seed_all
@@ -100,16 +111,21 @@ test_ahead_raw_diff_runs_nvim_on_private_copies() {
   settle
   printf '%s' "edited" >"$(file_of NPMRC)"
   nvim_stub
+  printf '%s' "+more" >"$T/nvim.edit"
   tty_engine $'v\nn\n' sync
   assert_rc "sync" "$RC" 0
   assert_eq "nvim called once" "$(nvim_calls)" 1
-  local c=$T/nvim.call.1
-  assert_eq "arguments before --" "$(sed '/^--$/q' "$c/argv" | tr '\n' ' ')" "--clean -n -R -d --cmd set noswapfile nowritebackup noundofile shadafile=NONE -- "
-  assert_eq "first file is the live file" "$(cat "$c/path1")" "$(file_of NPMRC)"
-  assert_eq "second file is a private copy" "$(basename "$(cat "$c/path2")")" "NPMRC.vault"
-  assert_eq "copy mode" "$(cat "$c/mode2")" 600
-  assert_eq "copy directory mode" "$(cat "$c/dirmode2")" 700
+  local c=$T/nvim.call.1 i
+  assert_eq "arguments before --" "$(sed '/^--$/q' "$c/argv" | tr '\n' ' ')" "--clean -n -R -M -d --cmd set noswapfile nowritebackup noundofile shadafile=NONE -- "
+  assert_eq "two windows: local copy, vault copy" "$(nvim_windows "$c")" "NPMRC.local NPMRC.vault "
+  assert_eq "first file is a private copy, not the live file" "$([[ $(cat "$c/path1") != "$(file_of NPMRC)" ]] && echo yes)" yes
+  assert_bytes "the local copy holds the local bytes" "$c/file1" "edited"
   assert_bytes "copy holds the vault bytes" "$c/file2" "v-NPMRC"
+  for i in 1 2; do
+    assert_eq "window $i copy mode" "$(cat "$c/mode$i")" 600
+    assert_eq "window $i copy directory mode" "$(cat "$c/dirmode$i")" 700
+  done
+  assert_bytes "the live file is still what the user wrote (the stub's edit hit the copy)" "$(file_of NPMRC)" "edited"
   assert_eq "no temp directory left behind" "$(find "$T/tmp" -mindepth 1 | wc -l | tr -d ' ')" 0
   assert_eq "vault untouched" "$(vver NPMRC)" 1
 }
@@ -149,11 +165,75 @@ test_diverged_skip_and_no_default() {
   printf '%s' "local-side" >"$(file_of NPMRC)"
   tty_engine $'\n\ns\n' sync
   assert_rc "sync" "$RC" 0
-  assert_eq "Enter alone does not choose: asked again twice" "$(grep -c 'answer one of: ktms' "$T/out")" 2
+  assert_eq "Enter alone does not choose: asked again twice" "$(grep -c 'answer one of: ktmvs' "$T/out")" 2
   assert_bytes "local untouched" "$(file_of NPMRC)" "local-side"
   assert_eq "vault untouched" "$(vver NPMRC)" 2
   tty_engine $'\004' sync
   assert_has "end of input skips" "$T/out" "skipped"
+}
+
+test_diverged_view_is_read_only_with_the_base_in_the_middle() {
+  seed_all
+  settle
+  seed_s NPMRC "vault-side"
+  printf '%s' "local-side" >"$(file_of NPMRC)"
+  nvim_stub
+  printf '%s' "+edited" >"$T/nvim.edit"
+  tty_engine $'v\ns\n' sync
+  assert_rc "sync" "$RC" 0
+  assert_eq "nvim called once" "$(nvim_calls)" 1
+  local c=$T/nvim.call.1 i
+  assert_eq "arguments before --" "$(sed '/^--$/q' "$c/argv" | tr '\n' ' ')" "--clean -n -R -M -d --cmd set noswapfile nowritebackup noundofile shadafile=NONE -- "
+  assert_eq "three windows: local, base, vault" "$(nvim_windows "$c")" "NPMRC.local NPMRC.base NPMRC.vault "
+  assert_bytes "local window" "$c/file1" "local-side"
+  assert_bytes "base window shows the version both sides started from" "$c/file2" "v-NPMRC"
+  assert_bytes "vault window shows the vault side" "$c/file3" "vault-side"
+  for i in 1 2 3; do
+    assert_eq "window $i copy mode" "$(cat "$c/mode$i")" 600
+    assert_eq "window $i copy directory mode" "$(cat "$c/dirmode$i")" 700
+  done
+  assert_eq "the live file is not what nvim was given" "$([[ $(cat "$c/path1") != "$(file_of NPMRC)" ]] && echo yes)" yes
+  assert_bytes "the live file is still what the user wrote (the stub's edit hit the copy)" "$(file_of NPMRC)" "local-side"
+  assert_eq "vault untouched" "$(vver NPMRC)" 2
+  assert_absent "no backup slot file" "$(state_file backup/NPMRC)"
+  assert_eq "the diverged prompt was shown twice" "$(count_in "$T/out" '[k]eep local and push / [t]ake vault / [m]erge / [v]iew / [s]kip: ')" 2
+  assert_has "skipped" "$T/out" "skipped"
+  assert_eq "no temp directory left behind" "$(find "$T/tmp" -mindepth 1 | wc -l | tr -d ' ')" 0
+}
+
+test_diverged_view_without_the_base_version_shows_two_windows() {
+  seed_all
+  settle
+  seed_s NPMRC "vault-side"
+  printf '%s' "local-side" >"$(file_of NPMRC)"
+  ba kv destroy -mount=secret -versions=1 "$TL_SECRET_PREFIX/NPMRC" >/dev/null
+  nvim_stub
+  tty_engine $'v\ns\n' sync
+  assert_rc "sync" "$RC" 0
+  assert_eq "the state is still diverged" "$(count_in "$T/out" '[k]eep local and push / [t]ake vault / [m]erge / [v]iew / [s]kip: ')" 2
+  assert_eq "nvim called once" "$(nvim_calls)" 1
+  local c=$T/nvim.call.1
+  assert_eq "arguments before --" "$(sed '/^--$/q' "$c/argv" | tr '\n' ' ')" "--clean -n -R -M -d --cmd set noswapfile nowritebackup noundofile shadafile=NONE -- "
+  assert_eq "two windows: local, vault" "$(nvim_windows "$c")" "NPMRC.local NPMRC.vault "
+  assert_bytes "local window" "$c/file1" "local-side"
+  assert_bytes "vault window" "$c/file2" "vault-side"
+  assert_bytes "local untouched" "$(file_of NPMRC)" "local-side"
+  assert_eq "vault untouched" "$(vver NPMRC)" 2
+}
+
+test_diverged_view_then_take_vault_takes_the_vault_side() {
+  seed_all
+  settle
+  seed_s NPMRC "vault-side"
+  printf '%s' "local-side" >"$(file_of NPMRC)"
+  nvim_stub
+  tty_engine $'v\nt\n' sync
+  assert_rc "sync" "$RC" 0
+  assert_eq "nvim called once" "$(nvim_calls)" 1
+  assert_has "took" "$T/out" "took vault NPMRC v2"
+  assert_bytes "local is the vault side, not the base the view read" "$(file_of NPMRC)" "vault-side"
+  assert_bytes "backup slot holds the local side" "$(state_file backup/NPMRC)" "local-side"
+  assert_eq "base" "$(base_version NPMRC)" 2
 }
 
 test_diverged_merge_edits_a_private_copy_and_pushes_it() {
@@ -265,7 +345,7 @@ test_unknown_and_rewound_have_no_default_on_enter() {
   printf '%s' "local-n" >"$(file_of NPMRC)"
   tty_engine $'\n\ns\n' sync
   assert_rc "unknown: sync" "$RC" 0
-  assert_eq "unknown: Enter asks again, twice" "$(grep -c 'answer one of: kts' "$T/out")" 2
+  assert_eq "unknown: Enter asks again, twice" "$(grep -c 'answer one of: ktvs' "$T/out")" 2
   assert_bytes "unknown: local untouched" "$(file_of NPMRC)" "local-n"
   assert_eq "unknown: vault untouched" "$(vver NPMRC)" 1
   assert_eq "unknown: nothing was saved over" "$([[ -e $(state_file backup/NPMRC) ]] && echo yes || echo no)" no
@@ -276,9 +356,49 @@ test_unknown_and_rewound_have_no_default_on_enter() {
   tty_engine $'\n\ns\n' sync
   assert_rc "rewound: sync" "$RC" 0
   assert_has "rewound: the prompt is the rewound one" "$T/out" "this Mac last synced v1"
-  assert_eq "rewound: Enter asks again, twice" "$(grep -c 'answer one of: rts' "$T/out")" 2
+  assert_eq "rewound: Enter asks again, twice" "$(grep -c 'answer one of: rtvs' "$T/out")" 2
   assert_eq "rewound: vault untouched" "$(vver OMP_ENV)" 1
   assert_bytes "rewound: local untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
+}
+
+# After a rewind the base version number names a different value (or none), so
+# the rewound view never shows a base window; unknown has no base at all.
+test_unknown_and_rewound_views_show_two_windows() {
+  local argv="--clean -n -R -M -d --cmd set noswapfile nowritebackup noundofile shadafile=NONE -- "
+  seed_all
+  printf '%s' "local-n" >"$(file_of NPMRC)"
+  nvim_stub
+  tty_engine $'v\ns\n' sync
+  assert_rc "unknown: sync" "$RC" 0
+  assert_has "unknown: the prompt is the unknown one" "$T/out" "no record of a previous sync"
+  assert_eq "unknown: the prompt was shown twice" "$(count_in "$T/out" '[k]eep local and push / [t]ake vault / [v]iew / [s]kip: ')" 2
+  assert_eq "unknown: nvim called once" "$(nvim_calls)" 1
+  local c=$T/nvim.call.1
+  assert_eq "unknown: arguments before --" "$(sed '/^--$/q' "$c/argv" | tr '\n' ' ')" "$argv"
+  assert_eq "unknown: two windows: local, vault" "$(nvim_windows "$c")" "NPMRC.local NPMRC.vault "
+  assert_bytes "unknown: local window" "$c/file1" "local-n"
+  assert_bytes "unknown: vault window" "$c/file2" "v-NPMRC"
+  assert_bytes "unknown: local untouched" "$(file_of NPMRC)" "local-n"
+  assert_bytes "unknown: vault untouched" "$(vget NPMRC)" "v-NPMRC"
+  assert_eq "unknown: vault version" "$(vver NPMRC)" 1
+  lput .npmrc "v-NPMRC"
+  settle
+  ba kv metadata delete -mount=secret "$TL_SECRET_PREFIX/OMP_ENV" >/dev/null
+  seed_s OMP_ENV "recreated-o"
+  tty_engine $'v\ns\n' sync
+  assert_rc "rewound: sync" "$RC" 0
+  assert_has "rewound: the prompt is the rewound one" "$T/out" "this Mac last synced v1"
+  assert_eq "rewound: the prompt was shown twice" "$(count_in "$T/out" '[r]estore OpenBao from the local file / [t]ake vault / [v]iew / [s]kip: ')" 2
+  assert_eq "rewound: nvim called once more" "$(nvim_calls)" 2
+  c=$T/nvim.call.2
+  assert_eq "rewound: arguments before --" "$(sed '/^--$/q' "$c/argv" | tr '\n' ' ')" "$argv"
+  assert_eq "rewound: a base record exists" "$(base_version OMP_ENV)" 1
+  assert_eq "rewound: two windows, no base window" "$(nvim_windows "$c")" "OMP_ENV.local OMP_ENV.vault "
+  assert_bytes "rewound: local window" "$c/file1" "v-OMP_ENV"
+  assert_bytes "rewound: vault window" "$c/file2" "recreated-o"
+  assert_bytes "rewound: local untouched" "$(file_of OMP_ENV)" "v-OMP_ENV"
+  assert_bytes "rewound: vault untouched" "$(vget OMP_ENV)" "recreated-o"
+  assert_eq "rewound: vault version" "$(vver OMP_ENV)" 1
 }
 
 test_rewound_rows() {

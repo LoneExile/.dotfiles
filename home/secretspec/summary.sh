@@ -81,18 +81,28 @@ summary_bytes() {
   echo "  local $(wc -c <"$1" | tr -d ' ') bytes, $(trailing_newlines "$1") trailing newline(s); OpenBao $(wc -c <"$2" | tr -d ' ') bytes, $(trailing_newlines "$2") trailing newline(s); whitespace-only change: $ws (values are not shown)"
 }
 
-# show_raw_diff NAME LOCAL_FILE VAULT_FILE: nvim, read-only, no swap/undo/shada.
-# The vault copy is a 0600 file in a 0700 directory, removed right after.
+# show_raw_diff NAME LOCAL_FILE VAULT_FILE [BASE_FILE]: nvim on private copies,
+# read-only and not modifiable (-R -M: no buffer can be edited and :w! cannot
+# write), no swap/undo/shada. The windows are the local copy, the base copy when
+# BASE_FILE is given, then the vault copy. Each copy is a 0600 file in a 0700
+# directory and is removed right after. The live file is never given to nvim.
 show_raw_diff() {
   local d=$WORK/view
+  local -a copies=("$d/$1.local")
   if ! command -v nvim >/dev/null 2>&1; then
     echo "  no raw diff without nvim"
     return 0
   fi
   mkdir -p "$d"
   chmod 700 "$d"
+  cp "$2" "$d/$1.local"
+  if [[ -n ${4:-} ]]; then
+    cp "$4" "$d/$1.base"
+    copies=("${copies[@]}" "$d/$1.base")
+  fi
   cp "$3" "$d/$1.vault"
-  chmod 600 "$d/$1.vault"
-  nvim --clean -n -R -d --cmd "$NVIM_SAFE" -- "$2" "$d/$1.vault" || true
-  rm -f "$d/$1.vault"
+  copies=("${copies[@]}" "$d/$1.vault")
+  chmod 600 "${copies[@]}"
+  nvim --clean -n -R -M -d --cmd "$NVIM_SAFE" -- "${copies[@]}" || true
+  rm -f "${copies[@]}"
 }

@@ -118,11 +118,13 @@ sync_ahead() {
   done
 }
 
+# sync_diverged NAME DEST MODE: [v]iew shows local, base and OpenBao (the base is
+# the middle window when its version can still be read) and asks again.
 sync_diverged() {
   local rc
   summary_masked "$1" "$2" "$I_VALUE"
   while true; do
-    ask "  [k]eep local and push / [t]ake vault / [m]erge / [s]kip: " ktms ""
+    ask "  [k]eep local and push / [t]ake vault / [m]erge / [v]iew / [s]kip: " ktmvs ""
     case $ANSWER in
       k)
         push_local "$1" "$2" "$D_CUR" "$D_LSHA"
@@ -137,6 +139,16 @@ sync_diverged() {
         sync_merge "$1" "$2" "$3" || rc=$?
         if [[ $rc -ne 3 ]]; then return "$rc"; fi
         ;;
+      v)
+        # kv_read leaves I_VALUE (the vault's latest bytes) alone: it writes
+        # val.NAME.<base version>.
+        kv_read "$1" "$D_BV"
+        if [[ $KV_CLASS == ok ]]; then
+          show_raw_diff "$1" "$2" "$I_VALUE" "$KV_VALUE"
+        else
+          show_raw_diff "$1" "$2" "$I_VALUE"
+        fi
+        ;;
       s)
         echo "  skipped"
         return 0
@@ -145,37 +157,52 @@ sync_diverged() {
   done
 }
 
+# sync_unknown NAME DEST MODE: [v]iew shows local and OpenBao and asks again.
 sync_unknown() {
   summary_masked "$1" "$2" "$I_VALUE"
-  ask "  [k]eep local and push / [t]ake vault / [s]kip: " kts ""
-  case $ANSWER in
-    k)
-      push_local "$1" "$2" "$D_CUR" "$D_LSHA"
-      return $?
-      ;;
-    t)
-      take_vault "$1" "$2" "$3"
-      return $?
-      ;;
-    *) echo "  skipped" ;;
-  esac
+  while true; do
+    ask "  [k]eep local and push / [t]ake vault / [v]iew / [s]kip: " ktvs ""
+    case $ANSWER in
+      k)
+        push_local "$1" "$2" "$D_CUR" "$D_LSHA"
+        return $?
+        ;;
+      t)
+        take_vault "$1" "$2" "$3"
+        return $?
+        ;;
+      v) show_raw_diff "$1" "$2" "$I_VALUE" ;;
+      *)
+        echo "  skipped"
+        return 0
+        ;;
+    esac
+  done
 }
 
+# sync_rewound NAME DEST MODE: [v]iew shows local and OpenBao and asks again. No
+# base window: after a rewind the base version names a different value or none.
 sync_rewound() {
   echo "  OpenBao is at v$D_CUR; this Mac last synced v$D_BV"
   summary_masked "$1" "$2" "$I_VALUE"
-  ask "  [r]estore OpenBao from the local file / [t]ake vault / [s]kip: " rts ""
-  case $ANSWER in
-    r)
-      push_local "$1" "$2" "$D_CUR" "$D_LSHA"
-      return $?
-      ;;
-    t)
-      take_vault "$1" "$2" "$3"
-      return $?
-      ;;
-    *) echo "  skipped" ;;
-  esac
+  while true; do
+    ask "  [r]estore OpenBao from the local file / [t]ake vault / [v]iew / [s]kip: " rtvs ""
+    case $ANSWER in
+      r)
+        push_local "$1" "$2" "$D_CUR" "$D_LSHA"
+        return $?
+        ;;
+      t)
+        take_vault "$1" "$2" "$3"
+        return $?
+        ;;
+      v) show_raw_diff "$1" "$2" "$I_VALUE" ;;
+      *)
+        echo "  skipped"
+        return 0
+        ;;
+    esac
+  done
 }
 
 sync_vault_missing() {
