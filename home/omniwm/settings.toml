@@ -898,7 +898,7 @@ binding = "Unassigned"
 id = "setWindowPrimarySpan.increase10Percent"
 
 [[hotkeys]]
-binding = "Option+Shift+Minus"
+binding = "Unassigned"
 id = "setWindowSecondarySpan.decrease10Percent"
 
 [[hotkeys]]
