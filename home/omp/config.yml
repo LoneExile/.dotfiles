@@ -34,88 +34,44 @@ statusLine:
       showUnstaged: true
       showUntracked: true
 modelRoles:
-  slow: xai-oauth/grok-4.6:xhigh
-  plan: anthropic/claude-opus-5-5:max
-  vision: xai-oauth/grok-4.6:medium
-  smol: cursor/gpt-5.6-luna:low
+  slow: anthropic/claude-sonnet-5-5:max
+  plan: xai-oauth/grok-4.7:xhigh
+  vision: cursor/grok-4.7-medium:medium
+  smol: anthropic/claude-sonnet-5-5:low
   tiny: anthropic/claude-haiku-4-5:off
   commit: anthropic/claude-haiku-4-5:off
-  advisor: anthropic/claude-opus-5-5:medium
+  advisor: anthropic/claude-sonnet-5-5:medium
   default: anthropic/claude-opus-5-5:max
-  task: anthropic/claude-opus-5-5:xhigh
+  task: anthropic/claude-sonnet-5-5:xhigh
   web: xai/grok-4.5
   image: xai/grok-imagine-image
 task:
   agentModelOverrides:
-    sdd-implementer: opencode-go/deepseek-v4.1-flash:high
-    sdd-reviewer: opencode-go/deepseek-v4.1-flash:high
-    sdd-rereviewer: opencode-go/deepseek-v4.1-flash:low
-    sdd-escalation-implementer: opencode-go/deepseek-v4.1-flash:max
-    sdd-final-reviewer: opencode-go/deepseek-v4.1-flash:max
+    sdd-implementer: anthropic/claude-sonnet-5-5:high
+    sdd-reviewer: anthropic/claude-sonnet-5-5:high
+    sdd-rereviewer: anthropic/claude-sonnet-5-5:low
+    sdd-escalation-implementer: anthropic/claude-sonnet-5-5:max
+    sdd-final-reviewer: anthropic/claude-sonnet-5-5:max
 providers:
   streamIdleTimeoutSeconds: 300
   anthropic:
     serverSideFallback: true
 retry:
-  modelFallback: false
+  modelFallback: true
   usageAwareFallback: false
   usageReservePct: 5
   fallbackChains:
-    anthropic/claude-fable-5:
-      - anthropic/claude-opus-5
-      - xai-oauth/grok-4.5
-      - openrouter/openai/gpt-5.6-sol
-    anthropic/claude-mythos-5:
-      - anthropic/claude-opus-5
-      - xai-oauth/grok-4.5
-      - openrouter/openai/gpt-5.6-sol
-    anthropic/claude-opus-5:
-      - xai-oauth/grok-4.5
-      - openrouter/deepseek/deepseek-v4-pro
-      - openrouter/xiaomi/mimo-v2.5-pro
-    anthropic/claude-sonnet-5:
-      - xai-oauth/grok-4.5
-      - openrouter/deepseek/deepseek-v4-pro
-      - openrouter/xiaomi/mimo-v2.5
-    anthropic/claude-haiku-4-5:
-      - xai-oauth/grok-4.3
-      - openrouter/xiaomi/mimo-v2.5
+    anthropic/*:
+      - xai-oauth/grok-4.7
+    xai-oauth/*:
+      - anthropic/claude-opus-5-5
     web:
-      - web/perplexity
-      - google/gemini-2.5-flash
-      - anthropic/claude-haiku-4-5
-      - openai-codex/gpt-5.6-luna
-      - web/zai
-      - web/exa
-      - web/tinyfish
-      - web/jina
-      - web/kagi
-      - web/tavily
-      - web/firecrawl
-      - web/brave
-      - web/kimi
-      - web/parallel
-      - web/synthetic
-      - web/searxng
-      - web/startpage
-      - web/duckduckgo
-      - web/ecosia
-      - web/google
-      - web/mojeek
-      - web/public
-      - google-antigravity/gemini-2.5-flash
-      - openai-codex/gpt-5.6
-      - openai-codex/gpt-5.5
       - xai-oauth/grok-4.5
-      - web/ollama
+      - anthropic/claude-haiku-4-5
+      - web/exa
+      - web/duckduckgo
     image:
-      - openai/gpt-image-1
-      - openai-codex/gpt-image-1
-      - google-antigravity/gemini-3-pro-image
       - xai-oauth/grok-imagine-image
-      - openrouter/google/gemini-3-pro-image-preview
-      - google/gemini-3-pro-image-preview
-      - deepinfra/black-forest-labs/FLUX-2-pro
 disabledProviders:
   - claude-plugins
   - codex
@@ -155,7 +111,7 @@ hindsight:
   retainEveryNTurns: 3
   recallBudget: mid
   mentalModelsEnabled: true
-  mentalModelAutoSeed: true
+  mentalModelAutoSeed: false
 bash:
   enabled: true
 hideThinkingBlock: false
