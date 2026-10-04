@@ -5,6 +5,13 @@ fi
 
 # Real interactive terminal only.
 # Non-TTY / agent shells bail out earlier via programs.zsh.initContent (order 500).
+
+# Cursor-launched shells inherit TMPDIR=/private/tmp. Atuin's daemon socket
+# lives in the launchd per-user temp dir; a mismatch makes every command
+# block ~4s on `atuin history start`. getconf ignores the inherited value,
+# so Ghostty and Tern both land on the same socket.
+export TMPDIR="$(getconf DARWIN_USER_TEMP_DIR)"
+
 [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh" ] && source "${XDG_DATA_HOME:-$HOME/.local/share}/zap/zap.zsh"
 
 plug "$HOME/.config/zsh/aliases.zsh"
