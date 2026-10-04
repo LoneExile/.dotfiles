@@ -35,23 +35,23 @@ statusLine:
       showUntracked: true
 modelRoles:
   slow: cursor-sdk/grok-4.7@500k@slow:xhigh
-  plan: xai-oauth/grok-4.7:xhigh
+  plan: cursor-sdk/grok-4.7@500k@slow:xhigh
   vision: cursor/grok-4.7-medium:medium
   smol: cursor-sdk/grok-4.7@500k@slow:low
-  tiny: anthropic/claude-haiku-4-5:off
-  commit: anthropic/claude-haiku-4-5:off
+  tiny: cursor-sdk/composer-2.5@slow
+  commit: cursor-sdk/composer-2.5@slow
   advisor: cursor-sdk/grok-4.7@500k@slow:medium
-  default: cursor-sdk/grok-4.7@500k@slow:xhigh
-  task: cursor-sdk/grok-4.7@500k@slow:high
+  task: cursor-sdk/grok-4.7@500k@slow:xhigh
   web: xai/grok-4.5
   image: xai/grok-imagine-image
+  default: opencode-go/deepseek-v4.1-flash:max
 task:
   agentModelOverrides:
-    sdd-implementer: anthropic/claude-sonnet-5-5:high
-    sdd-reviewer: anthropic/claude-sonnet-5-5:high
-    sdd-rereviewer: anthropic/claude-sonnet-5-5:low
-    sdd-escalation-implementer: anthropic/claude-sonnet-5-5:max
-    sdd-final-reviewer: anthropic/claude-sonnet-5-5:max
+    sdd-implementer: cursor-sdk/grok-4.7@500k@slow:high
+    sdd-reviewer: cursor-sdk/grok-4.7@500k@slow:high
+    sdd-rereviewer: cursor-sdk/grok-4.7@500k@slow:low
+    sdd-escalation-implementer: cursor-sdk/grok-4.7@500k@slow:max
+    sdd-final-reviewer: cursor-sdk/grok-4.7@500k@slow:max
 providers:
   streamIdleTimeoutSeconds: 300
   anthropic:
@@ -80,8 +80,6 @@ disabledProviders:
   - github
 skills:
   enableClaudeUser: false
-  customDirectories:
-    - ~/.omp/plugins/node_modules/taste-skill/skills
 commands:
   enableClaudeUser: false
 terminal:

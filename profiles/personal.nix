@@ -175,7 +175,7 @@
       "vorssaint"
       # "flameshot"
       "ghostty"
-      "paseo" # coding-agent orchestrator: Paseo.app + `paseo` CLI
+      # "paseo" # coding-agent orchestrator: Paseo.app + `paseo` CLI
       "calibre"
       "skills-manager"
     ];
