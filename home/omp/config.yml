@@ -34,15 +34,15 @@ statusLine:
       showUnstaged: true
       showUntracked: true
 modelRoles:
-  slow: anthropic/claude-sonnet-5-5:max
+  slow: cursor-sdk/grok-4.7@500k@slow:xhigh
   plan: xai-oauth/grok-4.7:xhigh
   vision: cursor/grok-4.7-medium:medium
-  smol: anthropic/claude-sonnet-5-5:low
+  smol: cursor-sdk/grok-4.7@500k@slow:low
   tiny: anthropic/claude-haiku-4-5:off
   commit: anthropic/claude-haiku-4-5:off
-  advisor: anthropic/claude-sonnet-5-5:medium
-  default: anthropic/claude-opus-5-5:max
-  task: anthropic/claude-sonnet-5-5:xhigh
+  advisor: cursor-sdk/grok-4.7@500k@slow:medium
+  default: cursor-sdk/grok-4.7@500k@slow:xhigh
+  task: cursor-sdk/grok-4.7@500k@slow:high
   web: xai/grok-4.5
   image: xai/grok-imagine-image
 task:
