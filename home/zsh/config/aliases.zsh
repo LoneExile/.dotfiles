@@ -9,7 +9,6 @@ alias c="clear"
 alias v="nvim"
 alias gdu="gdu-go"
 alias ld="lazydocker"
-alias cc="claude --dangerously-skip-permissions"
 alias pn="pnpm"
 alias pnx="pnpm dlx"
 
@@ -107,24 +106,20 @@ dk() {
 }
 
 pkgup() {
-    # pnpm install -g @anthropic-ai/claude-code
     # pnpm install -g @dbml/cli
     # pnpm install -g @github/copilot
-    # pnpm install -g @google/gemini-cli
     # pnpm install -g get-graphql-schema
     # pnpm install -g mcp-hub
     # pnpm install -g neovim
     # pnpm install -g @googleworkspace/cli
     # npx skills add https://github.com/googleworkspace/cli
     # npm install -g @playwright/cli@latest
-    # pnpm i -g opencode-ai@latest
     # pnpm install -g @usebruno/cli
     # pnpx impeccable skills update
     # npm i -g @colbymchenry/codegraph
 
     # pnpm self-update
     # mise upgrade
-    claude update
     pnpm update -g --latest
     uv tool upgrade --all
     bun update -g
