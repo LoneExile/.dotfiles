@@ -177,6 +177,7 @@
       "ghostty"
       "paseo" # coding-agent orchestrator: Paseo.app + `paseo` CLI
       "calibre"
+      "skills-manager"
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
