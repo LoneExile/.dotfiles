@@ -670,8 +670,13 @@ in {
         User = "root";
         IdentityFile = "~/.ssh/id_crypt";
       };
-      "home 10.0.10.150" = {
-        HostName = "10.0.10.150";
+      "home 10.0.10.249" = {
+        HostName = "10.0.10.249";
+        User = "le";
+        IdentityFile = "~/.ssh/id_crypt";
+      };
+      "office-home 10.0.10.126" = {
+        HostName = "10.0.10.126";
         User = "le";
         IdentityFile = "~/.ssh/id_crypt";
       };
