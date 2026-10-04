@@ -51,13 +51,13 @@
     unstablePkgs.parallel
     unstablePkgs.gettext
     unstablePkgs.yq-go
-    # Syncthing pinned to 2.1.2-1 ahead of nixpkgs (still on 2.0.14-1).
-    # Remove this override once nixpkgs-unstable ships >= 2.1.2-1.
+    # Syncthing pinned to 2.1.5-1 ahead of nixpkgs (still on 2.0.14-1).
+    # Remove this override once nixpkgs-unstable ships >= 2.1.5-1.
     (unstablePkgs.syncthing-macos.overrideAttrs (_: rec {
-      version = "2.1.2-1";
+      version = "2.1.5-1";
       src = unstablePkgs.fetchurl {
         url = "https://github.com/syncthing/syncthing-macos/releases/download/v${version}/Syncthing-${version}.dmg";
-        hash = "sha256-vlb8mAe8XjczIje6R5t3vehSxfDYYclQZ0JVmZu7oPY=";
+        hash = "sha256-UJA6KmIhhW4cNuPFxf856JcFPSmqH2ha1XZiLJMGnog=";
       };
     }))
 
