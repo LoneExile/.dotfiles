@@ -124,6 +124,15 @@ in {
       ".config/zsh/keybindings.zsh".text = builtins.readFile ./zsh/config/keybindings.zsh;
       ".config/zsh/options.zsh".text = builtins.readFile ./zsh/config/options.zsh;
       "Library/Application Support/MTMR/items.json".text = builtins.readFile ./mtmr/items.json;
+      # Tern rewrites settings.json from its preferences UI. A store copy
+      # would be 0444 and break saves; this link targets the working tree.
+      # Daemon state, sockets and notes stay in Application Support (not tracked).
+      # keymap is tmux with prefix ctrl+a, plus Herdr's pane/tab chords
+      # (home/herdr/config.toml): hjkl focus, | / - splits, 1–9 select tabs.
+      "Library/Application Support/Tern/settings.json" = {
+        source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/tern/settings.json";
+        force = true;
+      };
       "Library/Keyboard\ Layouts/English.bundle" = {
         source = ./keyboard-layouts/English.bundle;
         recursive = true;
