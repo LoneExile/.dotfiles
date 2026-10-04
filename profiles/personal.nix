@@ -143,7 +143,7 @@
       "mongodb-compass"
       "openvpn-connect"
       "cloudflare-warp"
-      "vnc-viewer"
+      "realvnc-connect-viewer"
       "visual-studio-code"
       "cap"
       # "figma"
