@@ -160,6 +160,12 @@ update-all target_host=hostname: (update-system target_host) (brew-upgrade targe
 gc:
   nix-collect-garbage -d
 
+### Proxmox NixOS VMs
+# Test the leak check for server values in tracked files (no network)
+test-infra:
+  @echo "🔎 Testing the infra leak check..."
+  bash infra/leak-check_test.sh
+
 ### Development and Validation
 # Check flake syntax and build without switching
 check:
@@ -193,7 +199,7 @@ test-secrets:
   bash home/secretspec/materialize_test.sh
 
 # Run all validation checks
-validate: check fmt-check lint deadnix test-secrets
+validate: check fmt-check lint deadnix test-secrets test-infra
   @echo "✅ All validation checks completed!"
 
 ### Documentation
