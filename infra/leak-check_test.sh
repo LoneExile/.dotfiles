@@ -130,8 +130,12 @@ test_positive_control_failure_exits_3() {
 test_grep_stderr_exits_3() {
   fixture_env
   fresh_repo
-  shim_grep 'echo "grep: boom" >&2; exit 1'
+  # Delegate the positive control (its file is named "control") to the real grep,
+  # so only the scan call fails and prints to stderr.
+  shim_grep "case \"\$*\" in */control*) exec '$(command -v grep)' \"\$@\" ;; esac; echo 'grep: boom' >&2; exit 1"
   assert_rc "grep error" "$(check_shimmed)" 3
+  assert_has "names the grep error" "$T/err" "grep reported an error"
+  assert_lacks "not the control branch" "$T/err" "positive control"
   assert_lacks "no success line" "$T/out" "no leaks"
 }
 
