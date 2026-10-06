@@ -92,6 +92,22 @@
     neovim-nightly-overlay = {
       url = "github:nix-community/neovim-nightly-overlay";
     };
+
+    # NixOS guests are not darwin: stable NixOS nixpkgs for hosts/nixos
+    nixpkgs-nixos.url = "github:NixOS/nixpkgs/nixos-25.11";
+
+    # disko lays out the NixOS guest disk declaratively
+    disko = {
+      url = "github:nix-community/disko/v1.13.0";
+      inputs.nixpkgs.follows = "nixpkgs-nixos";
+    };
+
+    # nixos-anywhere supplies the CLI that installs the guest over SSH
+    nixos-anywhere = {
+      url = "github:nix-community/nixos-anywhere/1.13.0";
+      inputs.nixpkgs.follows = "nixpkgs-nixos";
+      inputs.disko.follows = "disko";
+    };
   };
 
   outputs = {self, ...} @ inputs: let
@@ -145,6 +161,12 @@
             // host)
       )
       hosts;
+
+    # Generic NixOS guest role for Proxmox VMs
+    nixosConfigurations.proxmox-guest = inputs.nixpkgs-nixos.lib.nixosSystem {
+      specialArgs = {inherit stateVersion;};
+      modules = [inputs.disko.nixosModules.disko ./hosts/nixos/proxmox-guest];
+    };
 
     # Development shells for contributors
     devShells = forAllSystems (
