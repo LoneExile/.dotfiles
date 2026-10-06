@@ -108,10 +108,11 @@ just vm-install <name>   # Debian cloud image → NixOS via nixos-anywhere
 **Recovery.**
 
 - Unreachable after boot: serial console, `qm terminal <vmid>` on `<node>`. At the GRUB menu (serial too) pick an older generation to roll back, then fix the role and `just vm-deploy <name>`.
-- Reinstall: recreate the VM, then install again. The recreate is a plain apply:
+- Reinstall: recreate the VM, clear its old host key, then install again. The recreated Debian has a new host key; without `ssh-keygen -R`, the `vm-install` guard refuses the changed key and prints a misleading "already NixOS" error.
 
   ```bash
   just infra-apply "-replace='proxmox_virtual_environment_vm.vm[\"<name>\"]'"
+  ssh-keygen -R <ipv4>
   just vm-install <name>
   ```
 
