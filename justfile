@@ -12,6 +12,8 @@ user := `id -un`
 # `just switch`.
 hm_profile := `d="${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles"; [ -d "$d" ] || d="${NIX_STATE_DIR:-/nix/var/nix}/profiles/per-user/$(id -un)"; echo "$d/home-manager"`
 dotfiles_secrets := hm_profile / "home-path/bin/dotfiles-secrets"
+infra_dir := justfile_directory() / "infra"
+infra_unit := infra_dir / "proxmox/vms"
 
 ### System Management
 # Build the nix-darwin system configuration without switching to it
@@ -165,6 +167,18 @@ gc:
 test-infra:
   @echo "🔎 Testing the infra leak check..."
   bash infra/leak-check_test.sh
+
+# Plan the Proxmox VMs, with secrets from OpenBao through secretspec
+infra-plan *ARGS:
+  cd "{{infra_unit}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- terragrunt plan {{ARGS}}
+
+# Apply the Proxmox VMs, with secrets from OpenBao through secretspec
+infra-apply *ARGS:
+  cd "{{infra_unit}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- terragrunt apply {{ARGS}}
+
+# Scan tracked files for the real server values held in the infra secrets
+infra-leak-check:
+  cd "{{justfile_directory()}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash infra/leak-check.sh
 
 ### Development and Validation
 # Check flake syntax and build without switching

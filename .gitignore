@@ -14,3 +14,11 @@ test-results
 
 # omp writes a runtime lock next to the symlinked config
 home/omp/config.yml.lock
+
+# OpenTofu / Terragrunt (infra/); .terraform.lock.hcl stays tracked
+.terraform/
+.terragrunt-cache/
+*.tfstate
+*.tfstate.*
+*.tfplan
+infra/**/*_generated.tf
