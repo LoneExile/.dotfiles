@@ -180,6 +180,25 @@ infra-apply *ARGS:
 infra-leak-check:
   cd "{{justfile_directory()}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash infra/leak-check.sh
 
+# Install NixOS on a fresh Debian VM from infra output (refuses if debian@ login fails)
+vm-install name:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  ip=$(cd "{{infra_unit}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash "{{infra_dir}}/vm-ip.sh" {{quote(name)}})
+  if ! ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "debian@$ip" true; then
+    echo "error: "{{quote(name)}}" does not accept debian@ — already NixOS? use just vm-deploy" >&2
+    exit 1
+  fi
+  nix run --inputs-from . nixos-anywhere -- --flake .#proxmox-guest --build-on remote --target-host "debian@$ip"
+  ssh-keygen -R "$ip"
+
+# Deploy the NixOS configuration to an installed VM from infra output
+vm-deploy name:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  ip=$(cd "{{infra_unit}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash "{{infra_dir}}/vm-ip.sh" {{quote(name)}})
+  NIX_SSHOPTS="-o StrictHostKeyChecking=accept-new" nix shell --inputs-from . nixpkgs-nixos#nixos-rebuild-ng -c nixos-rebuild switch --flake .#proxmox-guest --target-host "root@$ip" --build-host "root@$ip"
+
 ### Development and Validation
 # Check flake syntax and build without switching
 check:
