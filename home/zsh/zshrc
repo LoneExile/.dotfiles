@@ -61,18 +61,6 @@ if [[ ${commands[treehouse]} ]]; then
   [[ -f "$_thcomp" ]] && source "$_thcomp"
 fi
 
-# no-mistakes completion (cached — same version-invalidation pattern as kubectl)
-if [[ ${commands[no-mistakes]} ]]; then
-  _nmcomp="$ZSH_CACHE_DIR/no-mistakes_completion"
-  _nmver="$ZSH_CACHE_DIR/no-mistakes_version"
-  _cur_ver="$(no-mistakes --version 2>/dev/null)"
-  if [[ ! -f "$_nmcomp" || "$(cat "$_nmver" 2>/dev/null)" != "$_cur_ver" ]]; then
-    no-mistakes completion zsh > "$_nmcomp" 2>/dev/null
-    echo -n "$_cur_ver" > "$_nmver"
-  fi
-  [[ -f "$_nmcomp" ]] && source "$_nmcomp"
-fi
-
 # AWS CLI completion
 if [[ -x "$(command -v aws_completer)" ]]; then
   autoload bashcompinit && bashcompinit
