@@ -601,6 +601,8 @@ in {
       "*" = {
         User = "root";
         StrictHostKeyChecking = "no";
+        AddKeysToAgent = "yes";
+        UseKeychain = "yes";
       };
 
       # ~/.ssh/config
