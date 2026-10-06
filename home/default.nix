@@ -124,15 +124,13 @@ in {
       ".config/zsh/keybindings.zsh".text = builtins.readFile ./zsh/config/keybindings.zsh;
       ".config/zsh/options.zsh".text = builtins.readFile ./zsh/config/options.zsh;
       "Library/Application Support/MTMR/items.json".text = builtins.readFile ./mtmr/items.json;
-      # Tern rewrites settings.json from its preferences UI. A store copy
-      # would be 0444 and break saves; this link targets the working tree.
-      # Daemon state, sockets and notes stay in Application Support (not tracked).
+      # Tern's settings.json is NOT linked here: Tern saves atomically (temp +
+      # rename), which replaces a symlink with a plain file, and the repo copy
+      # silently stops tracking (seen 2026-10-06 with Tern 0.5.1).
+      # home.activation.ternSettings installs a real writable copy instead;
+      # `just tern-capture` pulls preferences-UI changes back into the repo.
       # keymap is tmux with prefix ctrl+a, plus Herdr's pane/tab chords
       # (home/herdr/config.toml): hjkl focus, | / - splits, 1–9 select tabs.
-      "Library/Application Support/Tern/settings.json" = {
-        source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/tern/settings.json";
-        force = true;
-      };
       "Library/Keyboard\ Layouts/English.bundle" = {
         source = ./keyboard-layouts/English.bundle;
         recursive = true;
@@ -213,6 +211,30 @@ in {
     else
       echo "installing herdr omp integration"
       run "$herdrBin" integration install omp
+    fi
+  '';
+
+  # Tern's preferences UI rewrites settings.json with an atomic save (temp +
+  # rename), so the home.file symlink of old generations never survived — see
+  # the note at the home.file block above. Install the repo copy as a real,
+  # writable file instead: `just home` pushes the repo version, and
+  # `just tern-capture` pulls the live file back after a UI change. A live file
+  # that differs is kept as settings.json.dotfiles-backup, never dropped
+  # silently. Machine-local files (host_key, host_cert.der, daemon.state,
+  # hosts, known_hosts) stay untouched here on purpose — only settings.json
+  # travels between machines.
+  home.activation.ternSettings = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    ternDir="$HOME/Library/Application Support/Tern"
+    ternLive="$ternDir/settings.json"
+    ternRepo="${./tern/settings.json}"
+    if [ -f "$ternLive" ] && ! cmp -s "$ternLive" "$ternRepo"; then
+      run mv -f "$ternLive" "$ternLive.dotfiles-backup"
+      echo "tern settings: live file differed, kept as settings.json.dotfiles-backup (just tern-capture restores it)"
+    fi
+    if [ ! -f "$ternLive" ] || ! cmp -s "$ternLive" "$ternRepo"; then
+      run mkdir -p "$ternDir"
+      run cp -f "$ternRepo" "$ternLive"
+      run chmod u+w "$ternLive"
     fi
   '';
 

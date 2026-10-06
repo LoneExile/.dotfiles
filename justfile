@@ -59,6 +59,18 @@ secretspec-sync *ARGS:
   [[ -x $ds ]] || ds=$(command -v dotfiles-secrets) || { echo "error: dotfiles-secrets is not installed yet: run just home" >&2; exit 1; }
   "$ds" sync {{ARGS}}
 
+# Copy Tern's live settings.json (the preferences UI rewrites it in place) back
+# into the repo, so the change reaches the other MacBook through git — commit
+# it, pull there, run `just home`. See home.activation.ternSettings.
+[macos]
+tern-capture:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  dst="{{justfile_directory()}}/home/tern/settings.json"
+  cp -f "$HOME/Library/Application Support/Tern/settings.json" "$dst"
+  echo "captured Tern settings -> $dst"
+  git -C "{{justfile_directory()}}" --no-pager diff --stat -- home/tern/settings.json || true
+
 # Once, after every Mac runs this engine: OpenBao then refuses writes to the secrets without check-and-set
 [macos]
 secretspec-enforce-cas:
