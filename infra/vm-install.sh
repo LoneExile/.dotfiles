@@ -11,10 +11,14 @@
 #                         install, `vm-unlock` pins the connection to it
 # Files that must reach the new system but not the repo or the Nix store go in a staging tree
 # that nixos-anywhere copies to the target before the bootloader is installed (the bootloader
-# step reads them into the initrd, see hosts/nixos/proxmox-guest):
+# step reads the initrd files into the initrd, see hosts/nixos/proxmox-guest):
 #   /root/.ssh/authorized_keys                    root's keys for stage 2 and for the initrd
 #   /etc/secrets/initrd/ssh_host_ed25519_key      the initrd SSH host key
 #   /etc/secrets/initrd/10-initrd.network         the initrd's static address
+#   /etc/hostname                                 the VM name (NixOS runs no cloud-init)
+#   /etc/systemd/network/10-static.network        stage 2's address, gateway and resolvers
+# The identity is fixed at install: a changed name or address needs these files edited on the
+# VM (README), or a reinstall. The Proxmox cloud-init drive only serves the Debian stage.
 set -euo pipefail
 umask 077
 
@@ -33,6 +37,8 @@ die() {
 
 # shellcheck source=vault-map.sh
 . "$infra/vault-map.sh"
+# shellcheck source=vm-identity.sh
+. "$infra/vm-identity.sh"
 
 for var in TF_VAR_ssh_authorized_keys TF_VAR_vms VM_LUKS_KEYS VM_INITRD_HOST_KEYS; do
   [ -n "${!var:-}" ] || die "$var is empty (run it under secretspec: just vm-install $name)"
@@ -44,14 +50,18 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-ne
   exit 1
 fi
 
-# The VM entry supplies the initrd's static network. Same fields cloud-init gets from Proxmox.
-fields=$(printf '%s' "$TF_VAR_vms" | jq -r --arg n "$name" '.[$n] | select(. != null) | [.mac, .ipv4_cidr, .gateway] | @tsv') ||
-  die "TF_VAR_vms is not valid JSON"
+# The VM entry supplies the identity: the initrd's static network and, for stage 2, the hostname
+# and the static network file (NixOS has no cloud-init). `|` separates the fields: it cannot be
+# part of a valid value, and unlike a tab it does not merge empty fields.
+fields=$(printf '%s' "$TF_VAR_vms" | jq -r --arg n "$name" '.[$n] | select(. != null) | ([.mac, .ipv4_cidr, .gateway] + (.dns // [])) | map(. // "") | join("|")' 2>/dev/null) ||
+  die "TF_VAR_vms is not valid JSON of the expected shape"
 [ -n "$fields" ] || die "no VM named $name in TF_VAR_vms"
-IFS=$'\t' read -r mac cidr gateway <<<"$fields"
-[[ $mac =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]] || die "the mac of $name in TF_VAR_vms is not a MAC address"
-[[ $cidr =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]] || die "the ipv4_cidr of $name in TF_VAR_vms is not <ipv4>/<prefix>"
-[[ $gateway =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "the gateway of $name in TF_VAR_vms is not an IPv4 address"
+IFS='|' read -r -a f <<<"$fields"
+mac=${f[0]:-}
+cidr=${f[1]:-}
+gateway=${f[2]:-}
+dns=("${f[@]:3}")
+identity_validate "$name" "$mac" "$cidr" "$gateway" ${dns[@]+"${dns[@]}"}
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/vm-install.XXXXXX")
 trap 'rm -rf "$work"' EXIT
@@ -70,6 +80,7 @@ mkdirm 755 "$files/etc/secrets"
 mkdirm 700 "$files/etc/secrets/initrd"
 
 printf '%s\n' "$(printf '%s' "$TF_VAR_ssh_authorized_keys")" >"$files/root/.ssh/authorized_keys"
+identity_write "$files" "$name" "$mac" "$cidr" "$gateway" ${dns[@]+"${dns[@]}"}
 ssh-keygen -l -f "$files/root/.ssh/authorized_keys" >/dev/null || die "TF_VAR_ssh_authorized_keys holds no valid SSH public key"
 
 # The disk passphrase: stored in the vault before anything is formatted, so it cannot be lost.
@@ -91,7 +102,7 @@ map_put VM_INITRD_HOST_KEYS "$name" "$pub"
 # The initrd's static address. Mode 0644: networkd reads its files as the unprivileged user
 # systemd-network (measured: with 0600 it fails with "Permission denied" and the initrd has no
 # address). The 0700 directory /etc/secrets/initrd keeps other users out of the source copy.
-# The role clears the NIC before switch-root, so stage 2 gets its network from cloud-init.
+# The role clears the NIC before switch-root, so stage 2 starts from a clean NIC.
 cat >"$files/etc/secrets/initrd/10-initrd.network" <<EOF
 [Match]
 MACAddress=$mac
