@@ -72,15 +72,15 @@ Edited a secret file? `just secretspec-sync --push NAME` (or `just secretspec-sy
 
 NixOS guests on Proxmox, provisioned with Terragrunt + OpenTofu (`bpg/proxmox`) and installed with `nixos-anywhere`. One generic role (`hosts/nixos/proxmox-guest`); hostname, network and SSH keys come from the cloud-init drive, not from the repo. Root login by key only, no Home Manager on the VM, no per-VM roles.
 
-**What lives where.** The repo holds no server value, not even in docs or comments (`just infra-leak-check` enforces it). Placeholders below: `<name>`, `<ipv4>`, `<vmid>`, `<node>`.
+**What lives where.** The repo holds no server value, not even in docs or comments. `just infra-leak-check` catches the endpoint host, token id and secret, state passphrase, and every VM name, IPv4, MAC and gateway, in tracked file contents. It does not catch node, datastore and bridge names, vmids, sizing, DNS resolvers, tracked path names, commit messages or git history; those stay with the author. Placeholders below: `<name>`, `<ipv4>`, `<vmid>`, `<node>`.
 
 - Repo: `infra/` (Terragrunt unit `infra/proxmox/vms`, `infra/root.hcl`, `infra/secretspec.toml` = key *names* only) and `hosts/nixos/proxmox-guest/`.
 - OpenBao: the `dotfiles-infra` project, `secret/secretspec/dotfiles-infra/default/<KEY>`. Keys: `TF_VAR_proxmox_endpoint`, `TF_VAR_proxmox_api_token` (full `user@realm!id=secret` form), `TF_VAR_proxmox_insecure`, `TF_VAR_image_datastore`, `TF_VAR_vm_datastore`, `TF_VAR_network_bridge`, `TF_VAR_vms`, `TF_VAR_ssh_authorized_keys` (a reference to `SSH_ID_ED25519_PUB` of the root manifest, one copy), `TF_VAR_tofu_state_passphrase`.
 - State: `$XDG_STATE_HOME/dotfiles-infra/proxmox-vms/terraform.tfstate` (`~/.local/state/dotfiles-infra/proxmox-vms/terraform.tfstate` when unset), on **one Mac only**. It is encrypted (AES-GCM, key from `TF_VAR_tofu_state_passphrase`) and sits outside the repo and every worktree, so removing either does not lose it. The unit creates the directory. Losing the file means importing the VMs again by VMID.
 
-**New Mac.** `just openbao-login`; nothing else is seeded locally. Plan and apply only work on the Mac that holds the state.
+**New Mac.** `just openbao-login`; nothing else is seeded locally. Plan, apply, `vm-install` and `vm-deploy` (they read addresses from the state) only work on the Mac that holds the state. Keep `XDG_STATE_HOME` the same in every shell you use: a different value reads an empty state, and a plan then shows every VM as new.
 
-**Add a VM.** Set `TF_VAR_vms`, a JSON map keyed by VM name (a DNS label: it becomes the hostname). Keep the existing entries and add the new one:
+**Add a VM.** First check that `<ipv4>` and `<mac>` are not used by another host or guest: ping the address and look through the Proxmox guest configs (`/etc/pve/qemu-server/` and `/etc/pve/lxc/` on every node). Then set `TF_VAR_vms`, a JSON map keyed by VM name (a DNS label of 4 to 63 characters that is not a word used elsewhere in this repo; it becomes the hostname). Size: nixos-anywhere's kexec needs at least 1.5 GB of RAM (its `docs/requirements.md`), so use `memory_mb` of at least 2048 (the first VM used 4096 MB and 32 GB of disk). Keep the existing entries and add the new one (the pipe form below does that; the JSON shows the shape):
 
 ```json
 {
@@ -93,22 +93,26 @@ NixOS guests on Proxmox, provisioned with Terragrunt + OpenTofu (`bpg/proxmox`) 
 ```
 
 ```bash
-SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra" secretspec set TF_VAR_vms
+export SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra"
+secretspec get TF_VAR_vms | jq -c '. + {"<name>": {"node": "<node>", "vmid": 0, "mac": "<mac>", "ipv4_cidr": "<ipv4>/<prefix>", "gateway": "<gateway>", "dns": ["<resolver>"], "cores": 0, "memory_mb": 0, "disk_gb": 0}}' | secretspec set TF_VAR_vms
+just infra-leak-check    # a name that collides with a word in this repo shows up here, before any VM exists
 just infra-plan          # must show exactly the new entries
 just infra-apply
-just vm-install <name>   # Debian cloud image → NixOS via nixos-anywhere
+just vm-install <name>   # wait until the VM has booted; Debian cloud image → NixOS via nixos-anywhere
 ```
 
-`secretspec set` prompts for the value when you omit it; do not pass it as an argument (it would land in shell history). `SECRETSPEC_REASON` is needed in agent sessions. Names, `vmid`, `mac` and address must be unique across entries; the unit rejects collisions. `vm-install` refuses unless `debian@<ipv4>` accepts the login, so an installed VM is never reformatted.
+`secretspec set` reads the value from stdin when it is piped, so never pass it as an argument (it would land in shell history); pasting multi-line JSON into the interactive prompt is unverified. `SECRETSPEC_REASON` is needed in agent sessions. Names, `vmid`, `mac` and address must be unique across entries; the unit rejects collisions, but only inside `TF_VAR_vms`. `vm-install` refuses unless `debian@<ipv4>` accepts the login, so an installed VM is never reformatted; wait for the VM to boot before running it. It only proves the key is accepted, so the free address and MAC check at the top is yours.
 
 **Change the role.** Edit `hosts/nixos/proxmox-guest/`, then `just vm-deploy <name>` (`nixos-rebuild switch` over SSH as root, built on the VM).
 
-**Remove a VM.** Delete its key from `TF_VAR_vms` (same `secretspec set`), `just infra-plan` (must show exactly that VM's destroy), `just infra-apply`.
+**Remove a VM.** Remove its key with `secretspec get TF_VAR_vms | jq -c 'del(.["<name>"])' | secretspec set TF_VAR_vms` (same exported environment as above), `just infra-plan` (must show exactly that VM's destroy), `just infra-apply`. Removing the last VM on a node also destroys that node's downloaded Debian image. Renaming a key is a destroy plus a create: the name is the `for_each` key and the hostname.
+
+**Rotate the Proxmox API token.** Create the new token in Proxmox, copy the full `user@realm!id=secret` string to the clipboard, then `pbpaste | secretspec set TF_VAR_proxmox_api_token` (same exported environment). Without this the next plan fails with 401.
 
 **Recovery.**
 
 - Unreachable after boot: serial console, `qm terminal <vmid>` on `<node>`. At the GRUB menu (serial too) pick an older generation to roll back, then fix the role and `just vm-deploy <name>`.
-- Reinstall: recreate the VM, clear its old host key, then install again. The recreated Debian has a new host key; without `ssh-keygen -R`, the `vm-install` guard refuses the changed key and prints a misleading "already NixOS" error.
+- Reinstall: recreate the VM, clear its old host key, wait for Debian to boot, then install again. The recreated Debian has a new host key; without `ssh-keygen -R`, the `vm-install` guard refuses the changed key (its message names this cause, next to "still booting" and "already NixOS").
 
   ```bash
   just infra-apply "-replace='proxmox_virtual_environment_vm.vm[\"<name>\"]'"
