@@ -108,6 +108,15 @@
       inputs.nixpkgs.follows = "nixpkgs-nixos";
       inputs.disko.follows = "disko";
     };
+
+    # Home Manager for the NixOS guests (the agent role): the release branch that matches
+    # nixpkgs-nixos. The `home-manager` input above is master, and its modules need
+    # nixpkgs-unstable's lib/services/lib.nix, which nixos-25.11 does not have: evaluating a NixOS
+    # system with it fails (measured 2026-10-07).
+    home-manager-nixos = {
+      url = "github:nix-community/home-manager/release-25.11";
+      inputs.nixpkgs.follows = "nixpkgs-nixos";
+    };
   };
 
   outputs = {self, ...} @ inputs: let
@@ -142,6 +151,9 @@
       le = {username = "le";};
       lex = {username = "lex";};
     };
+
+    # What every NixOS guest role is built from.
+    guestModules = [inputs.disko.nixosModules.disko ./hosts/nixos/proxmox-guest];
   in {
     # Export our custom library for use by other flakes
     inherit lib;
@@ -162,11 +174,20 @@
       )
       hosts;
 
-    # Generic NixOS guest role for Proxmox VMs
+    # The clean NixOS guest for Proxmox VMs: the role a VM entry gets without a `role`.
     nixosConfigurations.proxmox-guest = inputs.nixpkgs-nixos.lib.nixosSystem {
       specialArgs = {inherit stateVersion;};
-      modules = [inputs.disko.nixosModules.disko ./hosts/nixos/proxmox-guest];
+      modules = guestModules;
     };
+
+    # The same guest with the agent-dev module on: the role `agent` of a VM entry.
+    nixosConfigurations.proxmox-agent = inputs.nixpkgs-nixos.lib.nixosSystem {
+      specialArgs = {inherit stateVersion;};
+      modules = guestModules ++ [self.nixosModules.agent-dev {dotfiles.agent.enable = true;}];
+    };
+
+    # Pickable on its own: import it, then set dotfiles.agent.enable (and the piece options).
+    nixosModules.agent-dev = import ./modules/nixos/agent-dev.nix inputs;
 
     # Development shells for contributors
     devShells = forAllSystems (

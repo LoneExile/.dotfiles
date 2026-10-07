@@ -1,0 +1,132 @@
+# The agent-dev module: a development machine for a coding agent, picked per VM by its role
+# (`agent`, see infra/vm-config.sh). `nixosModules.agent-dev` in the flake. Not enabled by default:
+# the clean role does not import it, and importing it changes nothing until
+# `dotfiles.agent.enable = true`.
+#
+# What it adds on top of whatever NixOS role it is imported into:
+#   - a normal user, not in `wheel`, no sudo, that lingers (its user services start at boot and
+#     survive logout); it logs in with the keys that root has (seeded once, see below);
+#   - Home Manager for that user (home/linux/agent.nix): zsh, starship, git, direnv, mise;
+#   - nix-ld, so glibc programs that were not built for NixOS run (mise's runtimes, omp, Tern);
+#   - omp, pinned by hash (agent-dev/omp.nix), with its config files copied in writable;
+#   - the gh CLI, rootless podman, zram swap;
+#   - Tern's remote service reachable on the LAN (UDP 8377), with its relay and iroh off.
+# Every piece but the base has an option that follows `dotfiles.agent.enable`.
+inputs: {
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
+  cfg = config.dotfiles.agent;
+  group = config.users.users.${cfg.user}.group;
+  home = config.users.users.${cfg.user}.home;
+
+  piece = what:
+    lib.mkOption {
+      type = lib.types.bool;
+      default = cfg.enable;
+      defaultText = lib.literalExpression "config.dotfiles.agent.enable";
+      description = "Whether to set up ${what}.";
+    };
+in {
+  imports = [inputs.home-manager-nixos.nixosModules.home-manager];
+
+  options.dotfiles.agent = {
+    enable = lib.mkEnableOption "the agent development machine (user, shell, runtimes, omp, containers)";
+
+    user = lib.mkOption {
+      type = lib.types.str;
+      default = "lex";
+      description = "The login user. It is not in wheel and has no sudo.";
+    };
+
+    omp.enable = piece "omp, pinned, with its config files copied into ~/.omp/agent as writable files";
+    mise.enable = piece "mise with the global tools (node, python, uv, go, rust, bun, pnpm)";
+    tern.enable = piece "the Tern remote service: UDP 8377 open, served to the LAN only (no relay, no iroh)";
+    gh.enable = piece "the GitHub CLI";
+    podman.enable = piece "rootless podman";
+  };
+
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
+      users.users.${cfg.user} = {
+        isNormalUser = true;
+        # zsh is the login shell; Home Manager configures it.
+        shell = pkgs.zsh;
+        # User services (Tern's) start at boot and stay up after logout.
+        linger = true;
+      };
+
+      # The system side of the login shell: /etc/shells and the global completion setup.
+      programs.zsh.enable = true;
+
+      # The user logs in with the keys of root. Root's authorized_keys is the one list of keys that
+      # vm-install wrote, and it is not in the repo or the Nix store, so it is copied on the VM, at
+      # activation: only when the user has no authorized_keys file yet, never over one. Keys the
+      # user adds or removes later stay, also across deploys and reboots. NixOS manages
+      # ~/.ssh/authorized_keys of nobody (it only writes /etc/ssh/authorized_keys.d).
+      system.activationScripts.agentDevAuthorizedKeys = {
+        deps = ["users"];
+        text = ''
+          if [ -d ${home} ] && [ -s /root/.ssh/authorized_keys ] && [ ! -e ${home}/.ssh/authorized_keys ]; then
+            ${pkgs.coreutils}/bin/install -d -m 700 -o ${cfg.user} -g ${group} ${home}/.ssh
+            ${pkgs.coreutils}/bin/install -m 600 -o ${cfg.user} -g ${group} /root/.ssh/authorized_keys ${home}/.ssh/authorized_keys
+          fi
+        '';
+      };
+
+      # Prebuilt glibc programs (mise's node and python, rust, omp, Tern) look for the dynamic
+      # loader at /lib64/ld-linux-x86-64.so.2. nix-ld puts a stub there that loads the real one
+      # with the libraries of this list, on top of its defaults (zlib, zstd, libstdc++, openssl,
+      # curl, bzip2, xz, libxml2 and a few more).
+      programs.nix-ld = {
+        enable = true;
+        libraries = [pkgs.icu];
+      };
+
+      # Compressed RAM as swap: a few GB of agent work and a build can pass the VM's memory.
+      zramSwap.enable = true;
+
+      # The compilers that mise's rust and node's native modules link with.
+      environment.systemPackages = with pkgs; [curl gcc gnumake];
+
+      home-manager = {
+        useGlobalPkgs = true;
+        useUserPackages = true;
+        # A regular file that is in the way of a managed one is kept as <name>.hm-backup instead of
+        # failing the whole switch.
+        backupFileExtension = "hm-backup";
+        users.${cfg.user} = {
+          imports = [../../home/linux/agent.nix];
+          dotfiles.agent = {
+            omp.enable = cfg.omp.enable;
+            mise.enable = cfg.mise.enable;
+            tern.enable = cfg.tern.enable;
+          };
+        };
+      };
+    }
+
+    (lib.mkIf cfg.omp.enable {
+      environment.systemPackages = [(pkgs.callPackage ./agent-dev/omp.nix {})];
+    })
+
+    (lib.mkIf cfg.gh.enable {
+      environment.systemPackages = [pkgs.gh];
+    })
+
+    (lib.mkIf cfg.podman.enable {
+      # Rootless: NixOS gives a normal user subuid and subgid ranges, and the setuid newuidmap and
+      # newgidmap wrappers come with the shadow module.
+      virtualisation.podman.enable = true;
+    })
+
+    (lib.mkIf cfg.tern.enable {
+      # Tern's remote service (a user service the user starts with `tern remote setup`, see
+      # home/linux/agent.nix) listens on UDP 8377 for the Mac's Tern. The firewall stays default
+      # deny: TCP 22 and this one UDP port.
+      networking.firewall.allowedUDPPorts = [8377];
+    })
+  ]);
+}
