@@ -51,16 +51,12 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-ne
 fi
 
 # The VM entry supplies the identity: the initrd's static network and, for stage 2, the hostname
-# and the static network file (NixOS has no cloud-init). `|` separates the fields: it cannot be
-# part of a valid value, and unlike a tab it does not merge empty fields.
-fields=$(printf '%s' "$TF_VAR_vms" | jq -r --arg n "$name" '.[$n] | select(. != null) | ([.mac, .ipv4_cidr, .gateway] + (.dns // [])) | map(. // "") | join("|")' 2>/dev/null) ||
-  die "TF_VAR_vms is not valid JSON of the expected shape"
-[ -n "$fields" ] || die "no VM named $name in TF_VAR_vms"
-IFS='|' read -r -a f <<<"$fields"
-mac=${f[0]:-}
-cidr=${f[1]:-}
-gateway=${f[2]:-}
-dns=("${f[@]:3}")
+# and the static network file (NixOS has no cloud-init). Checked before anything is written.
+identity_from_vms "$TF_VAR_vms" "$name"
+mac=$id_mac
+cidr=$id_cidr
+gateway=$id_gateway
+dns=(${id_dns[@]+"${id_dns[@]}"})
 identity_validate "$name" "$mac" "$cidr" "$gateway" ${dns[@]+"${dns[@]}"}
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/vm-install.XXXXXX")

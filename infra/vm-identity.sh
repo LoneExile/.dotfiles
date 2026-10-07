@@ -9,6 +9,34 @@
 _octet='(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])'
 _ipv4="^${_octet}(\\.${_octet}){3}\$"
 _cidr="^${_octet}(\\.${_octet}){3}/(3[0-2]|[12]?[0-9])\$"
+# Hex digits, dots and colons with at least two colons: any IPv6 notation, nothing else.
+_ipv6='^[0-9A-Fa-f.:]*:[0-9A-Fa-f.:]*:[0-9A-Fa-f.:]*$'
+
+# identity_from_vms JSON NAME
+# Reads the entry NAME of the TF_VAR_vms JSON. Sets id_mac, id_cidr, id_gateway and the array
+# id_dns. A field that is not a plain string, a `dns` that is not a list, an empty resolver, or
+# a `|` or newline inside a value stops here: those are the shapes the field transport below
+# (`|` between fields, and `read -a`, which drops trailing empty fields) could silently reshape.
+identity_from_vms() {
+  local json=$1 name=$2 fields f
+  fields=$(printf '%s' "$json" | jq -r --arg n "$name" '
+    .[$n] | select(. != null)
+    | (if has("dns") then .dns else [] end) as $d
+    | if ($d | type) == "array" then ([.mac, .ipv4_cidr, .gateway] + $d) else error("dns") end
+    | if all(.[]; type == "string" and length > 0 and (test("[|\n]") | not)) then join("|") else error("field") end
+  ' 2>/dev/null) || die "the entry in TF_VAR_vms has an unexpected shape (a field is not a plain string, or dns is not a list of them)"
+  [ -n "$fields" ] || die "no VM named $name in TF_VAR_vms"
+  IFS='|' read -r -a f <<<"$fields"
+  # The result globals are read by the caller.
+  # shellcheck disable=SC2034
+  id_mac=${f[0]:-}
+  # shellcheck disable=SC2034
+  id_cidr=${f[1]:-}
+  # shellcheck disable=SC2034
+  id_gateway=${f[2]:-}
+  # shellcheck disable=SC2034
+  id_dns=("${f[@]:3}")
+}
 
 # identity_validate NAME MAC CIDR GATEWAY [RESOLVER...]
 identity_validate() {
@@ -19,7 +47,7 @@ identity_validate() {
   [[ $cidr =~ $_cidr ]] || die "the ipv4_cidr is not <ipv4>/<prefix>"
   [[ $gateway =~ $_ipv4 ]] || die "the gateway is not an IPv4 address"
   for r in "$@"; do
-    [[ $r =~ ^[0-9A-Fa-f:.]+$ ]] || die "a resolver is not an IP address"
+    [[ $r =~ $_ipv4 || $r =~ $_ipv6 ]] || die "a resolver is not an IP address"
   done
 }
 
