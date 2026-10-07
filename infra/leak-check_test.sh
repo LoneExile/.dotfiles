@@ -172,17 +172,20 @@ test_s3_access_key_id_and_bucket_are_skipped() {
 }
 
 test_missing_s3_env_fails_closed() {
-  fixture_env
-  unset TF_STATE_S3_ENDPOINT
-  fresh_repo
-  assert_rc "missing endpoint" "$(check)" 2
-  assert_has "names the variable" "$T/err" "TF_STATE_S3_ENDPOINT"
-  assert_lacks "no success line" "$T/out" "no leaks"
-  fixture_env
-  unset AWS_SECRET_ACCESS_KEY
-  assert_rc "missing secret key" "$(check)" 2
-  assert_has "names the variable" "$T/err" "AWS_SECRET_ACCESS_KEY"
-  assert_lacks "no success line" "$T/out" "no leaks"
+  local var
+  for var in TF_STATE_S3_ENDPOINT AWS_SECRET_ACCESS_KEY; do
+    fixture_env
+    unset "$var"
+    fresh_repo
+    assert_rc "missing $var" "$(check)" 2
+    assert_has "own text for unset $var" "$T/err" "missing environment variable $var"
+    assert_lacks "no success line" "$T/out" "no leaks"
+    fixture_env
+    export "$var="
+    assert_rc "empty $var" "$(check)" 2
+    assert_has "own text for empty $var" "$T/err" "missing environment variable $var"
+    assert_lacks "no success line when empty" "$T/out" "no leaks"
+  done
 }
 
 test_short_s3_secret_aborts_naming_the_label() {
