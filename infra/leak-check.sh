@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Fail when a git-tracked file holds an identifying server value from TF_VAR_*.
+# Fail when a git-tracked file holds an identifying server value from TF_VAR_*,
+# the S3 endpoint host (TF_STATE_S3_ENDPOINT) or the S3 secret key (AWS_SECRET_ACCESS_KEY).
+# Skipped on purpose: the other TF_VAR_* values (datastores, bridge, node, sizing: generic),
+# TF_STATE_S3_BUCKET (generic, like datastores) and AWS_ACCESS_KEY_ID (its value equals the
+# public project name and it cannot authenticate without the secret key).
 # Exit: 0 clean, 1 leak, 2 missing env or value shorter than 4 characters,
 # 3 positive control failed or grep error. Never prints a value.
 set -uo pipefail
@@ -11,7 +15,7 @@ die() { # die CODE MESSAGE
   exit "$1"
 }
 
-for var in TF_VAR_proxmox_endpoint TF_VAR_proxmox_api_token TF_VAR_tofu_state_passphrase TF_VAR_vms; do
+for var in TF_VAR_proxmox_endpoint TF_VAR_proxmox_api_token TF_VAR_tofu_state_passphrase TF_VAR_vms TF_STATE_S3_ENDPOINT AWS_SECRET_ACCESS_KEY; do
   [[ -n ${!var:-} ]] || die 2 "missing environment variable $var"
 done
 
@@ -27,10 +31,15 @@ add() {
   printf '%s\n' "$2" >>"$raw"
 }
 
-host=${TF_VAR_proxmox_endpoint#*://}
-host=${host%%/*}
-host=${host%:*}
-add "proxmox endpoint host" "$host"
+# endpoint_host URL: strip scheme, path and port.
+endpoint_host() {
+  local h=${1#*://}
+  h=${h%%/*}
+  printf '%s' "${h%:*}"
+}
+add "proxmox endpoint host" "$(endpoint_host "$TF_VAR_proxmox_endpoint")"
+add "s3 endpoint host" "$(endpoint_host "$TF_STATE_S3_ENDPOINT")"
+add "s3 secret key" "$AWS_SECRET_ACCESS_KEY"
 token=$TF_VAR_proxmox_api_token
 add "proxmox token id" "${token%%=*}"
 secret=""

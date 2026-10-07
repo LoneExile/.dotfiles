@@ -9,6 +9,11 @@ fixture_env() {
   export TF_VAR_proxmox_endpoint='https://203.0.113.9:8006/'
   export TF_VAR_proxmox_api_token='fixture@pve!probe=0d6c1c2e-0000-4000-8000-000000000001'
   export TF_VAR_tofu_state_passphrase='fixture0passphrase0123456789abcdef'
+  export TF_STATE_S3_ENDPOINT='http://198.51.100.20:9000'
+  export AWS_SECRET_ACCESS_KEY='fixture0s3secret0123456789abcdef01'
+  # Exported to prove the script skips them (spec §10).
+  export AWS_ACCESS_KEY_ID='fixtures3user'
+  export TF_STATE_S3_BUCKET='fixture-bucket'
   export TF_VAR_vms='{"testvm-alpha":{"node":"n1","vmid":901,"mac":"02:00:5E:10:00:01","ipv4_cidr":"203.0.113.10/24","gateway":"203.0.113.1","dns":["198.51.100.53"],"cores":2,"memory_mb":2048,"disk_gb":20}}'
 }
 fresh_repo() {
@@ -137,6 +142,57 @@ test_grep_stderr_exits_3() {
   assert_has "names the grep error" "$T/err" "grep reported an error"
   assert_lacks "not the control branch" "$T/err" "positive control"
   assert_lacks "no success line" "$T/out" "no leaks"
+}
+
+test_s3_endpoint_host_is_checked() {
+  fixture_env
+  fresh_repo
+  track s.txt 'store 198.51.100.20'
+  assert_rc "s3 endpoint host" "$(check)" 1
+  assert_has "names the path" "$T/out" "LEAK in s.txt"
+  assert_lacks "stdout hides the value" "$T/out" "198.51.100.20"
+  assert_lacks "stderr hides the value" "$T/err" "198.51.100.20"
+}
+
+test_s3_secret_key_is_checked() {
+  fixture_env
+  fresh_repo
+  track k.txt 'fixture0s3secret0123456789abcdef01'
+  assert_rc "s3 secret key" "$(check)" 1
+  assert_lacks "stdout hides the value" "$T/out" "fixture0s3secret"
+  assert_lacks "stderr hides the value" "$T/err" "fixture0s3secret"
+}
+
+test_s3_access_key_id_and_bucket_are_skipped() {
+  fixture_env
+  fresh_repo
+  track a1.txt 'fixtures3user'
+  track a2.txt 'fixture-bucket'
+  assert_rc "access key id and bucket" "$(check)" 0
+}
+
+test_missing_s3_env_fails_closed() {
+  fixture_env
+  unset TF_STATE_S3_ENDPOINT
+  fresh_repo
+  assert_rc "missing endpoint" "$(check)" 2
+  assert_has "names the variable" "$T/err" "TF_STATE_S3_ENDPOINT"
+  assert_lacks "no success line" "$T/out" "no leaks"
+  fixture_env
+  unset AWS_SECRET_ACCESS_KEY
+  assert_rc "missing secret key" "$(check)" 2
+  assert_has "names the variable" "$T/err" "AWS_SECRET_ACCESS_KEY"
+  assert_lacks "no success line" "$T/out" "no leaks"
+}
+
+test_short_s3_secret_aborts_naming_the_label() {
+  fixture_env
+  export AWS_SECRET_ACCESS_KEY='ab'
+  fresh_repo
+  assert_rc "short s3 secret" "$(check)" 2
+  assert_has "names the label" "$T/err" "s3 secret key"
+  assert_has "says why" "$T/err" "shorter than 4"
+  assert_lacks "does not echo the value" "$T/err" "ab"
 }
 
 tl_init_pure
