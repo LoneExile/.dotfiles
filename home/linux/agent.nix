@@ -34,9 +34,10 @@
   };
 
   # mise's global tools. The tools are installed on first use (not_found_auto_install) or by
-  # `mise install`, not by Nix. node.compile is off: without it mise compiled node from source on
-  # this VM (it ran ./configure and failed on a missing python), while the prebuilt node runs
-  # through nix-ld (measured). Installed tools live in ~/.local/share/mise, outside Nix.
+  # `mise install`, not by Nix. node.compile and python.compile are off: with them unset mise
+  # compiled node and python from source on this VM (node: ./configure failed on a missing python;
+  # python: python-build exited 1 after minutes), while the prebuilt runtimes run through nix-ld
+  # (measured). Installed tools live in ~/.local/share/mise, outside Nix.
   miseConfig = (pkgs.formats.toml {}).generate "mise-config.toml" {
     tools = {
       node = "latest";
@@ -52,6 +53,7 @@
       plugin_autoupdate_last_check_duration = "0";
       idiomatic_version_file_enable_tools = [];
       node.compile = false;
+      python.compile = false;
     };
   };
 in {
