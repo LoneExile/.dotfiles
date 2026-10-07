@@ -125,5 +125,8 @@ nix run --inputs-from "$repo" nixos-anywhere -- \
   --disk-encryption-keys /tmp/luks-passphrase "$work/luks-passphrase" \
   --extra-files "$files" \
   --target-host "debian@$ip"
-ssh-keygen -R "$ip"
+# The Debian host key is dead now. Clearing it is housekeeping: ssh-keygen refuses to edit a
+# known_hosts that holds one malformed line (it then fails for every host), and that must not turn
+# a finished install into a failure.
+ssh-keygen -R "$ip" || echo "vm-install: could not clear the old host key of $ip from known_hosts; run ssh-keygen -R $ip yourself (ssh-keygen says why above)" >&2
 echo "vm-install: $name is installed with .#$config and waits for its disk passphrase: just vm-unlock $name"

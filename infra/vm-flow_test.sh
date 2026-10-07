@@ -47,7 +47,7 @@ EOF
   # (the real binary was looked up before any shim directory was on PATH)
   cat >"$T/bin/ssh-keygen" <<EOF
 #!/bin/sh
-[ "\$1" = -R ] && exit 0
+[ "\$1" = -R ] && exit "\${STUB_KEYGEN_R_RC:-0}"
 exec "$REAL_KEYGEN" "\$@"
 EOF
   cat >"$T/bin/nix" <<'EOF'
@@ -153,6 +153,15 @@ test_install_stops_before_formatting_on_a_bad_role() {
   assert_eq "nix not run" "" "$(cat "$T/nix.log")"
   assert_eq "no passphrase generated" "{}" "$(cat "$T/store/VM_LUKS_KEYS")"
   assert_eq "no host key pinned" "{}" "$(cat "$T/store/VM_INITRD_HOST_KEYS")"
+}
+
+# `ssh-keygen -R` refuses to edit a known_hosts that has one malformed line (seen live: it exits 1
+# for every host). The install is finished by then, so that must be a warning, not a failure.
+test_install_survives_a_known_hosts_that_ssh_keygen_cannot_edit() {
+  shims "$BASE"
+  assert_rc "install" "$(STUB_KEYGEN_R_RC=1 install testvm-alpha)" 0
+  assert_has "says how to clear the host key" "$T/err" "ssh-keygen -R"
+  assert_has "still says the VM is installed" "$T/out" "is installed"
 }
 
 test_install_stages_the_same_files_for_every_role() {
