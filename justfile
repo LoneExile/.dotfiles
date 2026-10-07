@@ -180,12 +180,19 @@ infra-apply *ARGS:
 infra-leak-check:
   cd "{{justfile_directory()}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash infra/leak-check.sh
 
-# Install NixOS on a fresh Debian VM from infra output (refuses if debian@ login fails)
+# Install NixOS with an encrypted root on a fresh Debian VM from infra output (refuses if debian@ login fails)
 vm-install name:
   #!/usr/bin/env bash
   set -euo pipefail
   cd "{{infra_unit}}"
   SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash "{{infra_dir}}/vm-install.sh" {{quote(name)}} "{{justfile_directory()}}"
+
+# Unlock a VM that waits for its disk passphrase in the initrd (after vm-install, a reboot or a host restart)
+vm-unlock name:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cd "{{infra_unit}}"
+  SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash "{{infra_dir}}/vm-unlock.sh" {{quote(name)}}
 
 # Deploy the NixOS configuration to an installed VM from infra output
 vm-deploy name:
