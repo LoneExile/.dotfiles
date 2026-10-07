@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Print the IPv4 of the named VM from the terragrunt output `vms`.
-# Run it in the infra unit, under secretspec. Any failure (no state, unknown
-# name, missing ip) takes the one error path and exits 1, so callers never
-# start ssh or nix with an empty or "null" address.
+# Run it in the infra unit, under secretspec. Two failure kinds, both exit 1,
+# so callers never start ssh or nix with an empty or "null" address:
+#   - the VM list cannot be read from the state (store unreachable, lock held,
+#     vault login or passphrase wrong): says so and shows what terragrunt said;
+#   - the list is read but has no such name, or no ip: "no VM named" line.
 set -uo pipefail
 
 if [ $# -ne 1 ]; then
@@ -19,8 +21,7 @@ fail() {
 }
 
 if ! out=$(terragrunt output -json vms 2>"$err"); then
-  fail
-  echo "terragrunt output failed:" >&2
+  echo "error: could not read the VM list from the state (store unreachable, lock held, vault login or passphrase wrong?); terragrunt said:" >&2
   grep -v '^[[:space:]]*$' "$err" | tail -n 5 >&2
   exit 1
 fi
