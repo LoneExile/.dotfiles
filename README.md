@@ -76,32 +76,79 @@ NixOS guests on Proxmox, provisioned with Terragrunt + OpenTofu (`bpg/proxmox`) 
 
 - Repo: `infra/` (Terragrunt unit `infra/proxmox/vms`, `infra/root.hcl`, `infra/secretspec.toml` = key *names* only) and `hosts/nixos/proxmox-guest/`.
 - OpenBao: the `dotfiles-infra` project, `secret/secretspec/dotfiles-infra/default/<KEY>`. Keys: `TF_VAR_proxmox_endpoint`, `TF_VAR_proxmox_api_token` (full `user@realm!id=secret` form), `TF_VAR_proxmox_insecure`, `TF_VAR_image_datastore`, `TF_VAR_vm_datastore`, `TF_VAR_network_bridge`, `TF_VAR_vms`, `TF_VAR_ssh_authorized_keys` (a reference to `SSH_ID_ED25519_PUB` of the root manifest, one copy), `TF_VAR_tofu_state_passphrase`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (the dedicated S3 state user; the OpenTofu s3 backend reads both from the environment), `TF_STATE_S3_ENDPOINT` (`http://<endpoint>:<port>`), `TF_STATE_S3_BUCKET`.
-- State: the S3 bucket `<bucket>` on the RustFS at `<endpoint>`, key `dotfiles-infra/proxmox-vms/terraform.tfstate`. It is encrypted client-side (AES-GCM, key from `TF_VAR_tofu_state_passphrase`, which stays in OpenBao), so the bucket holds only ciphertext. Locking is the s3 backend's native lockfile (`use_lockfile`), verified on this RustFS: a second run while one is active fails with a state-lock error. The unit fails early, naming the variable, when `TF_STATE_S3_ENDPOINT` or `TF_STATE_S3_BUCKET` is empty.
+- State: the S3 bucket `<bucket>` on the RustFS at `<endpoint>`, key `dotfiles-infra/proxmox-vms/terraform.tfstate`. The object is encrypted client-side (AES-GCM, key from `TF_VAR_tofu_state_passphrase`, which stays in OpenBao). Its envelope keeps `lineage`, `serial` and key-derivation metadata in clear, and a lock object is plain JSON that names `user@host` and the path. Terragrunt writes the generated backend file and the `.terraform` cache under `infra/proxmox/vms/.terragrunt-cache/` (gitignored; no state, but they name the endpoint and bucket). Locking is the s3 backend's native lockfile (`use_lockfile`), verified on this RustFS: a second run while one is active fails with a state-lock error. The unit fails early, naming the variable, when `TF_STATE_S3_ENDPOINT` or `TF_STATE_S3_BUCKET` is empty.
 
 **New Mac.** `just openbao-login`; nothing else is seeded locally. Any Mac that did this and can reach `<endpoint>` can plan, apply, `vm-install` and `vm-deploy` (they read addresses from the state). They fail while the state store is unreachable.
 
-**Provision the state user** (once per RustFS). Limit one S3 user to the prefix. This repo installs neither `mc` nor `aws`; the first run can use `nix run nixpkgs#minio-client` and `nix run nixpkgs#awscli2`. Point `mc` at the RustFS with the `MC_HOST_<alias>` environment variable (`http://<access>:<secret>@<endpoint>:<port>`; URL-encode special characters in the secret), never `mc alias set`, which writes the root credentials to `~/.mc/config.json`. `policy.json`:
+**Provision the state user** (once per RustFS; this section is the only record of these steps outside IaC). The user MUST be named `dotfiles-infra` and the policy `dotfiles-infra-state`: the leak check skips the access key id only because it equals the project name. This repo installs `aws` (`awscli2`) but not `mc`, so run the `mc` lines inside `nix shell nixpkgs#minio-client`.
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::<bucket>/dotfiles-infra/*"},
-    {"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "arn:aws:s3:::<bucket>", "Condition": {"StringLike": {"s3:prefix": ["dotfiles-infra/*"]}}},
-    {"Effect": "Allow", "Action": "s3:GetBucketLocation", "Resource": "arn:aws:s3:::<bucket>"}
-  ]
-}
-```
+1. Root credentials into variables, never typed into a command line (bash or zsh). Never `mc alias set`: it writes the root credentials to `~/.mc/config.json`.
 
-```bash
-mc admin policy create <alias> <policy> policy.json
-mc admin user add <alias> <user> <secret>    # the secret is visible in the process list while it runs and lands in shell history unless history is off
-mc admin policy attach <alias> <policy> --user <user>
-export SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra"
-printf '%s' '<user>' | secretspec set AWS_ACCESS_KEY_ID   # likewise AWS_SECRET_ACCESS_KEY, TF_STATE_S3_ENDPOINT, TF_STATE_S3_BUCKET
-```
+   ```bash
+   export MC_CONFIG_DIR=$(mktemp -d)        # without this mc creates ~/.mc
+   read -r RUSTFS_ROOT_USER                 # the RustFS root credentials are kept with the stack that deploys the RustFS
+   read -rs RUSTFS_ROOT_SECRET              # not echoed, not in history
+   export MC_HOST_<alias>="http://$RUSTFS_ROOT_USER:$RUSTFS_ROOT_SECRET@<endpoint>:<port>"   # URL-encode special characters
+   unset RUSTFS_ROOT_USER RUSTFS_ROOT_SECRET
+   ```
 
-Pipe each value in from stdin, never as an argument.
+2. Save this policy as `policy.json` outside the repo. `DeleteObject` is needed to release the lock. The prefix condition on `ListBucket` denies the backend's workspace-list call, which it ignores on purpose. `GetBucketLocation` only reveals the region and is what `mc` asks for.
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": ["arn:aws:s3:::<bucket>/dotfiles-infra/*"]},
+       {"Effect": "Allow", "Action": ["s3:ListBucket"], "Resource": ["arn:aws:s3:::<bucket>"], "Condition": {"StringLike": {"s3:prefix": ["dotfiles-infra/*"]}}},
+       {"Effect": "Allow", "Action": ["s3:GetBucketLocation"], "Resource": ["arn:aws:s3:::<bucket>"]}
+     ]
+   }
+   ```
+
+3. Create, from the repo root. The secret goes to the vault before it goes to the RustFS, so it cannot be lost. There is exactly one secret here (`$sec`); the root credentials are `RUSTFS_ROOT_*`. `mc admin user add` takes the secret as an argument, so it shows in the process list while it runs, not in shell history (history holds `"$sec"`).
+
+   ```bash
+   export SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra"
+   mc mb --ignore-existing <alias>/<bucket>         # a fresh RustFS needs the bucket first
+   mc admin policy create <alias> dotfiles-infra-state policy.json
+   sec=$(openssl rand -hex 24)
+   printf '%s' "$sec" | secretspec set AWS_SECRET_ACCESS_KEY
+   printf '%s' dotfiles-infra | secretspec set AWS_ACCESS_KEY_ID
+   mc admin user add <alias> dotfiles-infra "$sec"  # the secret shows in the process list while this runs, not in shell history (history holds "$sec")
+   mc admin policy attach <alias> dotfiles-infra-state --user dotfiles-infra
+   unset sec
+   printf '%s' 'http://<endpoint>:<port>' | secretspec set TF_STATE_S3_ENDPOINT   # not secrets, but they land in shell history
+   printf '%s' '<bucket>' | secretspec set TF_STATE_S3_BUCKET
+   ```
+
+4. Verify (a wrong policy shows up here, not in the middle of an apply). The two put/delete lines must succeed and the list outside the prefix must say AccessDenied. Then `just infra-plan` must end without an error.
+
+   ```bash
+   secretspec run -- sh -c '
+     export AWS_DEFAULT_REGION=us-east-1
+     awsr() { aws --endpoint-url "$TF_STATE_S3_ENDPOINT" "$@"; }
+     x="s3://$TF_STATE_S3_BUCKET/dotfiles-infra/_probe/x"
+     printf x | awsr s3 cp - "$x" && awsr s3 rm "$x"
+     awsr s3api list-objects-v2 --bucket "$TF_STATE_S3_BUCKET" --prefix other/
+   '
+   ```
+
+5. Rotate: same order, vault first. Measured: the old secret is refused at once, so runs fail between the two commands; do not rotate during an apply.
+
+   ```bash
+   sec=$(openssl rand -hex 24)
+   printf '%s' "$sec" | secretspec set AWS_SECRET_ACCESS_KEY
+   mc admin user add <alias> dotfiles-infra "$sec"   # on an existing user this replaces the secret
+   unset sec
+   ```
+
+6. Remove: detach, remove the user, remove the policy, then delete the four keys from the `dotfiles-infra` OpenBao project. State objects stay in the bucket until you delete them.
+
+   ```bash
+   mc admin policy detach <alias> dotfiles-infra-state --user dotfiles-infra
+   mc admin user remove <alias> dotfiles-infra
+   mc admin policy remove <alias> dotfiles-infra-state
+   ```
 
 **Add a VM.** First check that `<ipv4>` and `<mac>` are not used by another host or guest: ping the address and look through the Proxmox guest configs (`/etc/pve/qemu-server/` and `/etc/pve/lxc/` on every node). Then set `TF_VAR_vms`, a JSON map keyed by VM name (a DNS label of 4 to 63 characters that is not a word used elsewhere in this repo; it becomes the hostname). Size: nixos-anywhere's kexec needs at least 1.5 GB of RAM (its `docs/requirements.md`), so use `memory_mb` of at least 2048 (the first VM used 4096 MB and 32 GB of disk). Keep the existing entries and add the new one (the pipe form below does that; the JSON shows the shape):
 
@@ -144,19 +191,36 @@ just vm-install <name>   # wait until the VM has booted; Debian cloud image → 
   ```
 
 - Kexec failed while the VM still runs Debian: rerun `just vm-install <name>`.
-- State store unreachable: plan, apply and `vm-ip` fail. Nothing is lost; retry when it is back.
-- A crashed run can leave the lock object `dotfiles-infra/proxmox-vms/terraform.tfstate.tflock`. Only when no run is active (the id is in the lock error):
+- **State store unreachable before a run starts:** plan, apply, `vm-install` and `vm-deploy` fail before they change anything. `vm-ip` says it could not read the VM list from the state (ignore any "no VM named" text from older versions). Retry when it is back.
+- **State store dropped during an apply** (reboot, network): OpenTofu cannot save the new state. It writes it, encrypted, to `errored.tfstate` in its working directory, `infra/proxmox/vms/.terragrunt-cache/<hash>/<hash>/` (find it with `find infra/proxmox/vms/.terragrunt-cache -name errored.tfstate`), and the lock object stays. Do NOT rerun the apply (it plans the same VMs again) and do NOT delete `.terragrunt-cache`. When the store is back: force-unlock (next bullet), copy `errored.tfstate` out (`cp -p`, keep mode 600), upload it as the state object (restore bullet), then `just infra-plan` must show no changes for what was applied. `tofu state push` does not work here: it refuses an encrypted file.
+- **Stale lock:** a crashed run can leave the lock object `dotfiles-infra/proxmox-vms/terraform.tfstate.tflock`. Only when no run is active (the id is in the lock error):
 
   ```bash
   cd infra/proxmox/vms && SECRETSPEC_FILE=../../secretspec.toml SECRETSPEC_REASON="dotfiles infra" secretspec run -- terragrunt force-unlock <id>
   ```
 
-- State object lost: the VMs still exist. Import them again by VMID, with the same encryption passphrase.
-- Encrypted backup: copy the object as is, to a path outside the repo, private (`umask 077`). Never `tofu state pull` into a file: that is decrypted plaintext.
+- **Back up the state object** (before applies that replace or destroy a VM; a timestamped name keeps the last good copy). Copy the object as is, to a private path outside the repo. Never `tofu state pull` into a file: that is decrypted plaintext.
 
   ```bash
-  SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra" secretspec run -- sh -c 'umask 077; aws --endpoint-url "$TF_STATE_S3_ENDPOINT" s3 cp "s3://$TF_STATE_S3_BUCKET/dotfiles-infra/proxmox-vms/terraform.tfstate" "$HOME/infra-state.backup"'
+  SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra" secretspec run -- sh -c 'umask 077; aws --region us-east-1 --endpoint-url "$TF_STATE_S3_ENDPOINT" s3 cp "s3://$TF_STATE_S3_BUCKET/dotfiles-infra/proxmox-vms/terraform.tfstate" "$HOME/infra-state-$(date +%Y%m%dT%H%M%S).backup"'
   ```
+
+- **Restore the state object** (no run active; after a lost or damaged object, or after an outage during an apply): upload the encrypted file as is, then plan.
+
+  ```bash
+  SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra" secretspec run -- sh -c 'aws --region us-east-1 --endpoint-url "$TF_STATE_S3_ENDPOINT" s3 cp <file> "s3://$TF_STATE_S3_BUCKET/dotfiles-infra/proxmox-vms/terraform.tfstate"'
+  just infra-plan
+  ```
+
+  `just infra-plan` must show no changes for what the file holds. What was applied after a backup shows as to-create: import it before any apply, then read what the plan still wants to change. This path was not exercised:
+
+  ```bash
+  cd infra/proxmox/vms && SECRETSPEC_FILE=../../secretspec.toml SECRETSPEC_REASON="dotfiles infra" secretspec run -- terragrunt import 'proxmox_virtual_environment_vm.vm["<name>"]' <node>/<vmid>
+  # and per node: terragrunt import 'proxmox_download_file.debian["<node>"]' <node>/<datastore>:import/<file name>
+  ```
+
+  (ids as in the bpg/proxmox 0.112 docs). The passphrase must be the one the file was written with.
+- **The object no longer decrypts** (the passphrase in OpenBao was lost or changed, or the object is damaged): every command fails with a decrypt error, `import` included. Move the object aside first (same `secretspec run -- sh -c '…'` form, with `s3 mv "s3://$TF_STATE_S3_BUCKET/dotfiles-infra/proxmox-vms/terraform.tfstate" "s3://$TF_STATE_S3_BUCKET/dotfiles-infra/proxmox-vms/terraform.tfstate.unreadable"`), then restore a backup made with the right passphrase, or import. The passphrase lives only in OpenBao, so losing it makes every backup unreadable too.
 
 **Before every commit that touches `infra/`:** `just infra-leak-check` (expects `no leaks`; reads OpenBao, scans tracked files for the real values). `just test-infra` tests the check itself.
 
