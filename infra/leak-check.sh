@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Fail when a git-tracked file holds an identifying server value from TF_VAR_*,
-# the S3 endpoint host (TF_STATE_S3_ENDPOINT) or the S3 secret key (AWS_SECRET_ACCESS_KEY).
+# the S3 endpoint host (TF_STATE_S3_ENDPOINT), the S3 secret key (AWS_SECRET_ACCESS_KEY)
+# or a LUKS passphrase (VM_LUKS_KEYS, a JSON map of VM name to passphrase).
 # Skipped on purpose: the other TF_VAR_* values (datastores, bridge, node, sizing: generic),
-# TF_STATE_S3_BUCKET (generic, like datastores) and AWS_ACCESS_KEY_ID (its value equals the
-# public project name and it cannot authenticate without the secret key).
+# TF_STATE_S3_BUCKET (generic, like datastores), AWS_ACCESS_KEY_ID (its value equals the
+# public project name and it cannot authenticate without the secret key) and
+# VM_INITRD_HOST_KEYS (public keys, not secrets).
 # Exit: 0 clean, 1 leak, 2 missing env or value shorter than 4 characters,
 # 3 positive control failed or grep error. Never prints a value.
 set -uo pipefail
@@ -15,7 +17,7 @@ die() { # die CODE MESSAGE
   exit "$1"
 }
 
-for var in TF_VAR_proxmox_endpoint TF_VAR_proxmox_api_token TF_VAR_tofu_state_passphrase TF_VAR_vms TF_STATE_S3_ENDPOINT AWS_SECRET_ACCESS_KEY; do
+for var in TF_VAR_proxmox_endpoint TF_VAR_proxmox_api_token TF_VAR_tofu_state_passphrase TF_VAR_vms TF_STATE_S3_ENDPOINT AWS_SECRET_ACCESS_KEY VM_LUKS_KEYS; do
   [[ -n ${!var:-} ]] || die 2 "missing environment variable $var"
 done
 
@@ -56,6 +58,15 @@ while IFS= read -r line; do
   add "${labels[$((i % 4))]}" "$line"
   i=$((i + 1))
 done <"$vmfields"
+
+# VM_LUKS_KEYS: JSON object, VM name -> LUKS passphrase of its root disk. Every value is a pattern.
+# `{}` is valid (no VM installed yet). The VM names are covered by TF_VAR_vms above.
+lukslist=$work/luks
+printf '%s' "$VM_LUKS_KEYS" | jq -r 'if type == "object" then .[] | if type == "string" then . else error("not a string") end else error("not an object") end' >"$lukslist" 2>/dev/null ||
+  die 2 "VM_LUKS_KEYS is not a JSON object of strings"
+while IFS= read -r line; do
+  add "luks passphrase" "$line"
+done <"$lukslist"
 
 sort -u "$raw" >"$patterns"
 nvalues=$(wc -l <"$patterns" | tr -d ' ')

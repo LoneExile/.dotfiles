@@ -15,6 +15,9 @@ fixture_env() {
   export AWS_ACCESS_KEY_ID='fixtures3user'
   export TF_STATE_S3_BUCKET='fixture-bucket'
   export TF_VAR_vms='{"testvm-alpha":{"node":"n1","vmid":901,"mac":"02:00:5E:10:00:01","ipv4_cidr":"203.0.113.10/24","gateway":"203.0.113.1","dns":["198.51.100.53"],"cores":2,"memory_mb":2048,"disk_gb":20}}'
+  export VM_LUKS_KEYS='{"testvm-alpha":"fixture0luks0pass0123456789abcdef0123456789abcdef0123456789ab"}'
+  # Exported to prove the script skips it (spec §10): a public key, not a secret.
+  export VM_INITRD_HOST_KEYS='{"testvm-alpha":"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFixtureInitrdHostKey0000000000000000000000"}'
 }
 fresh_repo() {
   git init -q "$T/r"
@@ -196,6 +199,75 @@ test_short_s3_secret_aborts_naming_the_label() {
   assert_has "names the label" "$T/err" "s3 secret key"
   assert_has "says why" "$T/err" "shorter than 4"
   assert_lacks "does not echo the value" "$T/err" "ab"
+}
+
+test_luks_passphrase_is_checked() {
+  fixture_env
+  fresh_repo
+  track l.txt 'fixture0luks0pass0123456789abcdef0123456789abcdef0123456789ab'
+  assert_rc "luks passphrase" "$(check)" 1
+  assert_has "names the path" "$T/out" "LEAK in l.txt"
+  assert_lacks "stdout hides the value" "$T/out" "fixture0luks0pass"
+  assert_lacks "stderr hides the value" "$T/err" "fixture0luks0pass"
+}
+
+test_every_luks_passphrase_is_checked() {
+  fixture_env
+  export VM_LUKS_KEYS='{"testvm-alpha":"fixture0luks0pass0123456789abcdef0123456789abcdef0123456789ab","testvm-beta":"fixture0luks0other0123456789abcdef0123456789abcdef0123456789a"}'
+  fresh_repo
+  track l2.txt 'fixture0luks0other0123456789abcdef0123456789abcdef0123456789a'
+  assert_rc "second passphrase" "$(check)" 1
+}
+
+test_initrd_host_public_keys_are_skipped() {
+  fixture_env
+  fresh_repo
+  track k.txt 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFixtureInitrdHostKey0000000000000000000000'
+  assert_rc "initrd host public key" "$(check)" 0
+}
+
+test_empty_luks_map_passes() {
+  fixture_env
+  export VM_LUKS_KEYS='{}'
+  fresh_repo
+  assert_rc "no passphrases yet" "$(check)" 0
+  assert_has "reports no leaks" "$T/out" "no leaks"
+}
+
+test_missing_luks_env_fails_closed() {
+  fixture_env
+  unset VM_LUKS_KEYS
+  fresh_repo
+  assert_rc "missing VM_LUKS_KEYS" "$(check)" 2
+  assert_has "own text for unset" "$T/err" "missing environment variable VM_LUKS_KEYS"
+  assert_lacks "no success line" "$T/out" "no leaks"
+  fixture_env
+  export VM_LUKS_KEYS=
+  assert_rc "empty VM_LUKS_KEYS" "$(check)" 2
+  assert_has "own text for empty" "$T/err" "missing environment variable VM_LUKS_KEYS"
+}
+
+test_malformed_luks_map_fails_closed() {
+  local bad
+  for bad in 'not json' '["fixture0luks0pass0123456789abcdef"]' '{"testvm-alpha":["x"]}' '{"testvm-alpha":7}'; do
+    fixture_env
+    export VM_LUKS_KEYS=$bad
+    fresh_repo
+    assert_rc "malformed VM_LUKS_KEYS: $bad" "$(check)" 2
+    assert_has "names the variable" "$T/err" "VM_LUKS_KEYS"
+    assert_lacks "no success line" "$T/out" "no leaks"
+    rm -rf "$T/r"
+  done
+}
+
+test_short_luks_passphrase_aborts_naming_the_label() {
+  fixture_env
+  export VM_LUKS_KEYS='{"testvm-alpha":"x1"}'
+  fresh_repo
+  assert_rc "short luks passphrase" "$(check)" 2
+  assert_has "names the label" "$T/err" "luks passphrase"
+  assert_has "says why" "$T/err" "shorter than 4"
+  assert_lacks "does not echo the value" "$T/err" "x1"
 }
 
 tl_init_pure
