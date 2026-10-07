@@ -10,7 +10,7 @@
 #   - nix-ld, so glibc programs that were not built for NixOS run (mise's runtimes, omp, Tern);
 #   - omp, pinned by hash (agent-dev/omp.nix), with its config files copied in writable;
 #   - the gh CLI, rootless podman, zram swap;
-#   - Tern's remote service reachable on the LAN (UDP 8377), with its relay and iroh off.
+#   - Tern's remote service reachable on the LAN (UDP 8376), with its relay and iroh off.
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -43,7 +43,7 @@ in {
 
     omp.enable = piece "omp, pinned, with its config files copied into ~/.omp/agent as writable files";
     mise.enable = piece "mise with the global tools (node, python, uv, go, rust, bun, pnpm)";
-    tern.enable = piece "the Tern remote service: UDP 8377 open, served to the LAN only (no relay, no iroh)";
+    tern.enable = piece "the Tern remote service: UDP 8376 open, served to the LAN only (no relay, no iroh)";
     gh.enable = piece "the GitHub CLI";
     podman.enable = piece "rootless podman";
   };
@@ -101,7 +101,14 @@ in {
           imports = [../../home/linux/agent.nix];
           dotfiles.agent = {
             omp.enable = cfg.omp.enable;
-            mise.enable = cfg.mise.enable;
+            mise = {
+              inherit (cfg.mise) enable;
+              # nixos-25.11's mise (2025.11.7) takes the free-threaded CPython build of
+              # python-build-standalone for 3.13 and later and fails with "Python installation is
+              # missing a `lib` directory" (measured on the VM). nixpkgs-unstable's mise (2026.8.6)
+              # installs python 3.14 from the same release.
+              package = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.mise;
+            };
             tern.enable = cfg.tern.enable;
           };
         };
@@ -123,10 +130,10 @@ in {
     })
 
     (lib.mkIf cfg.tern.enable {
-      # Tern's remote service (a user service the user starts with `tern remote setup`, see
-      # home/linux/agent.nix) listens on UDP 8377 for the Mac's Tern. The firewall stays default
-      # deny: TCP 22 and this one UDP port.
-      networking.firewall.allowedUDPPorts = [8377];
+      # Tern's remote service (a user service that `tern remote setup` installs from the Mac, see
+      # home/linux/agent.nix) serves QUIC on UDP 8376 (measured: `ss` on the VM, and the unit
+      # file's own header). The firewall stays default deny: TCP 22 and this one UDP port.
+      networking.firewall.allowedUDPPorts = [8376];
     })
   ]);
 }
