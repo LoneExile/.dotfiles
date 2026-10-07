@@ -197,7 +197,7 @@ vm-deploy name:
   #!/usr/bin/env bash
   set -euo pipefail
   ip=$(cd "{{infra_unit}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash "{{infra_dir}}/vm-ip.sh" {{quote(name)}})
-  NIX_SSHOPTS="-o StrictHostKeyChecking=accept-new" nix shell --inputs-from . nixpkgs-nixos#nixos-rebuild-ng -c nixos-rebuild switch --flake .#proxmox-guest --target-host "root@$ip" --build-host "root@$ip"
+  NIX_SSHOPTS="-o StrictHostKeyChecking=accept-new" nix shell --inputs-from . nixpkgs-nixos#nixos-rebuild-ng -c nixos-rebuild-ng switch --flake .#proxmox-guest --target-host "root@$ip" --build-host "root@$ip"
 
 ### Development and Validation
 # Check flake syntax and build without switching
