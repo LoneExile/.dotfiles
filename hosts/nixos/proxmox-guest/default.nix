@@ -48,7 +48,8 @@
         PermitRootLogin = "prohibit-password";
       };
     };
-    qemuGuest.enable = true;
+    # No guest agent: it is a root-level command channel from the hypervisor into the guest.
+    qemuGuest.enable = false;
   };
 
   nix.settings.experimental-features = ["nix-command" "flakes"];

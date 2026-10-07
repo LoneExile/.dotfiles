@@ -48,12 +48,9 @@ resource "proxmox_virtual_environment_vm" "vm" {
   # The Debian cloud image panics on a disk resize without a serial device, and the role's console is ttyS0 (qm terminal).
   serial_device {}
 
+  # No guest agent, neither on Debian nor on NixOS: it is a root-level command channel from the hypervisor into the guest.
   agent {
-    enabled = true
-    # The Debian stage has no guest agent, so apply must not wait for an address.
-    wait_for_ip {
-      disabled = true
-    }
+    enabled = false
   }
 
   network_device {
