@@ -33,8 +33,8 @@ variable "vms" {
   }))
 
   validation {
-    condition     = alltrue([for k, v in var.vms : can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$", k))])
-    error_message = "Every VM name must be a DNS label: lowercase letters, digits and hyphens, 1 to 63 characters, no leading or trailing hyphen."
+    condition     = alltrue([for k, v in var.vms : can(regex("^[a-z0-9][a-z0-9-]{2,61}[a-z0-9]$", k))])
+    error_message = "Every VM name must be a DNS label: lowercase letters, digits and hyphens, 4 to 63 characters, no leading or trailing hyphen."
   }
 
   validation {
@@ -53,7 +53,7 @@ variable "vms" {
   }
 
   validation {
-    condition     = alltrue([for v in var.vms : can(cidrhost(v.ipv4_cidr, 0))])
+    condition     = alltrue([for v in var.vms : can(cidrnetmask(v.ipv4_cidr))])
     error_message = "Every ipv4_cidr must be a valid IPv4 address with prefix length, such as <ipv4>/<prefix>."
   }
 }
