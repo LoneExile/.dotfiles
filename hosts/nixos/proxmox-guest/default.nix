@@ -1,6 +1,6 @@
 # Generic NixOS guest role for Proxmox VMs.
-# Identity (hostname, network, SSH keys) comes from the cloud-init drive at
-# boot; this file holds no server values.
+# Identity (hostname, network) comes from the cloud-init drive at boot; root's
+# SSH keys are placed once by `just vm-install`. This file holds no server values.
 {
   modulesPath,
   pkgs,
@@ -39,6 +39,18 @@
     cloud-init = {
       enable = true;
       network.enable = true;
+      # Identity only. Every module that runs commands, writes files or sets users, passwords
+      # or SSH keys is out, so cloud-config keys cannot grant access or run code through a
+      # module (the nixpkgs defaults carry bootcmd, runcmd, write-files, users-groups, ssh,
+      # set-passwords, scripts-* and phone-home). Network is not a module: it is applied from
+      # the drive at init. What stays: hostname (update_hostname), DNS (resolv_conf), growpart,
+      # resizefs and migrator (moves cloud-init's own state, runs nothing from the drive).
+      # seed_random is out because its `command` key runs a program.
+      settings = {
+        cloud_init_modules = ["migrator" "growpart" "resizefs" "update_hostname" "resolv_conf"];
+        cloud_config_modules = [];
+        cloud_final_modules = [];
+      };
     };
     openssh = {
       enable = true;
