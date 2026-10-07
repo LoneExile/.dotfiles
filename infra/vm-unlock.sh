@@ -45,12 +45,6 @@ err=$work/ssh.err
 # up PORT: does the VM accept a TCP connection there?
 up() { nc -z -w 3 "$ip" "$1" >/dev/null 2>&1; }
 
-# Already running: the initrd's port is closed and the normal sshd answers.
-if ! up "$port" && up 22; then
-  echo "vm-unlock: $name already answers on port 22; nothing to unlock"
-  exit 0
-fi
-
 # Runs in the initrd. The query file is read on fd 3, so stdin stays the passphrase that
 # systemd-reply-password reads. Exit 3 when no query is pending yet (cryptsetup has not asked).
 remote='for f in /run/systemd/ask-password/ask.*; do
@@ -61,11 +55,21 @@ remote='for f in /run/systemd/ask-password/ask.*; do
 done
 exit 3'
 
+# Phase 1: find the pending query and answer it. ~/.ssh/config must not reroute or forward
+# anything; the server-alive options also bound a key exchange that hangs.
 deadline=$((SECONDS + timeout))
 unlocked=0
 while [ "$SECONDS" -lt "$deadline" ]; do
+  # Running already (unlocked on the console meanwhile, or never locked): the initrd's port is
+  # closed and the normal sshd answers.
+  if ! up "$port" && up 22; then
+    echo "vm-unlock: $name answers on port 22 and its initrd port is closed; nothing to unlock"
+    exit 0
+  fi
   rc=0
   printf '%s' "$luks" | ssh -p "$port" -o BatchMode=yes -o ConnectTimeout=5 \
+    -o ControlMaster=no -o ControlPath=none -o ForwardAgent=no -o ForwardX11=no \
+    -o ServerAliveInterval=5 -o ServerAliveCountMax=3 \
     -o UserKnownHostsFile="$work/known_hosts" -o GlobalKnownHostsFile=/dev/null \
     -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 -o LogLevel=ERROR \
     "root@$ip" "$remote" 2>"$err" || rc=$?
@@ -81,14 +85,24 @@ while [ "$SECONDS" -lt "$deadline" ]; do
   fi
   sleep 3
 done
-[ "$unlocked" -eq 1 ] || die "no passphrase prompt answered within ${timeout}s (the VM may be down, still booting, or stuck: qm terminal on its node shows the console)"
+if [ "$unlocked" -ne 1 ]; then
+  [ -s "$err" ] && { echo "vm-unlock: last ssh message:" >&2; tail -n 3 "$err" >&2; }
+  die "no passphrase prompt answered within ${timeout}s (the VM may be down, still booting, or stuck: qm terminal on its node shows the console)"
+fi
 
+# Phase 2: its own deadline. The initrd's sshd stops at switch-root, so a port 2222 that is
+# still open well after the answer means the initrd asked again: the passphrase was refused.
 echo "vm-unlock: passphrase sent to $name; waiting for it to boot"
-while [ "$SECONDS" -lt "$deadline" ]; do
+sent_at=$SECONDS
+boot_deadline=$((SECONDS + ${VM_UNLOCK_BOOT_TIMEOUT:-120}))
+while [ "$SECONDS" -lt "$boot_deadline" ]; do
   if up 22; then
     echo "vm-unlock: $name answers on port 22"
     exit 0
   fi
+  if [ $((SECONDS - sent_at)) -gt 45 ] && up "$port"; then
+    die "the initrd of $name still asks for a passphrase 45 s after it got one: the passphrase in VM_LUKS_KEYS was refused (tries left on the console prompt: 3 minus the wrong ones)"
+  fi
   sleep 3
 done
-die "$name did not answer on port 22 within ${timeout}s after the unlock (wrong passphrase: the prompt returns on the console)"
+die "$name did not answer on port 22 within ${VM_UNLOCK_BOOT_TIMEOUT:-120}s after the passphrase was accepted; qm terminal on its node shows the console"

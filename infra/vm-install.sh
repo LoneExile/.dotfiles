@@ -31,6 +31,9 @@ die() {
   exit 1
 }
 
+# shellcheck source=vault-map.sh
+. "$infra/vault-map.sh"
+
 for var in TF_VAR_ssh_authorized_keys TF_VAR_vms VM_LUKS_KEYS VM_INITRD_HOST_KEYS; do
   [ -n "${!var:-}" ] || die "$var is empty (run it under secretspec: just vm-install $name)"
 done
@@ -49,18 +52,6 @@ IFS=$'\t' read -r mac cidr gateway <<<"$fields"
 [[ $mac =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]] || die "the mac of $name in TF_VAR_vms is not a MAC address"
 [[ $cidr =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]] || die "the ipv4_cidr of $name in TF_VAR_vms is not <ipv4>/<prefix>"
 [[ $gateway =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "the gateway of $name in TF_VAR_vms is not an IPv4 address"
-
-# map_get KEY NAME: the string stored under NAME in the JSON map secret KEY, or nothing.
-map_get() {
-  secretspec get "$1" | jq -r --arg n "$2" '.[$n] // empty'
-}
-# map_put KEY NAME VALUE: read-modify-write of one entry. The value reaches jq through its
-# environment only. An empty or failed read leaves jq without input, `secretspec set` then
-# refuses the empty value and the old secret stays.
-map_put() {
-  secretspec get "$1" | MAP_NAME=$2 MAP_VALUE=$3 jq -c '. + {(env.MAP_NAME): env.MAP_VALUE}' | secretspec set "$1" >/dev/null
-  [ "$(map_get "$1" "$2")" = "$3" ] || die "could not store the entry in the vault key $1"
-}
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/vm-install.XXXXXX")
 trap 'rm -rf "$work"' EXIT
@@ -110,6 +101,10 @@ Address=$cidr
 Gateway=$gateway
 EOF
 chmod 644 "$files/etc/secrets/initrd/10-initrd.network"
+
+# Last look before the disk is formatted: both entries must still be what this run stored.
+[ "$(map_get VM_LUKS_KEYS "$name")" = "$luks" ] || die "the LUKS passphrase entry of $name changed in the vault during the run; nothing was formatted"
+[ "$(map_get VM_INITRD_HOST_KEYS "$name")" = "$pub" ] || die "the initrd host key entry of $name changed in the vault during the run; nothing was formatted"
 
 # macOS tar would add AppleDouble (._*) entries for files with extended attributes.
 export COPYFILE_DISABLE=1

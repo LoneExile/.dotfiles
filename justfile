@@ -163,10 +163,11 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check for server values in tracked files (no network)
+# Test the leak check and the vault map helpers (no network, no vault)
 test-infra:
-  @echo "🔎 Testing the infra leak check..."
+  @echo "🔎 Testing the infra leak check and vault map helpers..."
   bash infra/leak-check_test.sh
+  bash infra/vault-map_test.sh
 
 # Plan the Proxmox VMs, with secrets from OpenBao through secretspec
 infra-plan *ARGS:
