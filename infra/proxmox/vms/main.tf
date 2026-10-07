@@ -22,10 +22,11 @@ resource "proxmox_download_file" "debian" {
 resource "proxmox_virtual_environment_vm" "vm" {
   for_each = var.vms
 
-  name            = each.key
-  node_name       = each.value.node
-  vm_id           = each.value.vmid
-  on_boot         = true
+  name      = each.key
+  node_name = each.value.node
+  vm_id     = each.value.vmid
+  on_boot   = true
+  # Destroy cannot rely on the guest agent (absent during the Debian stage).
   stop_on_destroy = true
 
   operating_system {
@@ -44,10 +45,12 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
   scsi_hardware = "virtio-scsi-single"
 
+  # The Debian cloud image panics on a disk resize without a serial device, and the role's console is ttyS0 (qm terminal).
   serial_device {}
 
   agent {
     enabled = true
+    # The Debian stage has no guest agent, so apply must not wait for an address.
     wait_for_ip {
       disabled = true
     }
@@ -91,6 +94,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   lifecycle {
+    # disko rewrites the disk after install; without this a new image pin would replace every live VM on the next plan.
     ignore_changes = [disk[0].import_from]
   }
 }
