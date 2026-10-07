@@ -1,10 +1,11 @@
 terraform_binary = "tofu"
 
 locals {
-  # Fail early, naming the variable (never a value), when the state store is not configured.
-  # Terragrunt has no error(); a run_cmd that exits non-zero aborts evaluation with its stderr.
-  s3_endpoint = get_env("TF_STATE_S3_ENDPOINT", "") != "" ? get_env("TF_STATE_S3_ENDPOINT", "") : run_cmd("--terragrunt-quiet", "sh", "-c", "echo 'error: TF_STATE_S3_ENDPOINT is empty (run under secretspec with infra/secretspec.toml: just infra-plan)' >&2; exit 1")
-  s3_bucket   = get_env("TF_STATE_S3_BUCKET", "") != "" ? get_env("TF_STATE_S3_BUCKET", "") : run_cmd("--terragrunt-quiet", "sh", "-c", "echo 'error: TF_STATE_S3_BUCKET is empty (run under secretspec with infra/secretspec.toml: just infra-plan)' >&2; exit 1")
+  # One run_cmd per variable: it prints the value, or fails naming the variable (never a
+  # value) when it is unset or empty. Terragrunt has no error(); a failed run_cmd aborts
+  # evaluation with its stderr. Neither value is secret.
+  s3_endpoint = run_cmd("--terragrunt-quiet", "sh", "-c", "[ -n \"$TF_STATE_S3_ENDPOINT\" ] || { echo 'error: TF_STATE_S3_ENDPOINT is empty (run under secretspec with infra/secretspec.toml: just infra-plan)' >&2; exit 1; }; printf %s \"$TF_STATE_S3_ENDPOINT\"")
+  s3_bucket   = run_cmd("--terragrunt-quiet", "sh", "-c", "[ -n \"$TF_STATE_S3_BUCKET\" ] || { echo 'error: TF_STATE_S3_BUCKET is empty (run under secretspec with infra/secretspec.toml: just infra-plan)' >&2; exit 1; }; printf %s \"$TF_STATE_S3_BUCKET\"")
 }
 
 # The state lives in an S3 bucket on the user's RustFS. RustFS is not AWS: skip the
