@@ -80,7 +80,7 @@ NixOS guests on Proxmox, provisioned with Terragrunt + OpenTofu (`bpg/proxmox`) 
 
 **New Mac.** `just openbao-login`; nothing else is seeded locally. Any Mac that did this and can reach `<endpoint>` can plan, apply, `vm-install` and `vm-deploy` (they read addresses from the state). They fail while the state store is unreachable.
 
-**Provision the state user** (once per RustFS). Limit one S3 user to the prefix. Point `mc` at the RustFS with the `MC_HOST_<alias>` environment variable (`http://<access>:<secret>@<endpoint>:<port>`), never `mc alias set`, which writes the root credentials to `~/.mc/config.json`. `policy.json`:
+**Provision the state user** (once per RustFS). Limit one S3 user to the prefix. This repo installs neither `mc` nor `aws`; the first run can use `nix run nixpkgs#minio-client` and `nix run nixpkgs#awscli2`. Point `mc` at the RustFS with the `MC_HOST_<alias>` environment variable (`http://<access>:<secret>@<endpoint>:<port>`; URL-encode special characters in the secret), never `mc alias set`, which writes the root credentials to `~/.mc/config.json`. `policy.json`:
 
 ```json
 {
@@ -95,7 +95,7 @@ NixOS guests on Proxmox, provisioned with Terragrunt + OpenTofu (`bpg/proxmox`) 
 
 ```bash
 mc admin policy create <alias> <policy> policy.json
-mc admin user add <alias> <user> <secret>    # the secret is visible in the process list while it runs
+mc admin user add <alias> <user> <secret>    # the secret is visible in the process list while it runs and lands in shell history unless history is off
 mc admin policy attach <alias> <policy> --user <user>
 export SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra"
 printf '%s' '<user>' | secretspec set AWS_ACCESS_KEY_ID   # likewise AWS_SECRET_ACCESS_KEY, TF_STATE_S3_ENDPOINT, TF_STATE_S3_BUCKET
@@ -145,12 +145,17 @@ just vm-install <name>   # wait until the VM has booted; Debian cloud image → 
 
 - Kexec failed while the VM still runs Debian: rerun `just vm-install <name>`.
 - State store unreachable: plan, apply and `vm-ip` fail. Nothing is lost; retry when it is back.
-- A crashed run can leave the lock object `<key>.tflock`. Only when no run is active: `terragrunt force-unlock <id>` (the id is in the lock error) from `infra/proxmox/vms` under `secretspec run` with the infra manifest.
-- State object lost: the VMs still exist. Import them again by VMID, with the same encryption passphrase.
-- Encrypted backup (same exported `SECRETSPEC_FILE` and reason as above): copy the object as is. Never `tofu state pull` into a file: that is decrypted plaintext.
+- A crashed run can leave the lock object `dotfiles-infra/proxmox-vms/terraform.tfstate.tflock`. Only when no run is active (the id is in the lock error):
 
   ```bash
-  secretspec run -- sh -c 'aws --endpoint-url "$TF_STATE_S3_ENDPOINT" s3 cp "s3://$TF_STATE_S3_BUCKET/dotfiles-infra/proxmox-vms/terraform.tfstate" ./infra-state.backup'
+  cd infra/proxmox/vms && SECRETSPEC_FILE=../../secretspec.toml SECRETSPEC_REASON="dotfiles infra" secretspec run -- terragrunt force-unlock <id>
+  ```
+
+- State object lost: the VMs still exist. Import them again by VMID, with the same encryption passphrase.
+- Encrypted backup: copy the object as is, to a path outside the repo, private (`umask 077`). Never `tofu state pull` into a file: that is decrypted plaintext.
+
+  ```bash
+  SECRETSPEC_FILE=infra/secretspec.toml SECRETSPEC_REASON="dotfiles infra" secretspec run -- sh -c 'umask 077; aws --endpoint-url "$TF_STATE_S3_ENDPOINT" s3 cp "s3://$TF_STATE_S3_BUCKET/dotfiles-infra/proxmox-vms/terraform.tfstate" "$HOME/infra-state.backup"'
   ```
 
 **Before every commit that touches `infra/`:** `just infra-leak-check` (expects `no leaks`; reads OpenBao, scans tracked files for the real values). `just test-infra` tests the check itself.
