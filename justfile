@@ -173,6 +173,11 @@ test-infra:
   bash infra/vm-flow_test.sh
   bash home/linux/writable-copy_test.sh
 
+# Guard the roles: proxmox-guest stays clean (TCP 22 only, no user), proxmox-agent stays confined (evaluates the flake, no VM)
+test-roles:
+  @echo "🔒 Checking the roles..."
+  bash infra/roles-check.sh
+
 # Plan the Proxmox VMs, with secrets from OpenBao through secretspec
 infra-plan *ARGS:
   cd "{{infra_unit}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- terragrunt plan {{ARGS}}
@@ -238,7 +243,7 @@ test-secrets:
   bash home/secretspec/materialize_test.sh
 
 # Run all validation checks
-validate: check fmt-check lint deadnix test-secrets test-infra
+validate: check fmt-check lint deadnix test-secrets test-infra test-roles
   @echo "✅ All validation checks completed!"
 
 ### Documentation
