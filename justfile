@@ -186,7 +186,7 @@ vm-install name:
   set -euo pipefail
   ip=$(cd "{{infra_unit}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash "{{infra_dir}}/vm-ip.sh" {{quote(name)}})
   if ! ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "debian@$ip" true; then
-    echo "error: "{{quote(name)}}" does not accept debian@ — already NixOS? use just vm-deploy" >&2
+    echo "error: "{{quote(name)}}" does not accept debian@ — still booting, host key changed (ssh-keygen -R $ip), or already NixOS? use just vm-deploy" >&2
     exit 1
   fi
   nix run --inputs-from . nixos-anywhere -- --flake .#proxmox-guest --build-on remote --target-host "debian@$ip"
