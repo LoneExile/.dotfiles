@@ -163,14 +163,15 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check, the vault map helpers, the VM identity files and the VM roles (no network, no vault)
+# Test the leak check, the vault map helpers, the VM identity files, the VM roles and the agent role's writable config copies (no network, no vault)
 test-infra:
-  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files and VM roles..."
+  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles and writable config copies..."
   bash infra/leak-check_test.sh
   bash infra/vault-map_test.sh
   bash infra/vm-identity_test.sh
   bash infra/vm-role_test.sh
   bash infra/vm-flow_test.sh
+  bash home/linux/writable-copy_test.sh
 
 # Plan the Proxmox VMs, with secrets from OpenBao through secretspec
 infra-plan *ARGS:

@@ -10,24 +10,21 @@
 }: let
   cfg = config.dotfiles.agent;
 
-  # A config file that the program or the user writes to (omp's settings and models, mise's global
-  # tools) cannot be a Home Manager link: the target is in the read-only Nix store, so
-  # `mise use -g` fails with "Read-only file system". It is copied in as a real, writable file at
-  # every activation instead. A live file that differs is kept next to the new one as
-  # <name>.dotfiles-backup, never dropped silently: the repo copy wins, and an edit made on the VM
-  # survives only as that backup, until the repo copy is changed to match. Same pattern as the Mac's
-  # Tern settings (home/default.nix).
-  writableCopy = dir: name: src: ''
-    live="${dir}/${name}"
-    if [ -f "$live" ] && ! cmp -s "$live" "${src}"; then
-      run mv -f "$live" "$live.dotfiles-backup"
-      echo "agent config: $live differed from the repo copy, kept as ${name}.dotfiles-backup"
-    fi
-    if [ ! -f "$live" ]; then
-      run mkdir -p "${dir}"
-      run cp -f "${src}" "$live"
-      run chmod u+w "$live"
-    fi
+  # Config files that the program or the user writes to (omp's settings and models, mise's global
+  # tools) cannot be Home Manager links: the target is in the read-only Nix store, and
+  # `mise use -g` fails with "Read-only file system". They are installed as real, writable files by
+  # writable-copy.sh (tested by writable-copy_test.sh). The repo copy wins only when it is new: an
+  # edit made on the VM survives deploys and reboots, and is kept as <name>.dotfiles-backup when a
+  # changed repo copy replaces it. The Mac's Tern settings (home/default.nix) differ in one way:
+  # there, a differing file is backed up and replaced at every `just home`; here Home Manager also
+  # activates at every boot, which would undo an edit at the next reboot.
+  writableCopies = copies: ''
+    ${builtins.readFile ./writable-copy.sh}
+    ${lib.concatMapStringsSep "\n" ({
+      src,
+      dest,
+    }: ''writable_copy "${src}" "${dest}"'')
+    copies}
   '';
 
   ompFiles = {
@@ -122,15 +119,22 @@ in {
         enableBashIntegration = true;
       };
 
-      home.activation.miseConfig = lib.hm.dag.entryAfter ["writeBoundary"] (
-        writableCopy "$HOME/.config/mise" "config.toml" miseConfig
-      );
+      home.activation.miseConfig = lib.hm.dag.entryAfter ["writeBoundary"] (writableCopies [
+        {
+          src = miseConfig;
+          dest = "$HOME/.config/mise/config.toml";
+        }
+      ]);
     })
 
     (lib.mkIf cfg.omp.enable {
-      home.activation.ompConfig = lib.hm.dag.entryAfter ["writeBoundary"] (
-        lib.concatStrings (lib.mapAttrsToList (writableCopy "$HOME/.omp/agent") ompFiles)
-      );
+      home.activation.ompConfig = lib.hm.dag.entryAfter ["writeBoundary"] (writableCopies (
+        lib.mapAttrsToList (name: src: {
+          inherit src;
+          dest = "$HOME/.omp/agent/${name}";
+        })
+        ompFiles
+      ));
     })
 
     (lib.mkIf cfg.tern.enable {
