@@ -19,6 +19,9 @@
 #   /etc/systemd/network/10-static.network        stage 2's address, gateway and resolvers
 # The identity is fixed at install: a changed name or address needs these files edited on the
 # VM (README), or a reinstall. The Proxmox cloud-init drive only serves the Debian stage.
+# The role of the VM entry (clean or agent) picks the NixOS configuration, `proxmox-guest` or
+# `proxmox-agent` (infra/vm-config.sh). Both stage the same files: the agent role seeds its
+# user's SSH keys on the VM from root's, so nothing for it travels here.
 set -euo pipefail
 umask 077
 
@@ -45,6 +48,8 @@ for var in TF_VAR_ssh_authorized_keys TF_VAR_vms VM_LUKS_KEYS VM_INITRD_HOST_KEY
 done
 
 ip=$(bash "$infra/vm-ip.sh" "$name")
+# The configuration is chosen before anything is written or formatted: a bad role stops here.
+config=$(bash "$infra/vm-config.sh" "$name")
 if ! ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "debian@$ip" true; then
   echo "error: $name does not accept debian@ — still booting, host key changed (ssh-keygen -R $ip), or already NixOS? use just vm-deploy" >&2
   exit 1
@@ -116,9 +121,9 @@ chmod 644 "$files/etc/secrets/initrd/10-initrd.network"
 # macOS tar would add AppleDouble (._*) entries for files with extended attributes.
 export COPYFILE_DISABLE=1
 nix run --inputs-from "$repo" nixos-anywhere -- \
-  --flake "$repo#proxmox-guest" --build-on remote \
+  --flake "$repo#$config" --build-on remote \
   --disk-encryption-keys /tmp/luks-passphrase "$work/luks-passphrase" \
   --extra-files "$files" \
   --target-host "debian@$ip"
 ssh-keygen -R "$ip"
-echo "vm-install: $name is installed and waits for its disk passphrase: just vm-unlock $name"
+echo "vm-install: $name is installed with .#$config and waits for its disk passphrase: just vm-unlock $name"

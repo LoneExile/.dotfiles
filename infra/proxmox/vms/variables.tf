@@ -30,11 +30,19 @@ variable "vms" {
     cores     = number
     memory_mb = number
     disk_gb   = number
+    # Which NixOS configuration the VM gets (infra/vm-config.sh). It changes no resource: every
+    # role runs on the same Proxmox VM, so a role flip is `just vm-deploy`, not a replacement.
+    role = optional(string, "clean")
   }))
 
   validation {
     condition     = alltrue([for k, v in var.vms : can(regex("^[a-z0-9][a-z0-9-]{2,61}[a-z0-9]$", k))])
     error_message = "Every VM name must be a DNS label: lowercase letters, digits and hyphens, 4 to 63 characters, no leading or trailing hyphen."
+  }
+
+  validation {
+    condition     = alltrue([for v in var.vms : contains(["clean", "agent"], v.role)])
+    error_message = "Every VM role must be clean or agent (leave it out for clean)."
   }
 
   validation {

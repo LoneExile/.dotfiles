@@ -163,12 +163,14 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check, the vault map helpers and the VM identity files (no network, no vault)
+# Test the leak check, the vault map helpers, the VM identity files and the VM roles (no network, no vault)
 test-infra:
-  @echo "🔎 Testing the infra leak check, vault map helpers and VM identity files..."
+  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files and VM roles..."
   bash infra/leak-check_test.sh
   bash infra/vault-map_test.sh
   bash infra/vm-identity_test.sh
+  bash infra/vm-role_test.sh
+  bash infra/vm-flow_test.sh
 
 # Plan the Proxmox VMs, with secrets from OpenBao through secretspec
 infra-plan *ARGS:
@@ -196,12 +198,11 @@ vm-unlock name:
   cd "{{infra_unit}}"
   SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash "{{infra_dir}}/vm-unlock.sh" {{quote(name)}}
 
-# Deploy the NixOS configuration to an installed VM from infra output
+# Deploy the NixOS configuration of the VM's role (clean: proxmox-guest, agent: proxmox-agent) to an installed VM
 vm-deploy name:
   #!/usr/bin/env bash
   set -euo pipefail
-  ip=$(cd "{{infra_unit}}" && SECRETSPEC_FILE="{{infra_dir}}/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" secretspec run -- bash "{{infra_dir}}/vm-ip.sh" {{quote(name)}})
-  NIX_SSHOPTS="-o StrictHostKeyChecking=accept-new" nix shell --inputs-from . nixpkgs-nixos#nixos-rebuild-ng -c nixos-rebuild-ng switch --flake .#proxmox-guest --target-host "root@$ip" --build-host "root@$ip"
+  bash "{{infra_dir}}/vm-deploy.sh" {{quote(name)}} "{{justfile_directory()}}"
 
 ### Development and Validation
 # Check flake syntax and build without switching
