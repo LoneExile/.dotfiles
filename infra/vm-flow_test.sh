@@ -43,7 +43,7 @@ EOF
   cat >"$T/bin/ssh" <<'EOF'
 #!/bin/sh
 for a; do last=$a; done
-case "$last" in "cat "*dotfiles-agent-sync.json*) echo '{"gh":false,"plugins":false,"skills":false}' ;; esac
+case "$last" in "cat "*dotfiles-agent-sync.json*) echo '{"plugins":false,"skills":false,"hindsight":false}' ;; esac
 exit 0
 EOF
   # ssh-keygen -R edits the known_hosts of the passwd home, not $HOME: never let a test reach it.

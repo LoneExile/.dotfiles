@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync the gh login and the skills of this Mac to the agent user of a VM (role agent only). The
+# Sync the Hindsight URL and key and the skills of this Mac to the agent user of a VM (role agent only). The
 # justfile recipe `vm-sync` calls it; vm-deploy runs the same steps after an agent deploy.
 # Arguments: <name> <repo-root>. What it does and does not do: see infra/vm-sync-lib.sh.
 #   address: the state's `vms` output (infra/vm-ip.sh); role: the vault's TF_VAR_vms (infra/vm-config.sh)

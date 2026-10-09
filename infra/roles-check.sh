@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Guards the roles: the clean guest (proxmox-guest) must stay clean, and the agent (proxmox-agent)
-# must stay confined and carry its sync pieces (gh credential helper, plugin install, harper, rsync,
-# /etc/dotfiles-agent-sync.json) only while the dotfiles.agent.sync options are on. One `nix eval` of
+# must stay confined and carry its sync pieces (plugin install, harper, rsync, /etc/dotfiles-agent-sync.json,
+# the Hindsight zsh side) only while the dotfiles.agent.sync options are on, and keep gh as git's credential helper with no Home Manager hand on ~/.config/gh. One `nix eval` of
 # the configurations, then plain assertions. No VM, no vault, no network beyond what evaluating the
 # flake needs. Run it from anywhere: roles-check.sh [flake-dir].
 set -uo pipefail
@@ -36,10 +36,11 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           wantedBy = u.systemd.user.services.omp-plugins-install.Install.WantedBy or null;
           restart = u.systemd.user.services.omp-plugins-install.Service.Restart or null;
           zshenv = u.programs.zsh.envExtra;
+          ghOwned = (u.programs.gh.enable or false) || builtins.any (n: builtins.match "\\.config/gh(/.*)?" n != null) (builtins.attrNames u.home.file);
         }
         else null;
     };
-    syncOff = { dotfiles.agent.sync = { gh = false; plugins = false; skills = false; hindsight = false; }; };
+    syncOff = { dotfiles.agent.sync = { plugins = false; skills = false; hindsight = false; }; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
@@ -69,11 +70,12 @@ check "agent: exactly one normal user, lingering, outside wheel" '(.agent.normal
 check "agent: nix-ld, podman, zram, omp, Home Manager on" '.agent | [.nixLd, .podman, .zram, .omp, .homeManager] | all'
 check "both: root by key only, no password login" '[.guest, .agent] | all(.rootLogin == "prohibit-password" and .passwordAuth == false)'
 check "clean: none of the sync (no harper, no sync file, no user wiring)" '(.guest | [.harper, (.syncFile != null), (.userSync != null)] | any) | not'
-check "agent: the sync options are on by default" '.agent.syncFile == {"gh": true, "plugins": true, "skills": true, "hindsight": true}'
+check "agent: the sync options are on by default" '.agent.syncFile == {"plugins": true, "skills": true, "hindsight": true}'
 check "agent: harper (harper-cli) is installed" '.agent.harper'
-check "agent: plugin install service and activation, gh as git credential helper" '.agent.userSync.service and .agent.userSync.activation and (.agent.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$"))'
+check "agent: plugin install service and activation" '.agent.userSync.service and .agent.userSync.activation'
+check "agent: gh is git's credential helper for github.com, and Home Manager owns nothing of ~/.config/gh" '(.agent.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$")) and (.agent.userSync.ghOwned | not)'
 check "agent: the manifests are placed before the user units reload, and the unit carries the hash of the captured files" '.agent.userSync.before == ["reloadSystemd"] and ([.agent.userSync.execStart] | flatten | map(test(" [0-9a-f]{64}$")) | any)'
 check "agent: the plugin install unit starts with the user manager at boot and is retried on failure" '.agent.userSync.wantedBy == ["default.target"] and .agent.userSync.restart == "on-failure"'
 check "agent: zsh reads the hindsight file for every shell, and never ~/.omp/.env" '.agent.userSync.zshenv | (contains("config/dotfiles/hindsight.env") and (contains(".omp/.env") | not) and contains("set -a") and contains("set +a"))'
-check "agent with every sync option off: no harper, no service, no activation, no helper, no hindsight in zsh" '.agentOff | (.syncFile == {"gh": false, "plugins": false, "skills": false, "hindsight": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper == null) and (.userSync.zshenv | contains("hindsight") | not)'
+check "agent with every sync option off: no harper, no service, no activation, no hindsight in zsh; gh stays the credential helper" '.agentOff | (.syncFile == {"plugins": false, "skills": false, "hindsight": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$")) and (.userSync.zshenv | contains("hindsight") | not)'
 exit "$fail"

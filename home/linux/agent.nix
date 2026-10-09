@@ -1,9 +1,9 @@
 # Home Manager for the agent user of a NixOS VM (modules/nixos/agent-dev.nix imports it).
 # It is not the Mac's home/default.nix, which assumes darwin, Homebrew and secretspec: this one
 # holds the shell, the dev tools and the config files an agent needs, and nothing that needs a
-# secret. Secrets stay with the user on the VM (~/.omp/.env, `gh auth login`); the exceptions are
-# what `just vm-sync` writes from the vault (infra/vm-sync-lib.sh): the gh login and the Hindsight
-# URL and key. Nix never holds them; it only sets up how they are read.
+# secret. Secrets stay with the user on the VM (~/.omp/.env, `gh auth login`); the one exception is
+# what `just vm-sync` writes from the vault (infra/vm-sync-lib.sh): the Hindsight URL and key. Nix
+# never holds it; it only sets up how it is read.
 {
   config,
   lib,
@@ -80,8 +80,8 @@ in {
       };
     };
     tern.enable = lib.mkEnableOption "the Tern remote service settings";
+    gh.enable = lib.mkEnableOption "gh as git's credential helper for github.com (the user logs in with `gh auth login`)";
     sync = {
-      gh = lib.mkEnableOption "gh as git's credential helper for github.com (the login is written by vm-sync)";
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
       hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
       pluginPackages = lib.mkOption {
@@ -176,10 +176,11 @@ in {
       '';
     })
 
-    (lib.mkIf cfg.sync.gh {
-      # gh answers git's credential requests for github.com with the token in ~/.config/gh/hosts.yml,
-      # which `just vm-sync` writes from the vault (no entry there: no login, git asks for nothing and
-      # fails as before). The store path keeps it working in a shell that has no gh on its PATH.
+    (lib.mkIf cfg.gh.enable {
+      # gh answers git's credential requests for github.com with the login that the user makes on the VM
+      # (`gh auth login`: gh keeps it in ~/.config/gh, a plain directory that nothing here manages, so gh
+      # can write its own config and hosts files and no deploy overwrites them). Without a login git asks
+      # for nothing and fails as before. The store path keeps it working in a shell that has no gh on its PATH.
       programs.git.settings.credential = {
         "https://github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";
         "https://gist.github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";

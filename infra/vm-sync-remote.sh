@@ -2,7 +2,6 @@
 # The part of vm-sync and vm-deploy that runs ON the VM, as the agent user (never as root: root
 # runs nothing inside the user's home). The Mac sends this file over SSH and calls one subcommand:
 #
-#   gh                      read a GitHub token (one line) on stdin, write ~/.config/gh/hosts.yml
 #   hindsight               read the Hindsight URL and API key (two lines) on stdin, write
 #                           ~/.config/dotfiles/hindsight.env (zsh reads it, see home/linux/agent.nix)
 #   hindsight-remove NAME   remove that file (the vault map has no entry for the VM NAME), one line
@@ -19,7 +18,7 @@
 # records the Home Manager activation keeps for the files it placed, and removes ~/.omp/plugins as one
 # directory together with those records and the install stamp.
 #
-# The token comes on stdin only: never an argument, never printed, never in the manifest.
+# The key comes on stdin only: never an argument, never printed, never in the manifest.
 # Exit: 0 done, 1 refused or failed, 2 usage.
 set -uo pipefail
 
@@ -74,29 +73,6 @@ parent_is_plain() {
     [ ! -L "$HOME/$part" ] || return 1
   done
   return 0
-}
-
-cmd_gh() {
-  local token rest hosts rel=.config/gh/hosts.yml tmp
-  IFS= read -r token || true
-  if IFS= read -r rest; then die 1 "more than one line on stdin"; fi
-  [[ $token =~ ^[A-Za-z0-9_]{20,255}$ ]] || die 1 "the token on stdin has an unexpected shape (one line of 20 to 255 letters, digits or underscores)"
-  umask 077
-  mkdir_recorded .config/gh 700
-  hosts=$HOME/$rel
-  if { [ -e "$hosts" ] || [ -L "$hosts" ]; } && ! grep -qxF -- "file $rel" "$manifest" 2>/dev/null; then
-    mv -f -- "$hosts" "$hosts.dotfiles-backup" || die 1 "cannot keep the existing hosts.yml"
-    record backup "$rel.dotfiles-backup"
-    echo "gh: kept the existing hosts.yml as hosts.yml.dotfiles-backup (unsync puts it back)"
-  fi
-  record file "$rel"
-  tmp=$(mktemp "$HOME/.config/gh/.hosts.yml.XXXXXX") || die 1 "cannot create a temporary file"
-  printf 'github.com:\n    oauth_token: %s\n    git_protocol: https\n' "$token" >"$tmp" || {
-    rm -f "$tmp"
-    die 1 "cannot write the login"
-  }
-  mv -f -- "$tmp" "$hosts" || die 1 "cannot place hosts.yml"
-  echo "gh: wrote ~/$rel"
 }
 
 # hindsight.env is ours when the manifest has it or its first line is the marker.
@@ -305,11 +281,10 @@ cmd_unsync() {
   return "$rc"
 }
 
-[ $# -ge 1 ] || die 2 "usage: vm-sync-remote.sh gh | hindsight | hindsight-remove NAME | skills-prepare NAME... | plugins-status | unsync"
+[ $# -ge 1 ] || die 2 "usage: vm-sync-remote.sh hindsight | hindsight-remove NAME | skills-prepare NAME... | plugins-status | unsync"
 sub=$1
 shift
 case $sub in
-  gh) cmd_gh ;;
   hindsight) cmd_hindsight ;;
   hindsight-remove) cmd_hindsight_remove "$@" ;;
   skills-prepare) cmd_skills_prepare "$@" ;;

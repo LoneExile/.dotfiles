@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Tests for the Mac side of the VM sync: infra/vm-gh-token.sh (the token of one VM out of the vault
-# map), infra/vm-sync.sh and infra/vm-sync-lib.sh (gh login and skills to the agent user of a VM),
+# Tests for the Mac side of the VM sync: infra/vm-hindsight-entry.sh (the Hindsight URL and key of one
+# VM out of the vault map), infra/vm-sync.sh and infra/vm-sync-lib.sh (Hindsight file and skills to the agent user of a VM),
 # and the removal that vm-deploy runs before a VM leaves the agent role. The VM is a directory:
 # the `ssh` shim runs the remote command here, as the "user", with HOME set to that directory, and
 # rsync is the real one talking through the shim. Fixtures only: RFC 5737 addresses, invented
@@ -17,33 +17,32 @@ for c in rsync jq base64 shasum; do
   }
 done
 
-TOKEN=fixture0ghtoken0123456789abcdefABCDEF01
 BASE='{"testvm-alpha":{"node":"n1","vmid":901,"mac":"02:00:5E:10:00:01","ipv4_cidr":"203.0.113.10/24","gateway":"203.0.113.1","dns":["198.51.100.53"],"cores":2,"memory_mb":2048,"disk_gb":20,"role":"agent"}}'
 CLEAN='{"testvm-alpha":{"node":"n1","vmid":901,"mac":"02:00:5E:10:00:01","ipv4_cidr":"203.0.113.10/24","gateway":"203.0.113.1","dns":["198.51.100.53"],"cores":2,"memory_mb":2048,"disk_gb":20}}'
-ALL_ON='{"gh":true,"plugins":true,"skills":true}'
-HS_ON='{"gh":false,"plugins":false,"skills":false,"hindsight":true}'
+ALL_ON='{"plugins":true,"skills":true}'
+HS_ON='{"plugins":false,"skills":false,"hindsight":true}'
+SECRET_ON='{"plugins":true,"skills":true,"hindsight":true}'
 HS_URL=https://hindsight.fixture.example
 HS_KEY=fixture0hstoken0123456789abcdefABCD
 HS_MAP="{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"$HS_KEY\"}}"
 
-# shims VMS-JSON [TOKEN-MAP-JSON [VM-CONFIG-JSON]]: PATH directory $T/bin and the fake world.
-#   secretspec get|run   a file-backed vault ($T/store); VM_GH_TOKENS absent reads as {} (the manifest default)
+# shims VMS-JSON [VM-CONFIG-JSON [HINDSIGHT-MAP-JSON]]: PATH directory $T/bin and the fake world.
+#   secretspec get|run   a file-backed vault ($T/store); VM_HINDSIGHT absent reads as {} (the manifest default)
 #   terragrunt           the `vms` output, with ip and role
 #   ssh                  runs the remote command here with HOME=$T/vm (host user@...); root@ answers `id -u`
 #   nix                  logs its arguments (the deploy)
 shims() {
   mkdir -p "$T/bin" "$T/store" "$T/vm"
   printf '%s' "$1" >"$T/store/TF_VAR_vms"
-  [ -z "${2:-}" ] || printf '%s' "$2" >"$T/store/VM_GH_TOKENS"
-  [ -z "${4:-}" ] || printf '%s' "$4" >"$T/store/VM_HINDSIGHT"
-  printf '%s' "${3:-$ALL_ON}" >"$T/vm-config.json"
+  [ -z "${3:-}" ] || printf '%s' "$3" >"$T/store/VM_HINDSIGHT"
+  printf '%s' "${2:-$ALL_ON}" >"$T/vm-config.json"
   cat >"$T/bin/secretspec" <<'EOF'
 #!/bin/sh
 case "$1" in
   get)
     printf 'get %s\n' "$2" >>"$STUB_SEQ"
     if [ -f "$STUB_DIR/$2" ]; then cat "$STUB_DIR/$2"
-    elif [ "$2" = VM_GH_TOKENS ] || [ "$2" = VM_HINDSIGHT ]; then printf '{}'
+    elif [ "$2" = VM_HINDSIGHT ]; then printf '{}'
     else exit 1; fi ;;
   run) shift; [ "$1" = -- ] && shift; TF_VAR_vms=$(cat "$STUB_DIR/TF_VAR_vms") exec "$@" ;;
 esac
@@ -159,68 +158,16 @@ EOF
 sync_run() { bash "$ROOT/infra/vm-sync.sh" "${1:-testvm-alpha}" "$ROOT" >"$T/out" 2>"$T/err"; echo $?; }
 deploy() { (cd "$ROOT" && bash "$ROOT/infra/vm-deploy.sh" "${1:-testvm-alpha}" "$ROOT") >"$T/out" 2>"$T/err"; echo $?; }
 VMSKILLS() { echo "$T/vm/.omp/agent/skills"; }
-HOSTS() { echo "$T/vm/.config/gh/hosts.yml"; }
 VMHS() { echo "$T/vm/.config/dotfiles/hindsight.env"; }
 # hashes DIR: sorted per-file hashes of DIR, relative paths.
 hashes() { (cd "$1" && find . -type f | LC_ALL=C sort | while IFS= read -r f; do printf '%s %s\n' "$(shasum -a 256 <"$f" | cut -c1-64)" "$f"; done); }
-
-# ---- vm-gh-token.sh
-
-tok() { bash "$ROOT/infra/vm-gh-token.sh" "$@" >"$T/out" 2>"$T/err"; echo $?; }
-
-test_token_script_prints_the_token_of_the_named_vm_only() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\",\"testvm-beta\":\"fixture0other0token0123456789abcdef\"}"
-  assert_rc "token" "$(tok testvm-alpha)" 0
-  assert_eq "the token and nothing else" "$TOKEN" "$(cat "$T/out")"
-  assert_eq "stderr empty" "" "$(cat "$T/err")"
-  assert_lacks "not the other VM's" "$T/out" "other0token"
-}
-
-test_token_script_prints_nothing_without_an_entry() {
-  shims "$BASE" '{"testvm-beta":"fixture0other0token0123456789abcdef"}'
-  assert_rc "no entry for the VM" "$(tok testvm-alpha)" 0
-  assert_eq "nothing on stdout" "" "$(cat "$T/out")"
-  shims "$BASE"
-  assert_rc "key absent from the vault (default {})" "$(tok testvm-alpha)" 0
-  assert_eq "nothing" "" "$(cat "$T/out")"
-  shims "$BASE" '{"testvm-alpha":""}'
-  assert_rc "an empty entry" "$(tok testvm-alpha)" 0
-  assert_eq "nothing" "" "$(cat "$T/out")"
-  shims "$BASE" '{"testvm-alpha":null}'
-  assert_rc "a null entry" "$(tok testvm-alpha)" 0
-  assert_eq "nothing" "" "$(cat "$T/out")"
-}
-
-test_token_script_refuses_a_malformed_vault_value_without_echoing_it() {
-  local bad
-  for bad in 'not json' '["fixture0ghtoken0123456789abcdefABCDEF01"]' '{"testvm-alpha":["x"]}' '{"testvm-alpha":7}' '{"testvm-alpha":"short"}' '{"testvm-alpha":"has space in it 0123456789abcdef"}' "{\"testvm-alpha\":\"line\\n$TOKEN\"}"; do
-    shims "$BASE" "$bad"
-    assert_rc "bad value: $bad" "$(tok testvm-alpha)" 1
-    assert_has "names the vault key" "$T/err" "VM_GH_TOKENS"
-    assert_eq "stdout empty" "" "$(cat "$T/out")"
-    assert_lacks "stderr hides the token" "$T/err" "ghtoken0123456789"
-  done
-}
-
-test_token_script_fails_when_the_vault_cannot_be_read() {
-  shims "$BASE"
-  printf '#!/bin/sh\nexit 1\n' >"$T/bin/secretspec"
-  assert_rc "secretspec fails" "$(tok testvm-alpha)" 1
-  assert_has "says it" "$T/err" "cannot read VM_GH_TOKENS"
-}
-
-test_token_script_takes_one_argument() {
-  shims "$BASE"
-  assert_rc "none" "$(tok)" 2
-  assert_rc "two" "$(tok a b)" 2
-}
 
 # ---- vm-hindsight-entry.sh
 
 ent() { bash "$ROOT/infra/vm-hindsight-entry.sh" "$@" >"$T/out" 2>"$T/err"; echo $?; }
 
 test_entry_script_prints_url_and_key_of_the_named_vm_only() {
-  shims "$BASE" "" "" "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"$HS_KEY\"},\"testvm-beta\":{\"url\":\"https://other.fixture.example\",\"token\":\"fixture0other0hstoken0123456789ab\"}}"
+  shims "$BASE" "" "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"$HS_KEY\"},\"testvm-beta\":{\"url\":\"https://other.fixture.example\",\"token\":\"fixture0other0hstoken0123456789ab\"}}"
   assert_rc "entry" "$(ent testvm-alpha)" 0
   assert_eq "the url, then the key, and nothing else" "$HS_URL
 $HS_KEY" "$(cat "$T/out")"
@@ -229,13 +176,13 @@ $HS_KEY" "$(cat "$T/out")"
 }
 
 test_entry_script_prints_nothing_without_an_entry() {
-  shims "$BASE" "" "" '{"testvm-beta":{"url":"https://other.fixture.example","token":"fixture0other0hstoken0123456789ab"}}'
+  shims "$BASE" "" '{"testvm-beta":{"url":"https://other.fixture.example","token":"fixture0other0hstoken0123456789ab"}}'
   assert_rc "no entry for the VM" "$(ent testvm-alpha)" 0
   assert_eq "nothing on stdout" "" "$(cat "$T/out")"
   shims "$BASE"
   assert_rc "key absent from the vault (default {})" "$(ent testvm-alpha)" 0
   assert_eq "nothing" "" "$(cat "$T/out")"
-  shims "$BASE" "" "" '{"testvm-alpha":null}'
+  shims "$BASE" "" '{"testvm-alpha":null}'
   assert_rc "a null entry" "$(ent testvm-alpha)" 0
   assert_eq "nothing" "" "$(cat "$T/out")"
 }
@@ -249,7 +196,7 @@ test_entry_script_refuses_a_malformed_vault_value_without_echoing_it() {
     "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"short\"}}" \
     "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"has space in it 0123456789abcdef\"}}" \
     "{\"testvm-alpha\":{\"url\":7,\"token\":\"$HS_KEY\"}}"; do
-    shims "$BASE" "" "" "$bad"
+    shims "$BASE" "" "$bad"
     assert_rc "bad value: $bad" "$(ent testvm-alpha)" 1
     assert_has "names the vault key" "$T/err" "VM_HINDSIGHT"
     assert_eq "stdout empty" "" "$(cat "$T/out")"
@@ -268,13 +215,13 @@ test_entry_script_fails_when_the_vault_cannot_be_read() {
 test_entry_script_says_what_is_wrong_with_the_map_or_the_entry() {
   local bad
   for bad in 'null' '7' '"x"' '["x"]'; do
-    shims "$BASE" "" "" "$bad"
+    shims "$BASE" "" "$bad"
     assert_rc "map: $bad" "$(ent testvm-alpha)" 1
     assert_has "says it is not a JSON object" "$T/err" "is not a JSON object"
     assert_eq "stdout empty" "" "$(cat "$T/out")"
   done
   for bad in '{"testvm-alpha":"x"}' '{"testvm-alpha":7}' '{"testvm-alpha":["x"]}'; do
-    shims "$BASE" "" "" "$bad"
+    shims "$BASE" "" "$bad"
     assert_rc "entry: $bad" "$(ent testvm-alpha)" 1
     assert_has "says it is not an object" "$T/err" "not an object"
     assert_eq "stdout empty" "" "$(cat "$T/out")"
@@ -289,15 +236,13 @@ test_entry_script_takes_one_argument() {
 
 # ---- vm-sync.sh
 
-test_sync_writes_the_gh_login_and_mirrors_the_skills() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+test_sync_mirrors_the_skills() {
+  shims "$BASE"
   mkdir -p "$(VMSKILLS)/mine" "$(VMSKILLS)/alpha/stale"
   printf 'mine' >"$(VMSKILLS)/mine/SKILL.md"
   printf 'stale' >"$(VMSKILLS)/alpha/stale/old.md"
   printf 'stale' >"$(VMSKILLS)/alpha/extra.txt"
   assert_rc "sync" "$(sync_run)" 0
-  assert_has "hosts.yml has the token" "$(HOSTS)" "oauth_token: $TOKEN"
-  assert_eq "hosts.yml is 600" 600 "$(tl_mode "$(HOSTS)")"
   assert_eq "alpha mirrors the Mac exactly (files and hashes)" "$(hashes "$T/lib/alpha")" "$(hashes "$(VMSKILLS)/alpha")"
   assert_eq "beta" "$(hashes "$T/lib/beta")" "$(hashes "$(VMSKILLS)/beta")"
   assert_eq "gamma" "$(hashes "$T/lib/gamma")" "$(hashes "$(VMSKILLS)/gamma")"
@@ -306,15 +251,6 @@ test_sync_writes_the_gh_login_and_mirrors_the_skills() {
   assert_eq "the user's own skill stays" mine "$(cat "$(VMSKILLS)/mine/SKILL.md")"
   assert_eq "script keeps its exec bit" yes "$([ -x "$(VMSKILLS)/beta/scripts/run.sh" ] && echo yes)"
   assert_eq "exactly the three plus the user's" "alpha beta gamma mine" "$(ls "$(VMSKILLS)" | tr '\n' ' ' | sed 's/ $//')"
-}
-
-test_sync_never_puts_the_token_in_an_argument_or_an_output() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
-  assert_rc "sync" "$(sync_run)" 0
-  assert_lacks "not in any ssh argument" "$T/sshlog" "$TOKEN"
-  assert_lacks "not on stdout" "$T/out" "$TOKEN"
-  assert_lacks "not on stderr" "$T/err" "$TOKEN"
-  assert_lacks "not in the manifest on the VM" "$T/vm/.local/state/dotfiles/vm-sync/manifest" "$TOKEN"
 }
 
 test_sync_syncs_only_the_library_skills() {
@@ -328,31 +264,21 @@ test_sync_syncs_only_the_library_skills() {
   assert_absent "no stray file" "$(VMSKILLS)/stray-file"
 }
 
-test_sync_skips_gh_with_one_notice_when_there_is_no_token() {
-  shims "$BASE"
-  assert_rc "sync" "$(sync_run)" 0
-  assert_absent "no hosts.yml" "$(HOSTS)"
-  assert_eq "one notice line about gh" 1 "$(grep -c 'gh: no token' "$T/out")"
-  assert_has "names the vault key" "$T/out" "VM_GH_TOKENS"
-  assert_eq "skills were still synced" yes "$([ -d "$(VMSKILLS)/alpha" ] && echo yes)"
-}
-
 test_sync_follows_the_vms_options() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}" '{"gh":false,"plugins":false,"skills":false}'
+  shims "$BASE" '{"plugins":false,"skills":false,"hindsight":false}' "$HS_MAP"
   assert_rc "all off" "$(sync_run)" 0
-  assert_absent "no hosts.yml" "$(HOSTS)"
   assert_absent "no skills" "$(VMSKILLS)"
-  assert_eq "the token was not even read" 0 "$(grep -c 'get VM_GH_TOKENS' "$T/seq")"
+  assert_absent "no hindsight file" "$(VMHS)"
+  assert_eq "the vault entry was not even read" 0 "$(grep -c 'get VM_HINDSIGHT' "$T/seq")"
   assert_lacks "no plugin line" "$T/out" "plugins:"
-  printf '{"gh":false,"plugins":false,"skills":true}' >"$T/vm-config.json"
+  printf '{"plugins":false,"skills":true}' >"$T/vm-config.json"
   assert_rc "skills only" "$(sync_run)" 0
   assert_eq "skills" yes "$([ -d "$(VMSKILLS)/alpha" ] && echo yes)"
-  assert_absent "still no hosts.yml" "$(HOSTS)"
-  printf '{"gh":true,"plugins":true,"skills":false}' >"$T/vm-config.json"
+  assert_absent "still no hindsight file" "$(VMHS)"
+  printf '{"plugins":true,"skills":false}' >"$T/vm-config.json"
   rm -rf "$T/vm"
   mkdir -p "$T/vm"
-  assert_rc "gh and plugins only" "$(sync_run)" 0
-  assert_has "hosts.yml" "$(HOSTS)" "oauth_token: $TOKEN"
+  assert_rc "plugins only" "$(sync_run)" 0
   assert_absent "no skills" "$(VMSKILLS)"
   assert_has "the plugin status line" "$T/out" "plugins:"
 }
@@ -399,7 +325,7 @@ test_sync_skips_a_directory_with_an_unusable_name_and_says_so() {
 }
 
 test_sync_twice_changes_nothing_and_follows_a_removed_file() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+  shims "$BASE"
   assert_rc "first" "$(sync_run)" 0
   local before
   before=$(hashes "$T/vm")
@@ -439,7 +365,7 @@ test_sync_fails_on_an_unreadable_vm_config() {
 }
 
 test_sync_runs_the_remote_part_as_the_user_never_as_root() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+  shims "$BASE"
   assert_rc "sync" "$(sync_run)" 0
   assert_eq "no root login" 0 "$(grep -c '^ssh root' "$T/seq")"
 }
@@ -447,7 +373,7 @@ test_sync_runs_the_remote_part_as_the_user_never_as_root() {
 # ---- host keys: the sync only talks to a VM whose key is pinned already
 
 test_sync_refuses_a_host_key_that_is_not_pinned() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+  shims "$BASE" "$SECRET_ON" "$HS_MAP"
   : >"$T/known_hosts"
   assert_rc "sync" "$(sync_run)" 1
   assert_has "says the key is not pinned" "$T/err" "not pinned in known_hosts"
@@ -456,25 +382,25 @@ test_sync_refuses_a_host_key_that_is_not_pinned() {
   assert_eq "nothing was pinned by the attempt" "" "$(cat "$T/known_hosts")"
   assert_eq "no remote command ran (only the probe)" 0 "$(grep -c 'base64 -d' "$T/sshlog")"
   assert_eq "no rsync was started" 0 "$(grep -c 'rsync --server' "$T/sshlog")"
-  assert_absent "no hosts.yml" "$(HOSTS)"
+  assert_absent "no hindsight file" "$(VMHS)"
   assert_absent "no skills" "$(VMSKILLS)"
-  assert_lacks "the token went nowhere" "$T/sshlog" "$TOKEN"
+  assert_lacks "the key went nowhere" "$T/sshlog" "$HS_KEY"
 }
 
 test_sync_refuses_a_host_key_that_does_not_match_the_pinned_one() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+  shims "$BASE" "$SECRET_ON" "$HS_MAP"
   printf '203.0.113.10 changed\n' >"$T/known_hosts"
   assert_rc "sync" "$(sync_run)" 1
   assert_has "names the re-key step" "$T/err" "ssh-keygen -R 203.0.113.10"
   assert_eq "no remote command ran" 0 "$(grep -c 'base64 -d' "$T/sshlog")"
-  assert_absent "no hosts.yml" "$(HOSTS)"
+  assert_absent "no hindsight file" "$(VMHS)"
   assert_absent "no skills" "$(VMSKILLS)"
 }
 
 test_every_connection_of_the_sync_is_strict_and_writes_no_host_key() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+  shims "$BASE" "$SECRET_ON" "$HS_MAP"
   assert_rc "sync" "$(sync_run)" 0
-  assert_eq "ssh was called (config, gh, skills-prepare, plugins) and rsync ran its three transfers" yes "$([ "$(grep -c '' "$T/sshopts")" -ge 8 ] && [ "$(grep -c 'rsync --server' "$T/sshlog")" -eq 3 ] && echo yes)"
+  assert_eq "ssh was called (config, hindsight, skills-prepare, plugins) and rsync ran its three transfers" yes "$([ "$(grep -c '' "$T/sshopts")" -ge 8 ] && [ "$(grep -c 'rsync --server' "$T/sshlog")" -eq 3 ] && echo yes)"
   assert_eq "no connection without StrictHostKeyChecking=yes" 0 "$(grep -vc '^strict=yes ' "$T/sshopts")"
   assert_eq "no connection without UpdateHostKeys=no" 0 "$(grep -vc 'UpdateHostKeys=no' "$T/sshopts")"
   assert_eq "known_hosts is as it was" "203.0.113.10 ok" "$(cat "$T/known_hosts")"
@@ -509,33 +435,26 @@ test_the_remote_call_refuses_an_argument_that_is_not_a_plain_name() {
   assert_eq "no ssh call at all" 0 "$(grep -c '^ssh ' "$T/sshlog")"
 }
 
-test_a_bad_token_entry_stops_the_sync_before_anything_is_written() {
-  shims "$BASE" '{"testvm-alpha":"short"}'
-  assert_rc "sync" "$(sync_run)" 1
-  assert_absent "no hosts.yml" "$(HOSTS)"
-  assert_absent "no skills" "$(VMSKILLS)"
-}
-
 # ---- vm-deploy: sync after an agent deploy, removal before a clean one
 
 test_deploy_of_the_agent_role_syncs_after_the_switch() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+  shims "$BASE" "$SECRET_ON" "$HS_MAP"
   assert_rc "deploy" "$(deploy)" 0
   assert_eq "nix first, then the user's ssh" "nix" "$(grep -E '^(nix|ssh lex)' "$T/seq" | head -1)"
   assert_eq "the switch is before the first remote call as the user" "yes" "$(awk '/^nix$/ {n=NR} /^ssh lex$/ && !f {f=NR} END {print (n && f && n < f) ? "yes" : "no"}' "$T/seq")"
-  assert_has "hosts.yml" "$(HOSTS)" "oauth_token: $TOKEN"
+  assert_has "hindsight file" "$(VMHS)" "HINDSIGHT_API_TOKEN='$HS_KEY'"
   assert_eq "skills" yes "$([ -d "$(VMSKILLS)/alpha" ] && echo yes)"
 }
 
 test_a_failed_sync_after_the_switch_fails_the_deploy_and_says_what_to_do() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}" 'not json'
+  shims "$BASE" 'not json'
   assert_rc "deploy" "$(deploy)" 1
   assert_has "the switch happened" "$T/seq" "nix"
   assert_has "says it is deployed and names the recipe" "$T/err" "just vm-sync"
 }
 
 test_deploy_of_the_clean_role_removes_what_the_sync_placed_first() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+  shims "$BASE" "$SECRET_ON" "$HS_MAP"
   mkdir -p "$(VMSKILLS)/mine"
   printf 'mine' >"$(VMSKILLS)/mine/SKILL.md"
   printf 'cfg' >"$T/vm/keepme"
@@ -544,7 +463,7 @@ test_deploy_of_the_clean_role_removes_what_the_sync_placed_first() {
   printf '%s' "$CLEAN" >"$T/store/TF_VAR_vms"
   assert_rc "deploy as clean" "$(deploy)" 0
   assert_eq "the removal ran before the switch" "yes" "$(awk '/^nix$/ {n=NR} /^ssh lex$/ {f=NR} END {print (n && f && f < n) ? "yes" : "no"}' "$T/seq")"
-  assert_absent "hosts.yml is gone" "$(HOSTS)"
+  assert_absent "hindsight file is gone" "$(VMHS)"
   assert_absent "alpha is gone" "$(VMSKILLS)/alpha"
   assert_absent "beta is gone" "$(VMSKILLS)/beta"
   assert_absent "gamma is gone" "$(VMSKILLS)/gamma"
@@ -555,7 +474,7 @@ test_deploy_of_the_clean_role_removes_what_the_sync_placed_first() {
 # ---- vm-sync.sh: the Hindsight piece
 
 test_sync_hindsight_checks_the_gate_then_writes_the_file_and_puts_nothing_in_an_argument() {
-  shims "$BASE" "" "$HS_ON" "$HS_MAP"
+  shims "$BASE" "$HS_ON" "$HS_MAP"
   mkdir -p "$T/vm/.omp"
   printf 'mine' >"$T/vm/.omp/.env"
   assert_rc "sync" "$(sync_run)" 0
@@ -572,13 +491,12 @@ $HS_KEY" "$(cat "$T/store/health.stdin")"
   assert_lacks "no key in the output" "$T/out" "$HS_KEY"
   assert_lacks "no key in stderr" "$T/err" "$HS_KEY"
   assert_eq "the user's ~/.omp/.env is untouched" "mine" "$(cat "$T/vm/.omp/.env")"
-  assert_eq "the gh token was not read" 0 "$(grep -c 'get VM_GH_TOKENS' "$T/seq")"
 }
 
 test_sync_hindsight_pushes_nothing_when_the_gate_does_not_accept_the_key() {
   local st rc
   for st in 401 500 unreachable; do
-    shims "$BASE" "" "$HS_ON" "$HS_MAP"
+    shims "$BASE" "$HS_ON" "$HS_MAP"
     rc=$(STUB_HEALTH=$st sync_run)
     assert_rc "gate says $st" "$rc" 1
     assert_has "names the VM" "$T/err" "testvm-alpha"
@@ -587,7 +505,7 @@ test_sync_hindsight_pushes_nothing_when_the_gate_does_not_accept_the_key() {
     assert_eq "no hindsight call reached the VM for $st" 0 "$(grep -c "'hindsight'" "$T/sshlog")"
     assert_lacks "no key in stderr" "$T/err" "$HS_KEY"
   done
-  shims "$BASE" "" "$HS_ON" "$HS_MAP"
+  shims "$BASE" "$HS_ON" "$HS_MAP"
   assert_rc "first, accepted" "$(sync_run)" 0
   local before
   before=$(shasum -a 256 <"$(VMHS)")
@@ -596,7 +514,7 @@ test_sync_hindsight_pushes_nothing_when_the_gate_does_not_accept_the_key() {
 }
 
 test_sync_hindsight_without_an_entry_removes_the_file_with_one_notice() {
-  shims "$BASE" "" "$HS_ON" "$HS_MAP"
+  shims "$BASE" "$HS_ON" "$HS_MAP"
   assert_rc "first sync" "$(sync_run)" 0
   assert_eq "the file is there" yes "$([ -f "$(VMHS)" ] && echo yes)"
   printf '{"testvm-beta":{"url":"https://other.fixture.example","token":"fixture0other0hstoken0123456789ab"}}' >"$T/store/VM_HINDSIGHT"
@@ -608,16 +526,16 @@ test_sync_hindsight_without_an_entry_removes_the_file_with_one_notice() {
   assert_rc "third sync, nothing to remove" "$(sync_run)" 0
   assert_eq "one line again" 1 "$(grep -c '^hindsight:' "$T/out")"
   assert_has "says there is nothing" "$T/out" "no file to remove"
-  shims "$BASE" "" "$HS_ON"
+  shims "$BASE" "$HS_ON"
   assert_rc "key absent from the vault (default {})" "$(sync_run)" 0
   assert_has "same notice" "$T/out" "no entry for testvm-alpha in VM_HINDSIGHT"
 }
 
 test_sync_hindsight_does_nothing_when_the_vms_option_is_off() {
-  shims "$BASE" "" "$ALL_ON" "$HS_MAP"
+  shims "$BASE" "$ALL_ON" "$HS_MAP"
   assert_rc "option absent" "$(sync_run)" 0
   assert_absent "no file" "$(VMHS)"
-  printf '{"gh":false,"plugins":false,"skills":false,"hindsight":false}' >"$T/vm-config.json"
+  printf '{"plugins":false,"skills":false,"hindsight":false}' >"$T/vm-config.json"
   assert_rc "option false" "$(sync_run)" 0
   assert_absent "still no file" "$(VMHS)"
   assert_eq "the vault entry was not read" 0 "$(grep -c 'get VM_HINDSIGHT' "$T/seq")"
@@ -627,7 +545,7 @@ test_sync_hindsight_does_nothing_when_the_vms_option_is_off() {
 test_sync_hindsight_refuses_a_malformed_vault_map_and_writes_nothing() {
   local bad
   for bad in 'not json' '{"testvm-alpha":"x"}' "{\"testvm-alpha\":{\"url\":\"http://hindsight.fixture.example\",\"token\":\"$HS_KEY\"}}" "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"short\"}}"; do
-    shims "$BASE" "" "$HS_ON" "$bad"
+    shims "$BASE" "$HS_ON" "$bad"
     assert_rc "bad map: $bad" "$(sync_run)" 1
     assert_has "names the vault key" "$T/err" "VM_HINDSIGHT"
     assert_absent "no file" "$(VMHS)"
@@ -636,7 +554,7 @@ test_sync_hindsight_refuses_a_malformed_vault_map_and_writes_nothing() {
 }
 
 test_deploy_of_the_agent_role_syncs_hindsight_after_the_switch() {
-  shims "$BASE" "" '{"gh":true,"plugins":true,"skills":true,"hindsight":true}' "$HS_MAP"
+  shims "$BASE" "$SECRET_ON" "$HS_MAP"
   assert_rc "deploy" "$(deploy)" 0
   assert_has "key line" "$(VMHS)" "HINDSIGHT_API_TOKEN='$HS_KEY'"
   assert_eq "the check ran" 1 "$(grep -c '^health$' "$T/seq")"
@@ -644,7 +562,7 @@ test_deploy_of_the_agent_role_syncs_hindsight_after_the_switch() {
 }
 
 test_deploy_of_the_clean_role_removes_the_hindsight_file_and_nothing_else() {
-  shims "$BASE" "" "$HS_ON" "$HS_MAP"
+  shims "$BASE" "$HS_ON" "$HS_MAP"
   mkdir -p "$T/vm/.omp"
   printf 'mine' >"$T/vm/.omp/.env"
   assert_rc "sync" "$(sync_run)" 0
@@ -681,7 +599,7 @@ test_deploy_stops_when_root_cannot_be_reached_to_look_for_the_user() {
 }
 
 test_deploy_of_the_agent_role_sends_no_secret_over_a_key_that_the_switch_pinned() {
-  shims "$BASE" "{\"testvm-alpha\":\"$TOKEN\"}"
+  shims "$BASE" "$SECRET_ON" "$HS_MAP"
   : >"$T/known_hosts"
   assert_rc "deploy" "$(deploy)" 1
   assert_has "the switch ran (it trusts a new key on first use, as it always did)" "$T/seq" "nix"
@@ -689,12 +607,12 @@ test_deploy_of_the_agent_role_sends_no_secret_over_a_key_that_the_switch_pinned(
   assert_has "says why nothing was synced" "$T/err" "was not pinned before this deploy"
   assert_has "names the re-key step" "$T/err" "ssh-keygen -R 203.0.113.10"
   assert_has "names the recipe to run next" "$T/err" "just vm-sync"
-  assert_absent "no hosts.yml" "$(HOSTS)"
+  assert_absent "no hindsight file" "$(VMHS)"
   assert_absent "no skills" "$(VMSKILLS)"
-  assert_lacks "the token went nowhere" "$T/sshlog" "$TOKEN"
+  assert_lacks "the key went nowhere" "$T/sshlog" "$HS_KEY"
   assert_eq "no connection as the agent user" 0 "$(grep -c '^ssh lex' "$T/seq")"
   assert_rc "vm-sync afterwards, with the key pinned" "$(sync_run)" 0
-  assert_has "hosts.yml now" "$(HOSTS)" "oauth_token: $TOKEN"
+  assert_has "hindsight file now" "$(VMHS)" "HINDSIGHT_API_TOKEN='$HS_KEY'"
 }
 
 test_deploy_of_the_clean_role_without_a_pinned_key_skips_the_removal_and_deploys() {

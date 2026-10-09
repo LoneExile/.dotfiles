@@ -9,13 +9,14 @@
 #   - Home Manager for that user (home/linux/agent.nix): zsh, starship, git, direnv, mise;
 #   - nix-ld, so glibc programs that were not built for NixOS run (mise's runtimes, omp, Tern);
 #   - omp, pinned by hash (agent-dev/omp.nix), with its config files copied in writable;
-#   - the gh CLI, rootless podman, zram swap;
+#   - the gh CLI with git's credential helper for github.com (the user logs in by hand: `gh auth login`),
+#     rootless podman, zram swap;
 #   - Tern's remote service reachable on the LAN (UDP 8376), with its relay and iroh off.
 #   - the sync from the Mac (options `dotfiles.agent.sync.*`, run by `just vm-sync` and by vm-deploy):
-#     gh as git's credential helper (the login itself is written from the vault), the captured omp
-#     plugins (manifests plus a user service that installs them, and harper-cli), rsync for the
-#     skills the Mac mirrors in, and the zsh side of the Hindsight URL and key (the file itself is
-#     written from the vault); /etc/dotfiles-agent-sync.json tells vm-sync which of the four.
+#     the captured omp plugins (manifests plus a user service that installs them, and harper-cli),
+#     rsync for the skills the Mac mirrors in, and the zsh side of the Hindsight URL and key (the
+#     file itself is written from the vault); /etc/dotfiles-agent-sync.json tells vm-sync which of
+#     the three.
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -52,11 +53,10 @@ in {
     omp.enable = piece "omp, pinned, with its config files copied into ~/.omp/agent as writable files";
     mise.enable = piece "mise with the global tools (node, python, uv, go, rust, bun, pnpm)";
     tern.enable = piece "the Tern remote service: UDP 8376 open, served to the LAN only (no relay, no iroh)";
-    gh.enable = piece "the GitHub CLI";
+    gh.enable = piece "the GitHub CLI, with git's credential helper for github.com (the user logs in by hand with `gh auth login`)";
     podman.enable = piece "rootless podman";
 
     sync = {
-      gh = piece "gh as git's credential helper for github.com (the login itself comes from `just vm-sync`, with the token stored for this VM)";
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
       skills = piece "the skills that `just vm-sync` mirrors from the Mac into ~/.omp/agent/skills (needs rsync on the VM)";
       hindsight = piece "the public Hindsight API for omp: zsh reads ~/.config/dotfiles/hindsight.env (written by `just vm-sync` from the vault) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN, which omp prefers over its config file";
@@ -124,8 +124,9 @@ in {
               package = unstable.mise;
             };
             tern.enable = cfg.tern.enable;
+            gh.enable = cfg.gh.enable;
             sync = {
-              inherit (cfg.sync) gh plugins hindsight;
+              inherit (cfg.sync) plugins hindsight;
               pluginPackages = [unstable.bun unstable.nodejs_24];
             };
           };
@@ -133,10 +134,6 @@ in {
       };
 
       assertions = [
-        {
-          assertion = !cfg.sync.gh || cfg.gh.enable;
-          message = "dotfiles.agent.sync.gh needs dotfiles.agent.gh.enable";
-        }
         {
           assertion = !cfg.sync.plugins || cfg.omp.enable;
           message = "dotfiles.agent.sync.plugins needs dotfiles.agent.omp.enable";
@@ -148,7 +145,7 @@ in {
       ];
 
       # What the VM wants synced, read by vm-sync (infra/vm-sync-lib.sh). No secret, world readable.
-      environment.etc."dotfiles-agent-sync.json".text = builtins.toJSON {inherit (cfg.sync) gh plugins skills hindsight;};
+      environment.etc."dotfiles-agent-sync.json".text = builtins.toJSON {inherit (cfg.sync) plugins skills hindsight;};
     }
 
     (lib.mkIf cfg.omp.enable {

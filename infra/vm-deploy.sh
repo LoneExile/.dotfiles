@@ -6,7 +6,7 @@
 #            resource and so needs no apply before it can be deployed
 # Both are read under secretspec. The build then runs outside it: it needs no secret, and its
 # processes should not carry the vault's values in their environment.
-# The agent role then gets the sync (infra/vm-sync-lib.sh: gh login, skills). A role without the
+# The agent role then gets the sync (infra/vm-sync-lib.sh: Hindsight file, skills). A role without the
 # agent first has what an earlier sync placed removed from the agent user's home, because the user
 # is gone after the switch.
 set -euo pipefail

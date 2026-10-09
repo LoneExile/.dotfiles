@@ -1,10 +1,8 @@
 # shellcheck shell=bash
-# Functions of the VM sync, sourced by vm-sync.sh and vm-deploy.sh. Needs ssh, rsync, jq, base64.
+# Functions of the VM sync, sourced by vm-sync.sh and vm-deploy.sh. Needs ssh, rsync, jq, base64 and python3.
 #
 # What the sync is: the agent role (modules/nixos/agent-dev.nix) lists in /etc/dotfiles-agent-sync.json
-# which of four things it wants (options dotfiles.agent.sync.gh, .plugins, .skills and .hindsight):
-#   gh       the agent user's gh login: the token of this VM from the vault map VM_GH_TOKENS (no entry:
-#            skipped with a notice), written to ~/.config/gh/hosts.yml over ssh stdin
+# which of three things it wants (options dotfiles.agent.sync.hindsight, .plugins and .skills):
 #   hindsight the public Hindsight API of this VM: the URL and key from the vault map VM_HINDSIGHT. The
 #            Mac first asks the gate (GET <url>/health with the key, infra/vm-hindsight-health.py): not
 #            200 means nothing is pushed. Then ~/.config/dotfiles/hindsight.env (mode 600, over ssh
@@ -20,7 +18,7 @@
 #
 # Host keys: every connection of the sync, ssh and rsync alike, uses StrictHostKeyChecking=yes (and
 # UpdateHostKeys=no, so it never writes known_hosts either): the VM's key must already be pinned, or
-# the sync refuses and says how to pin it (the re-key step of the README). The sync sends a token and
+# the sync refuses and says how to pin it (the re-key step of the README). The sync sends a key and
 # may send more secrets later, so it never trusts a key on first use. vm-install does not use this file.
 
 sync_user=${VM_AGENT_USER:-lex}
@@ -61,7 +59,7 @@ under_secretspec() {
 }
 
 # sync_remote REPO IP SUBCOMMAND [ARG...]: run vm-sync-remote.sh on the VM as the agent user. The script
-# travels base64-encoded in the command, so that stdin stays free (the token goes there). The arguments
+# travels base64-encoded in the command, so that stdin stays free (the key goes there). The arguments
 # are names, checked here: they end up inside single quotes of a command that the remote shell parses.
 sync_remote() {
   local repo=$1 ip=$2 b64 cmd a
@@ -121,24 +119,13 @@ sync_skill_names() {
   printf '%s' "$names"
 }
 
-# vm_sync NAME REPO IP: gh login, Hindsight file and skills, as far as the VM's options ask for them.
+# vm_sync NAME REPO IP: Hindsight file and skills, as far as the VM's options ask for them.
 vm_sync() {
-  local name=$1 repo=$2 ip=$3 cfg cfgpath on token entry names n count=0
+  local name=$1 repo=$2 ip=$3 cfg cfgpath on entry names n count=0
   cfgpath=${VM_SYNC_CONFIG_PATH:-/etc/dotfiles-agent-sync.json}
   sync_wait_ssh "$name" "$ip"
   cfg=$(ssh "${sync_ssh_opts[@]}" "$sync_user@$ip" "cat $cfgpath") || sync_die "cannot read $cfgpath on the VM (deploy the agent role first)"
   printf '%s' "$cfg" | jq -e 'type == "object"' >/dev/null 2>&1 || sync_die "$cfgpath on the VM is not a JSON object (dotfiles-agent-sync)"
-
-  on=$(printf '%s' "$cfg" | jq -r '.gh // false')
-  if [ "$on" = true ]; then
-    token=$(SECRETSPEC_FILE="$repo/infra/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" bash "$repo/infra/vm-gh-token.sh" "$name") || exit 1
-    if [ -z "$token" ]; then
-      echo "vm-sync: gh: no token for $name in VM_GH_TOKENS: skipped (see the README to store one)"
-    else
-      printf '%s' "$token" | sync_remote "$repo" "$ip" gh || sync_die "could not write the gh login on the VM"
-    fi
-    token=""
-  fi
 
   on=$(printf '%s' "$cfg" | jq -r '.hindsight // false')
   if [ "$on" = true ]; then

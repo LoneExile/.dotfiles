@@ -225,7 +225,7 @@ vm-deploy name:
   set -euo pipefail
   bash "{{infra_dir}}/vm-deploy.sh" {{quote(name)}} "{{justfile_directory()}}"
 
-# Sync the gh login (this VM's token from the vault map VM_GH_TOKENS) and the Mac's skills library to the agent user of a VM (role agent); vm-deploy runs it after an agent deploy
+# Sync the Hindsight URL and key (this VM's entry in the vault map VM_HINDSIGHT) and the Mac's skills library to the agent user of a VM (role agent); vm-deploy runs it after an agent deploy
 vm-sync name:
   #!/usr/bin/env bash
   set -euo pipefail

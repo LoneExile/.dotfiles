@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tests for infra/vm-sync-remote.sh, the helper that vm-sync and vm-deploy run on the VM as the
-# agent user: it writes the gh login, prepares the skills directory, reports the plugin install and
+# agent user: it writes the Hindsight file, prepares the skills directory, reports the plugin install and
 # removes what the sync placed. Run here against a temp HOME, as the user would run it there.
 # Fixtures only. The token is a fixture string, never a real one.
 set -uo pipefail
@@ -8,8 +8,6 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 # shellcheck source=../home/secretspec/testlib.sh
 . "$ROOT/home/secretspec/testlib.sh" || exit 1
 HELPER=$ROOT/infra/vm-sync-remote.sh
-TOKEN=fixture0ghtoken0123456789abcdefABCDEF01
-TOKEN2=fixture0ghtoken0second0123456789ABCDEF
 HS_URL=https://hindsight.fixture.example
 HS_TOKEN=fixture0hstoken0123456789abcdefABCD
 HS_TOKEN2=fixture0hstoken0second012345678ABCD
@@ -21,13 +19,10 @@ h() {
   HOME=$T_HOME bash "$HELPER" "$@" <"$T/stdin" >"$T/out" 2>"$T/err"
   echo $?
 }
-# hgh TOKEN: the gh subcommand with TOKEN on stdin (printed as is, a trailing newline is added).
-hgh() { printf '%s\n' "$1" >"$T/stdin"; h gh; }
 # hhs URL TOKEN: the hindsight subcommand with the two lines on stdin.
 hhs() { printf '%s\n%s\n' "$1" "$2" >"$T/stdin"; h hindsight; }
 HSENV() { echo "$T_HOME/.config/dotfiles/hindsight.env"; }
 MANIFEST() { echo "$T_HOME/.local/state/dotfiles/vm-sync/manifest"; }
-HOSTS() { echo "$T_HOME/.config/gh/hosts.yml"; }
 SKILLS() { echo "$T_HOME/.omp/agent/skills"; }
 # snapshot DIR: every path under DIR with its type, mode and, for files, content hash.
 snapshot() {
@@ -62,80 +57,6 @@ mkhome() {
   printf 'tools' >"$T_HOME/.config/mise/config.toml"
   printf 'zsh' >"$T_HOME/.zshrc"
   printf 'tool' >"$T_HOME/.local/share/mise/installed"
-}
-
-# ---- gh
-
-test_gh_writes_the_login_for_gh_and_git() {
-  assert_rc "gh" "$(hgh "$TOKEN")" 0
-  assert_bytes "hosts.yml content" "$(HOSTS)" "github.com:
-    oauth_token: $TOKEN
-    git_protocol: https
-"
-  assert_eq "hosts.yml is 600" 600 "$(tl_mode "$(HOSTS)")"
-  assert_eq "its directory is 700" 700 "$(tl_mode "$T_HOME/.config/gh")"
-  assert_has "manifest lists the file" "$(MANIFEST)" "file .config/gh/hosts.yml"
-  assert_has "manifest lists the directory it made" "$(MANIFEST)" "dir .config/gh"
-  assert_lacks "the token is not in stdout" "$T/out" "$TOKEN"
-  assert_lacks "the token is not in stderr" "$T/err" "$TOKEN"
-  assert_lacks "the token is not in the manifest" "$(MANIFEST)" "$TOKEN"
-}
-
-test_gh_accepts_the_token_without_a_trailing_newline() {
-  printf '%s' "$TOKEN" >"$T/stdin"
-  assert_rc "gh" "$(h gh)" 0
-  assert_has "token written" "$(HOSTS)" "oauth_token: $TOKEN"
-}
-
-test_gh_rejects_a_token_of_a_wrong_shape_and_writes_nothing() {
-  local bad
-  for bad in 'short' 'has space in it 0123456789abcdef' 'quote"0123456789abcdefghijklmnop' "colon:0123456789abcdefghijklmnop" 'dollar$0123456789abcdefghijklmnop' ''; do
-    printf '%s\n' "$bad" >"$T/stdin"
-    assert_rc "bad token" "$(h gh)" 1
-    assert_absent "no hosts.yml for: $bad" "$(HOSTS)"
-    assert_lacks "stderr hides the value" "$T/err" "0123456789abcdefghijklmnop"
-  done
-  printf '%s\n%s\n' "$TOKEN" "$TOKEN2" >"$T/stdin"
-  assert_rc "two lines, both well formed" "$(h gh)" 1
-  assert_absent "no hosts.yml" "$(HOSTS)"
-  assert_absent "no manifest" "$(MANIFEST)"
-}
-
-test_gh_overwrites_its_own_file_when_the_token_changes() {
-  assert_rc "first" "$(hgh "$TOKEN")" 0
-  assert_rc "second" "$(hgh "$TOKEN2")" 0
-  assert_has "new token" "$(HOSTS)" "oauth_token: $TOKEN2"
-  assert_lacks "old token is gone" "$(HOSTS)" "$TOKEN"
-  assert_absent "no backup of our own file" "$(HOSTS).dotfiles-backup"
-  assert_eq "listed once" 1 "$(grep -cx 'file .config/gh/hosts.yml' "$(MANIFEST)")"
-}
-
-test_gh_keeps_a_login_the_user_made_as_a_backup_and_unsync_restores_it() {
-  mkdir -p "$T_HOME/.config/gh"
-  printf 'github.com:\n    oauth_token: usermade\n' >"$(HOSTS)"
-  chmod 600 "$(HOSTS)"
-  assert_rc "gh" "$(hgh "$TOKEN")" 0
-  assert_has "the new login" "$(HOSTS)" "oauth_token: $TOKEN"
-  assert_has "the user's login is kept" "$(HOSTS).dotfiles-backup" "usermade"
-  assert_eq "backup is 600" 600 "$(tl_mode "$(HOSTS).dotfiles-backup")"
-  assert_has "says so" "$T/out" "dotfiles-backup"
-  assert_rc "again" "$(hgh "$TOKEN2")" 0
-  assert_has "the backup is still the user's" "$(HOSTS).dotfiles-backup" "usermade"
-  assert_rc "unsync" "$(h unsync)" 0
-  assert_has "the user's login is back" "$(HOSTS)" "usermade"
-  assert_absent "no backup left" "$(HOSTS).dotfiles-backup"
-  assert_absent "no manifest left" "$(MANIFEST)"
-}
-
-test_gh_replaces_a_link_and_unsync_puts_it_back() {
-  mkdir -p "$T_HOME/.config/gh"
-  printf 'target' >"$T/target"
-  ln -s "$T/target" "$(HOSTS)"
-  assert_rc "gh" "$(hgh "$TOKEN")" 0
-  assert_eq "a regular file now" "" "$(find "$(HOSTS)" -type l)"
-  assert_eq "the link's target is untouched" target "$(cat "$T/target")"
-  assert_rc "unsync" "$(h unsync)" 0
-  assert_eq "the link is back" "$T/target" "$(readlink "$(HOSTS)")"
 }
 
 # ---- skills-prepare
@@ -229,7 +150,7 @@ test_unsync_leaves_everything_else_exactly_as_it_was() {
   mkhome
   local before after
   before=$(snapshot "$T_HOME" | grep ' F ')
-  assert_rc "gh" "$(hgh "$TOKEN")" 0
+  assert_rc "hindsight" "$(hhs "$HS_URL" "$HS_TOKEN")" 0
   assert_rc "prepare" "$(h skills-prepare alpha beta)" 0
   mkdir -p "$(SKILLS)/alpha" "$(SKILLS)/beta"
   printf 'a' >"$(SKILLS)/alpha/SKILL.md"
@@ -239,7 +160,7 @@ test_unsync_leaves_everything_else_exactly_as_it_was() {
   # are untouched and none of the synced ones is left. (Directories of the activation may remain.)
   after=$(snapshot "$T_HOME" | grep ' F ')
   assert_eq "the set of files, modes and contents" "$before" "$after"
-  assert_eq "no gh directory is left" "" "$(ls -A "$T_HOME/.config" | grep -x gh)"
+  assert_eq "no dotfiles config directory is left" "" "$(ls -A "$T_HOME/.config" | grep -x dotfiles)"
 }
 
 test_unsync_removes_the_plugin_install_and_its_records() {
@@ -272,14 +193,14 @@ test_unsync_does_not_follow_a_link_in_place_of_the_plugins_home() {
 }
 
 test_unsync_does_not_follow_a_link_above_a_recorded_path() {
-  mkdir -p "$T/elsewhere/gh" "$T/elsewhere/skills/alpha" "$T_HOME/.config" "$T_HOME/.omp/agent" "$T_HOME/.local/state/dotfiles/vm-sync"
-  printf 'keep' >"$T/elsewhere/gh/hosts.yml"
+  mkdir -p "$T/elsewhere/dotfiles" "$T/elsewhere/skills/alpha" "$T_HOME/.config" "$T_HOME/.omp/agent" "$T_HOME/.local/state/dotfiles/vm-sync"
+  printf 'keep' >"$T/elsewhere/dotfiles/hindsight.env"
   printf 'keep' >"$T/elsewhere/skills/alpha/SKILL.md"
-  ln -s "$T/elsewhere/gh" "$T_HOME/.config/gh"
+  ln -s "$T/elsewhere/dotfiles" "$T_HOME/.config/dotfiles"
   ln -s "$T/elsewhere/skills" "$T_HOME/.omp/agent/skills"
-  printf 'file .config/gh/hosts.yml\nskill alpha\n' >"$(MANIFEST)"
+  printf 'file .config/dotfiles/hindsight.env\nskill alpha\n' >"$(MANIFEST)"
   assert_rc "unsync" "$(h unsync)" 1
-  assert_eq "the file behind the linked directory stays" keep "$(cat "$T/elsewhere/gh/hosts.yml")"
+  assert_eq "the file behind the linked directory stays" keep "$(cat "$T/elsewhere/dotfiles/hindsight.env")"
   assert_eq "the skill behind the linked directory stays" keep "$(cat "$T/elsewhere/skills/alpha/SKILL.md")"
   assert_has "says it refused" "$T/err" "refused"
   assert_eq "the manifest is kept for a retry" yes "$([ -f "$(MANIFEST)" ] && echo yes)"
@@ -324,7 +245,7 @@ test_unsync_with_nothing_to_remove_succeeds_and_twice_is_the_same() {
   assert_rc "nothing placed" "$(h unsync)" 0
   assert_has "says so" "$T/out" "nothing"
   assert_eq "nothing changed" "$before" "$(snapshot "$T_HOME")"
-  assert_rc "gh" "$(hgh "$TOKEN")" 0
+  assert_rc "hindsight" "$(hhs "$HS_URL" "$HS_TOKEN")" 0
   assert_rc "unsync" "$(h unsync)" 0
   assert_rc "unsync again" "$(h unsync)" 0
 }
@@ -447,6 +368,17 @@ test_hindsight_write_does_not_follow_a_link_above_the_file() {
   assert_absent "nothing was written behind the link" "$T/elsewhere/hindsight.env"
   assert_has "says why" "$T/err" "is a link"
   assert_lacks "stderr hides the key" "$T/err" "$HS_TOKEN"
+}
+
+test_hindsight_replaces_a_link_and_unsync_puts_it_back() {
+  mkdir -p "$T_HOME/.config/dotfiles"
+  printf 'target' >"$T/target"
+  ln -s "$T/target" "$(HSENV)"
+  assert_rc "hindsight" "$(hhs "$HS_URL" "$HS_TOKEN")" 0
+  assert_eq "a regular file now" "" "$(find "$(HSENV)" -type l)"
+  assert_eq "the link's target is untouched" target "$(cat "$T/target")"
+  assert_rc "unsync" "$(h unsync)" 0
+  assert_eq "the link is back" "$T/target" "$(readlink "$(HSENV)")"
 }
 
 # ---- plugins-status
