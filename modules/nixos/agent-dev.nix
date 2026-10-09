@@ -25,6 +25,8 @@
 #     rootful daemon, no docker group and no /var/run/docker.sock (that group would be root on the machine); DOCKER_HOST
 #     points every login at the rootless socket. Rootless podman stays beside it.
 #   - just, lazygit and lazydocker as packages of lex (option `dotfiles.agent.tools.enable`).
+#   - lex's interactive zsh gets the Mac's aliases, options, keybindings and zsh plugins (option `dotfiles.agent.zsh.enable`, home/linux/zsh.nix):
+#     the files of home/zsh/config as they are, the plugins from nixpkgs, one cached compinit; /etc/zshrc's own compinit is off then.
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -66,6 +68,7 @@ in {
     podman.enable = piece "rootless podman";
     docker.enable = piece "rootless Docker with Compose: a user service of the user (no rootful daemon, no docker group, no /var/run/docker.sock), and DOCKER_HOST for the rootless socket in every login, so that lazydocker and the docker CLI find it";
     tools.enable = piece "just, lazygit and lazydocker, as packages of the user";
+    zsh.enable = piece "the Mac's aliases, options, keybindings and zsh plugins (nixpkgs) in the interactive zsh of the user, with fzf, and one cached compinit";
 
     sync = {
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
@@ -138,6 +141,7 @@ in {
             gh.enable = cfg.gh.enable;
             tools.enable = cfg.tools.enable;
             docker.enable = cfg.docker.enable;
+            zsh.enable = cfg.zsh.enable;
             sync = {
               inherit (cfg.sync) plugins hindsight;
               pluginPackages = [unstable.bun unstable.nodejs_24];
@@ -200,6 +204,14 @@ in {
         setSocketVariable = true;
         package = pkgs.docker_29;
       };
+    })
+
+    (lib.mkIf cfg.zsh.enable {
+      # /etc/zshrc runs compinit for every interactive zsh BEFORE ~/.zshrc: a completer that ~/.zshrc adds to the fpath
+      # afterwards (zsh-completions) is never registered in $_comps. So the global call is off here, and the user's
+      # ~/.zshrc (home/linux/zsh.nix) makes the one call, cached like the Mac's. enableCompletion stays on: it keeps
+      # /share/zsh of the system profile linked, where the packages' completers are.
+      programs.zsh.enableGlobalCompInit = false;
     })
 
     (lib.mkIf cfg.tern.enable {

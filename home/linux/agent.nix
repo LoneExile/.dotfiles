@@ -78,6 +78,8 @@
     };
   };
 in {
+  imports = [./zsh.nix];
+
   options.dotfiles.agent = {
     omp.enable = lib.mkEnableOption "omp's writable config files in ~/.omp/agent";
     mise = {

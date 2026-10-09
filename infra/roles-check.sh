@@ -51,6 +51,8 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
       podmanDockerCompat = cfg.virtualisation.podman.dockerCompat;
       podmanDockerSocket = cfg.virtualisation.podman.dockerSocket.enable;
       extraInit = cfg.environment.extraInit;
+      zshSystem = cfg.programs.zsh.enable;
+      zshGlobalCompInit = cfg.programs.zsh.enableGlobalCompInit;
       # just, lazygit and lazydocker are user packages of lex on the agent; as system packages they are in no role.
       systemTools = builtins.listToAttrs (map (n: { name = n; value = builtins.any (p: (p.pname or "") == n) cfg.environment.systemPackages; }) [ "just" "lazygit" "lazydocker" ]);
       # rsync is not a role signal: the clean guest has it too (the module still names it for the skills sync).
@@ -82,7 +84,9 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           shellcheck = builtins.any (p: builtins.match "[Ss]hell[Cc]heck" (p.pname or "") != null) u.home.packages;
           # just, lazygit and lazydocker as user packages (the agent-tools piece)
           tools = builtins.listToAttrs (map (n: { name = n; value = builtins.any (p: (p.pname or "") == n) u.home.packages; }) [ "just" "lazygit" "lazydocker" ]);
-          # the step that starts Docker
+          # the interactive zsh piece: the whole ~/.zshrc (Home Manager merges the ordered pieces into initContent), fzf, and the step that starts Docker
+          zshrc = u.programs.zsh.initContent;
+          fzf = builtins.any (p: (p.pname or "") == "fzf") u.home.packages;
           dockerStart = if u.home.activation ? dockerRootlessStart then { after = u.home.activation.dockerRootlessStart.after; data = u.home.activation.dockerRootlessStart.data; } else null;
           nvimConfigOwned = (u.programs.neovim.enable or false)
             || builtins.any (f: builtins.match "(.*/)?\\.config/nvim(/.*)?" f.target != null) (builtins.attrValues u.home.file)
@@ -98,6 +102,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     masonOff = { dotfiles.agent.mason.enable = false; };
     dockerOff = { dotfiles.agent.docker.enable = false; };
     toolsOff = { dotfiles.agent.tools.enable = false; };
+    zshOff = { dotfiles.agent.zsh.enable = false; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
@@ -105,6 +110,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     masonOff = summary (c.proxmox-agent.extendModules { modules = [ masonOff ]; }).config;
     dockerOff = summary (c.proxmox-agent.extendModules { modules = [ dockerOff ]; }).config;
     toolsOff = summary (c.proxmox-agent.extendModules { modules = [ toolsOff ]; }).config;
+    zshOff = summary (c.proxmox-agent.extendModules { modules = [ zshOff ]; }).config;
   }
 ') || {
   echo "roles-check: nix eval failed" >&2
@@ -166,7 +172,16 @@ check "agent: just, lazygit and lazydocker are user packages of lex, and in no s
 check "agent with the Docker option off: no Docker at all (no daemon, unit, package, DOCKER_HOST), while the tools and podman stay" '.dockerOff | ([.dockerRootless, .dockerRootful, .dockerSystemPackage, (.dockerUnit != null), (.extraInit | contains("DOCKER_HOST"))] | any | not) and ([.userSync.tools[]] | all) and .podman'
 check "agent with the tools option off: none of just, lazygit, lazydocker, while Docker and podman stay" '.toolsOff | ([.userSync.tools[]] | any | not) and .dockerRootless and .podman'
 
-# The start of the rootless Docker unit by Home Manager.
+# The interactive zsh piece (the Mac's files and plugins) and the start of the rootless Docker unit by Home Manager.
+check "clean: no zsh set up (no system zsh), so /etc/zshrc and the rest are the clean guest's" '.guest.zshSystem | not'
+check "agent: /etc/zshrc runs no compinit (the one call is in ~/.zshrc, after the fpath is extended); with the zsh option off it does, as before" '(.agent.zshGlobalCompInit | not) and .zshOff.zshGlobalCompInit'
+check "agent: ~/.zshrc leaves at once for a shell without a terminal, then loads the three files of the Mac, the vim override of EDITOR, the plugins in the order of the Mac, and compinit, in that order" '.agent.userSync.zshrc as $z | (["[[ ! -t 0 || ! -t 1 ]]", "return 2>/dev/null || true", "-aliases.zsh", "-options.zsh", "-keybindings.zsh", "export EDITOR=vim VISUAL=vim", "zsh-syntax-highlighting-", "zsh-autosuggestions-", "zsh-completions-", "zsh-history-substring-search-", "zsh-fzf-tab-", "fzf-tab-source.plugin.zsh", "compinit -d"] | map(. as $n | $z | index($n))) as $at | ($at | all(. != null)) and ($at == ($at | sort))'
+check "agent: the EDITOR override is for a machine without nvim only" '.agent.userSync.zshrc | contains("if (( ! $+commands[nvim] )); then\n  export EDITOR=vim VISUAL=vim\nfi")'
+check "agent: one compinit (a daily full call and a cached -C call, nothing of Home Manager's own), never from /etc/zshrc" '.agent.userSync.zshrc | (([match("compinit -[dC]"; "g")] | length) == 2) and (contains("autoload -U compinit && compinit") | not)'
+check "agent: the plugins come from the store, fzf-tab-source from its pinned source, none is fetched at shell start" '.agent.userSync.zshrc | (test("source /nix/store/[a-z0-9]{32}-zsh-syntax-highlighting-[0-9.]+/share/")) and (test("source /nix/store/[a-z0-9]{32}-zsh-fzf-tab-[0-9.]+/share/fzf-tab/fzf-tab.plugin.zsh")) and (test("source /nix/store/[a-z0-9]{32}-source/fzf-tab-source.plugin.zsh")) and (test("curl|wget|git clone|zap\\.zsh|zap-zsh") | not)'
+check "agent: fzf is a user package of lex (fzf-tab needs it)" '.agent.userSync.fzf'
+check "agent: none of it is in ~/.zshenv, which every shell reads (omp and the agents run zsh -c)" '.agent.userSync.zshenv | (test("syntax-highlighting|autosuggestions|fzf-tab|aliases\\.zsh|compinit") | not) and contains("hindsight.env")'
+check "agent with the zsh option off: ~/.zshrc names none of the Mac's files or plugins, no compinit, no early exit, no fzf" '.zshOff | (.userSync.zshrc | (contains("aliases.zsh") or contains("compinit") or contains("zsh-autosuggestions") or contains("[[ ! -t 0")) | not) and (.userSync.fzf | not)'
 check "agent: Home Manager starts the rootless Docker unit after reloadSystemd (a NixOS switch loads a new user unit but does not start it), with the systemctl of the store" '.agent.userSync.dockerStart | (.after == ["reloadSystemd"]) and (.data | (contains("start_user_unit()")) and test("\nstart_user_unit /nix/store/[a-z0-9]{32}-systemd-[0-9.]+/bin/systemctl docker\\.service\n"))'
 check "agent with the Docker option off: no such start step" '.dockerOff.userSync.dockerStart == null'
 
@@ -183,6 +198,14 @@ icheck "init file: no package path" $?
 icheck "init file: it loads mason.nvim and nothing else" $?
 ! printf '%s\n' "$initcode" | grep -Eq 'stdpath|\.config|dofile|loadfile|source|packadd|vim\.cmd|vim\.fn\.system|os\.execute|io\.popen'
 icheck "init file: no other path, no sourcing, no shell" $?
+
+# The Mac's zsh files that the VM sources are the repo files, byte for byte (the flake names a store copy of each).
+zshrc=$(printf '%s' "$facts" | jq -r '.agent.userSync.zshrc')
+for zf in aliases options keybindings; do
+  zp=$(printf '%s\n' "$zshrc" | sed -nE "s#^source (/nix/store/[a-z0-9]{32}-$zf\\.zsh)\$#\\1#p")
+  [ -n "$zp" ] && [ "$(printf '%s\n' "$zp" | wc -l | tr -d ' ')" -eq 1 ] && [ -f "$zp" ] && cmp -s "$zp" "$repo/home/zsh/config/$zf.zsh"
+  icheck "zsh: the $zf.zsh that the VM sources is home/zsh/config/$zf.zsh of the Mac, byte for byte" $?
+done
 
 # The zsh snippet of the hindsight piece, run for real with fixture files (no secret): the file's values reach a
 # child process, no file means no output and no variables, and allexport is left as the shell had it.
