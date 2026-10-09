@@ -44,6 +44,16 @@
   pluginsHash = builtins.hashString "sha256" (lib.concatMapStringsSep "\n" (f: builtins.hashFile "sha256" (pluginsDir + "/${f}")) pluginFiles);
   pluginsInstall = pkgs.writeScript "omp-plugins-install" (builtins.readFile ./omp-plugins-install.sh);
 
+  # The Mason language servers (just mason-capture): names only, one per line. A user service installs
+  # the ones that are missing with a headless Neovim that loads mason.nvim and nothing else, into
+  # ~/.local/share/nvim/mason, which pi-mason-bridge (one of the captured omp plugins) puts on omp's PATH.
+  # The list's hash is part of the unit, so a changed list restarts the service at the next deploy; the
+  # script keeps a stamp too, so a boot with nothing new installs nothing.
+  masonList = ../omp/mason-lsp.txt;
+  masonNames = lib.filter (n: n != "") (lib.splitString "\n" (builtins.readFile masonList));
+  masonHash = builtins.hashFile "sha256" masonList;
+  masonInstall = pkgs.writeScript "mason-lsp-install" (builtins.readFile ./mason-lsp-install.sh);
+
   # mise's global tools. The tools are installed on first use (not_found_auto_install) or by
   # `mise install`, not by Nix. node.compile and python.compile are off: with them unset mise
   # compiled node and python from source on this VM (node: ./configure failed on a missing python;
@@ -89,6 +99,15 @@ in {
         default = [pkgs.bun pkgs.nodejs];
         defaultText = lib.literalExpression "[pkgs.bun pkgs.nodejs]";
         description = "bun and node, on the PATH of the plugin install service (some plugins run node in their install scripts).";
+      };
+    };
+    mason = {
+      enable = lib.mkEnableOption "the Mason language servers of home/omp/mason-lsp.txt, installed by a user service";
+      toolPackages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [pkgs.nodejs pkgs.go pkgs.getconf pkgs.curl pkgs.gzip pkgs.gnutar pkgs.cargo pkgs.rustc pkgs.gcc pkgs.git pkgs.nix];
+        defaultText = lib.literalExpression "[pkgs.nodejs pkgs.go pkgs.getconf pkgs.curl pkgs.gzip pkgs.gnutar pkgs.cargo pkgs.rustc pkgs.gcc pkgs.git pkgs.nix]";
+        description = "What the install of the listed servers runs, on the PATH of the install service (bash and coreutils are added for the script itself): nothing else.";
       };
     };
   };
@@ -228,6 +247,36 @@ in {
           Restart = "on-failure";
           RestartSec = 60;
           Environment = "PATH=${lib.makeBinPath (cfg.sync.pluginPackages ++ [pkgs.bash pkgs.coreutils])}";
+        };
+        Install.WantedBy = ["default.target"];
+      };
+    })
+
+    (lib.mkIf cfg.mason.enable {
+      # bash-language-server gets its diagnostics from shellcheck (it runs the binary on PATH, and Mason's
+      # own shellcheck is a linter, which this role does not install). On lex's login PATH, which omp inherits;
+      # not on the PATH of the install unit, which names only what the installs need.
+      home.packages = [pkgs.shellcheck];
+
+      # Type=simple, like the plugin install: a first install downloads some 900 MB, and a Home Manager
+      # activation must not wait for it. A failure (network, registry) is retried a few times an hour,
+      # and again at the next boot. Neovim and mason.nvim are on no PATH: the unit names them by store
+      # path, and the init file (home/linux/mason-init.lua) loads mason.nvim from MASON_NVIM only.
+      systemd.user.services.mason-lsp-install = {
+        Unit = {
+          Description = "Install the Mason language servers of home/omp/mason-lsp.txt (headless MasonInstall)";
+          StartLimitIntervalSec = 3600;
+          StartLimitBurst = 5;
+        };
+        Service = {
+          Type = "simple";
+          ExecStart = "${masonInstall} ${masonHash} ${pkgs.neovim}/bin/nvim ${./mason-init.lua} ${lib.concatStringsSep " " masonNames}";
+          Restart = "on-failure";
+          RestartSec = 60;
+          Environment = [
+            "PATH=${lib.makeBinPath (cfg.mason.toolPackages ++ [pkgs.bash pkgs.coreutils])}"
+            "MASON_NVIM=${pkgs.vimPlugins.mason-nvim}"
+          ];
         };
         Install.WantedBy = ["default.target"];
       };

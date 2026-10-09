@@ -318,6 +318,25 @@ test_unsync_stops_the_install_service_first_when_systemd_is_there() {
   HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
   assert_rc "unsync" "$?" 0
   assert_has "stopped the unit" "$T/systemctl.log" "--user stop omp-plugins-install.service"
+  assert_has "stopped the Mason install too, so that none runs on as the removed user" "$T/systemctl.log" "--user stop mason-lsp-install.service"
+}
+
+test_unsync_leaves_the_mason_install_and_every_neovim_file_alone() {
+  mkdir -p "$T/bin"
+  printf '#!/bin/sh\nexit 0\n' >"$T/bin/systemctl"
+  chmod +x "$T/bin/systemctl"
+  mkplugins
+  lput .local/share/nvim/mason/packages/gopls/mason-receipt.json '{"name":"gopls"}' 644
+  lput .local/share/nvim/mason/bin/gopls 'x' 755
+  lput .local/state/dotfiles/mason-lsp.stamp 'abc' 644
+  lput .local/state/nvim/mason.log 'log' 644
+  lput .config/nvim/init.lua 'mine' 644
+  local before
+  before=$(cd "$T_HOME" && find .local/share/nvim .local/state/dotfiles/mason-lsp.stamp .local/state/nvim .config/nvim -type f | LC_ALL=C sort | xargs shasum -a 256)
+  HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
+  assert_rc "unsync" "$?" 0
+  assert_eq "no Mason or Neovim file was removed or changed" "$before" "$(cd "$T_HOME" && find .local/share/nvim .local/state/dotfiles/mason-lsp.stamp .local/state/nvim .config/nvim -type f | LC_ALL=C sort | xargs shasum -a 256)"
+  assert_absent "while the plugin install is gone" "$T_HOME/.omp/plugins"
 }
 
 # ---- hindsight

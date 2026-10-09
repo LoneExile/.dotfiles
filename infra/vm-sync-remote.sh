@@ -7,7 +7,8 @@
 #   hindsight-remove NAME   remove that file (the vault map has no entry for the VM NAME), one line
 #   skills-prepare NAME...  make ~/.omp/agent/skills, check the named entries, record them
 #   plugins-status          say whether the captured omp plugins are installed
-#   unsync                  remove exactly what the sync placed
+#   unsync                  remove exactly what the sync placed (and stop the Mason install service, whose
+#                           output, ~/.local/share/nvim/mason, stays)
 #
 # The sync keeps a record of what it placed, so that `unsync` (run by vm-deploy before the VM leaves
 # the agent role) removes that and nothing else: ~/.local/state/dotfiles/vm-sync/manifest, one line
@@ -166,8 +167,14 @@ cmd_plugins_status() {
 cmd_unsync() {
   local rc=0 removed=0 line kind rel n=0 p dest
   local files="" backups="" skills="" dirs="" wc plugins_gone=1
+  # Both install services stop first: a running install would go on as the removed user. The Mason install
+  # (home/linux/mason-lsp-install.sh) is only stopped: what it installed is the data directory of any Neovim
+  # (~/.local/share/nvim/mason), shared with a config that the user may set up later, and nothing records which
+  # files are its own, so unsync leaves it, and its stamp, alone.
   if command -v systemctl >/dev/null 2>&1; then
-    systemctl --user stop omp-plugins-install.service >/dev/null 2>&1 || true
+    for unit in omp-plugins-install.service mason-lsp-install.service; do
+      systemctl --user stop "$unit" >/dev/null 2>&1 || true
+    done
   fi
 
   if [ -f "$manifest" ]; then

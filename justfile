@@ -201,6 +201,7 @@ test-infra:
   bash home/omp/plugins-capture_test.sh
   bash home/omp/lsp-builtins-extract_test.sh
   bash home/omp/mason-capture_test.sh
+  bash home/linux/mason-lsp-install_test.sh
 
 # Guard the roles: proxmox-guest stays clean (TCP 22 only, no user), proxmox-agent stays confined (evaluates the flake, no VM)
 test-roles:

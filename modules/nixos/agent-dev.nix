@@ -17,6 +17,10 @@
 #     rsync for the skills the Mac mirrors in, and the zsh side of the Hindsight URL and key (the
 #     file itself is written from the vault); /etc/dotfiles-agent-sync.json tells vm-sync which of
 #     the three.
+#   - Mason's language servers for omp (option `dotfiles.agent.mason.enable`): neovim and mason.nvim
+#     from nixpkgs, and a user service that installs the servers of home/omp/mason-lsp.txt into
+#     ~/.local/share/nvim/mason, where the pi-mason-bridge plugin finds them. Nothing else of Neovim;
+#     plus shellcheck (nixpkgs) on lex's PATH, because bash-language-server takes its diagnostics from it.
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -54,6 +58,7 @@ in {
     mise.enable = piece "mise with the global tools (node, python, uv, go, rust, bun, pnpm)";
     tern.enable = piece "the Tern remote service: UDP 8376 open, served to the LAN only (no relay, no iroh)";
     gh.enable = piece "the GitHub CLI, with git's credential helper for github.com (the user logs in by hand with `gh auth login`)";
+    mason.enable = piece "the Mason language servers of home/omp/mason-lsp.txt for omp's LSP tool, installed by a user service with a minimal Neovim (mason.nvim only; no Neovim config, no other plugin), and shellcheck for bash-language-server";
     podman.enable = piece "rootless podman";
 
     sync = {
@@ -128,6 +133,16 @@ in {
             sync = {
               inherit (cfg.sync) plugins hindsight;
               pluginPackages = [unstable.bun unstable.nodejs_24];
+            };
+            mason = {
+              inherit (cfg.mason) enable;
+              # What the install of the listed servers runs, measured with every one of them (README): curl for
+              # the registry and the release assets, gzip and tar to unpack them, getconf for Mason's glibc
+              # check (without it Mason takes NixOS for an unsupported platform), node with npm for the npm
+              # packages, go for gopls, and for nil, which is built from a git tag, cargo with rustc (1.6 GiB
+              # of closure), a C compiler, git and nix (its build script runs nix). Node is the one of the
+              # plugin install, so that the closure holds one; gcc, git and nix are in the closure anyway.
+              toolPackages = [unstable.nodejs_24 pkgs.go pkgs.getconf pkgs.curl pkgs.gzip pkgs.gnutar pkgs.cargo pkgs.rustc pkgs.gcc pkgs.git pkgs.nix];
             };
           };
         };
