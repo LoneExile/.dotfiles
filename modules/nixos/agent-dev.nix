@@ -11,6 +11,10 @@
 #   - omp, pinned by hash (agent-dev/omp.nix), with its config files copied in writable;
 #   - the gh CLI, rootless podman, zram swap;
 #   - Tern's remote service reachable on the LAN (UDP 8376), with its relay and iroh off.
+#   - the sync from the Mac (options `dotfiles.agent.sync.*`, run by `just vm-sync` and by vm-deploy):
+#     gh as git's credential helper (the login itself is written from the vault), the captured omp
+#     plugins (manifests plus a user service that installs them, and harper-cli), rsync for the
+#     skills the Mac mirrors in; /etc/dotfiles-agent-sync.json tells vm-sync which of the three.
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -27,6 +31,11 @@ inputs: {
       defaultText = lib.literalExpression "config.dotfiles.agent.enable";
       description = "Whether to set up ${what}.";
     };
+
+  # Packages that nixos-25.11 lacks or has too old: mise (see below), harper (only the unstable one
+  # builds harper-cli, 25.11's has harper-ls alone) and bun and node (the plugin install service
+  # reads a lockfile that a current bun wrote).
+  unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
 in {
   imports = [inputs.home-manager-nixos.nixosModules.home-manager];
 
@@ -44,6 +53,12 @@ in {
     tern.enable = piece "the Tern remote service: UDP 8376 open, served to the LAN only (no relay, no iroh)";
     gh.enable = piece "the GitHub CLI";
     podman.enable = piece "rootless podman";
+
+    sync = {
+      gh = piece "gh as git's credential helper for github.com (the login itself comes from `just vm-sync`, with the token stored for this VM)";
+      plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
+      skills = piece "the skills that `just vm-sync` mirrors from the Mac into ~/.omp/agent/skills (needs rsync on the VM)";
+    };
   };
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -104,12 +119,30 @@ in {
               # python-build-standalone for 3.13 and later and fails with "Python installation is
               # missing a `lib` directory" (measured on the VM). nixpkgs-unstable's mise (2026.8.6)
               # installs python 3.14 from the same release.
-              package = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system}.mise;
+              package = unstable.mise;
             };
             tern.enable = cfg.tern.enable;
+            sync = {
+              inherit (cfg.sync) gh plugins;
+              pluginPackages = [unstable.bun unstable.nodejs_24];
+            };
           };
         };
       };
+
+      assertions = [
+        {
+          assertion = !cfg.sync.gh || cfg.gh.enable;
+          message = "dotfiles.agent.sync.gh needs dotfiles.agent.gh.enable";
+        }
+        {
+          assertion = !cfg.sync.plugins || cfg.omp.enable;
+          message = "dotfiles.agent.sync.plugins needs dotfiles.agent.omp.enable";
+        }
+      ];
+
+      # What the VM wants synced, read by vm-sync (infra/vm-sync-lib.sh). No secret, world readable.
+      environment.etc."dotfiles-agent-sync.json".text = builtins.toJSON {inherit (cfg.sync) gh plugins skills;};
     }
 
     (lib.mkIf cfg.omp.enable {
@@ -131,6 +164,16 @@ in {
       # home/linux/agent.nix) serves QUIC on UDP 8376 (measured: `ss` on the VM, and the unit
       # file's own header). The firewall stays default deny: TCP 22 and this one UDP port.
       networking.firewall.allowedUDPPorts = [8376];
+    })
+
+    (lib.mkIf cfg.sync.plugins {
+      # pi-harper-grammar runs `harper-cli lint`.
+      environment.systemPackages = [unstable.harper];
+    })
+
+    (lib.mkIf cfg.sync.skills {
+      # The Mac's rsync talks to this one.
+      environment.systemPackages = [pkgs.rsync];
     })
   ]);
 }

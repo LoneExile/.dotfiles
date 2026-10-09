@@ -1,7 +1,8 @@
 # Home Manager for the agent user of a NixOS VM (modules/nixos/agent-dev.nix imports it).
 # It is not the Mac's home/default.nix, which assumes darwin, Homebrew and secretspec: this one
 # holds the shell, the dev tools and the config files an agent needs, and nothing that needs a
-# secret. Secrets stay with the user on the VM (~/.omp/.env, `gh auth login`).
+# secret. Secrets stay with the user on the VM (~/.omp/.env, `gh auth login`); the one exception is
+# the gh login that `just vm-sync` writes from the vault (infra/vm-sync-lib.sh), never Nix.
 {
   config,
   lib,
@@ -32,6 +33,15 @@
     "models.yml" = ../omp/models.yml;
     "mcp.json" = ../omp/mcp.json;
   };
+
+  # The captured omp plugins (just omp-plugins-capture): the manifests are installed as writable
+  # files (omp rewrites them), and a user service runs `bun install --frozen-lockfile` when their
+  # hash is new. The hash is part of the unit, so a changed capture restarts the service at the
+  # next deploy; the script keeps a stamp too, so a boot with nothing new installs nothing.
+  pluginFiles = ["package.json" "bun.lock" "omp-plugins.lock.json"];
+  pluginsDir = ../omp/plugins;
+  pluginsHash = builtins.hashString "sha256" (lib.concatMapStringsSep "\n" (f: builtins.hashFile "sha256" (pluginsDir + "/${f}")) pluginFiles);
+  pluginsInstall = pkgs.writeScript "omp-plugins-install" (builtins.readFile ./omp-plugins-install.sh);
 
   # mise's global tools. The tools are installed on first use (not_found_auto_install) or by
   # `mise install`, not by Nix. node.compile and python.compile are off: with them unset mise
@@ -69,6 +79,16 @@ in {
       };
     };
     tern.enable = lib.mkEnableOption "the Tern remote service settings";
+    sync = {
+      gh = lib.mkEnableOption "gh as git's credential helper for github.com (the login is written by vm-sync)";
+      plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
+      pluginPackages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [pkgs.bun pkgs.nodejs];
+        defaultText = lib.literalExpression "[pkgs.bun pkgs.nodejs]";
+        description = "bun and node, on the PATH of the plugin install service (some plugins run node in their install scripts).";
+      };
+    };
   };
 
   config = lib.mkMerge [
@@ -152,6 +172,44 @@ in {
         ExecStart=
         ExecStart=%h/.local/share/tern/build/tern remote serve --user --state-dir %h/.config/tern --relay none --pkarr none --no-iroh
       '';
+    })
+
+    (lib.mkIf cfg.sync.gh {
+      # gh answers git's credential requests for github.com with the token in ~/.config/gh/hosts.yml,
+      # which `just vm-sync` writes from the vault (no entry there: no login, git asks for nothing and
+      # fails as before). The store path keeps it working in a shell that has no gh on its PATH.
+      programs.git.settings.credential = {
+        "https://github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";
+        "https://gist.github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";
+      };
+    })
+
+    (lib.mkIf cfg.sync.plugins {
+      # Before reloadSystemd, so that the manifests are in place when the unit is (re)started.
+      home.activation.ompPlugins = lib.hm.dag.entryBetween ["reloadSystemd"] ["writeBoundary"] (writableCopies (map (f: {
+          src = pluginsDir + "/${f}";
+          dest = "$HOME/.omp/plugins/${f}";
+        })
+        pluginFiles));
+
+      # Type=simple: a first install downloads about a gigabyte, and a Home Manager activation must
+      # not wait for it. A failure (network, registry) is retried a few times an hour, and again at
+      # the next boot.
+      systemd.user.services.omp-plugins-install = {
+        Unit = {
+          Description = "Install the captured omp plugins (bun install --frozen-lockfile)";
+          StartLimitIntervalSec = 3600;
+          StartLimitBurst = 5;
+        };
+        Service = {
+          Type = "simple";
+          ExecStart = "${pluginsInstall} ${pluginsHash}";
+          Restart = "on-failure";
+          RestartSec = 60;
+          Environment = "PATH=${lib.makeBinPath (cfg.sync.pluginPackages ++ [pkgs.bash pkgs.coreutils])}";
+        };
+        Install.WantedBy = ["default.target"];
+      };
     })
   ];
 }
