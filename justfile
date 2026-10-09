@@ -84,6 +84,17 @@ omp-plugins-capture:
   bash "{{justfile_directory()}}/home/omp/plugins-capture.sh" "$HOME/.omp/plugins" "{{justfile_directory()}}/home/omp/plugins"
   git -C "{{justfile_directory()}}" --no-pager diff --stat -- home/omp/plugins || true
 
+# Copy the names of this Mac's Mason language servers that omp can start from PATH alone, and that the VM can
+# run, into home/omp/mason-lsp.txt, for the agent VMs: LSP category only, names only, and the capture is refused
+# (nothing written) when a name is not a plain package name. What it left out is printed with the reason.
+# Review `git diff`, commit, then `just vm-deploy <name>`. See home/omp/mason-capture.sh.
+[macos]
+mason-capture:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  bash "{{justfile_directory()}}/home/omp/mason-capture.sh" "${XDG_DATA_HOME:-$HOME/.local/share}/nvim/mason" "{{justfile_directory()}}/home/omp/lsp-builtins.txt" "{{justfile_directory()}}/home/omp/mason-lsp-skip.txt" "{{justfile_directory()}}/home/omp/mason-lsp.txt"
+  git -C "{{justfile_directory()}}" --no-pager diff --stat -- home/omp/mason-lsp.txt || true
+
 # Once, after every Mac runs this engine: OpenBao then refuses writes to the secrets without check-and-set
 [macos]
 secretspec-enforce-cas:
@@ -189,6 +200,7 @@ test-infra:
   bash home/linux/omp-plugins-install_test.sh
   bash home/omp/plugins-capture_test.sh
   bash home/omp/lsp-builtins-extract_test.sh
+  bash home/omp/mason-capture_test.sh
 
 # Guard the roles: proxmox-guest stays clean (TCP 22 only, no user), proxmox-agent stays confined (evaluates the flake, no VM)
 test-roles:

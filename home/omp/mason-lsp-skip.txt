@@ -1,0 +1,5 @@
+# Mason packages that home/omp/mason-capture.sh leaves out of home/omp/mason-lsp.txt although omp has a
+# server for them, one per line: <package>  <why it is left out>. README.md explains each one.
+elixir-ls  needs the Elixir runtime (elixir and Erlang/OTP), which is not on the VM
+omnisharp  needs the .NET runtime (dotnet), which is not on the VM; Mason links it as OmniSharp, omp looks for omnisharp, and Linux tells the two apart
+astro-language-server  omp sends no typescript.tsdk, so the server cannot start in omp (same on the Mac); astro files get no diagnostics from it
