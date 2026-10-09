@@ -174,9 +174,9 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin capture and install scripts and the agent role's writable config copies (no network, no vault)
+# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts and the agent role's writable config copies (no network, no vault)
 test-infra:
-  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles, VM sync, plugin scripts and writable config copies..."
+  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles, VM sync, plugin and Mason scripts and writable config copies..."
   bash infra/leak-check_test.sh
   bash infra/vault-map_test.sh
   bash infra/vm-identity_test.sh
@@ -188,6 +188,7 @@ test-infra:
   bash home/linux/writable-copy_test.sh
   bash home/linux/omp-plugins-install_test.sh
   bash home/omp/plugins-capture_test.sh
+  bash home/omp/lsp-builtins-extract_test.sh
 
 # Guard the roles: proxmox-guest stays clean (TCP 22 only, no user), proxmox-agent stays confined (evaluates the flake, no VM)
 test-roles:
