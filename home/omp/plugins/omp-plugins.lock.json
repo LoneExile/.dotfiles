@@ -1,0 +1,40 @@
+{
+  "plugins": {
+    "context-mode": {
+      "version": "1.0.169",
+      "enabledFeatures": null,
+      "enabled": true
+    },
+    "pi-refusal-guard": {
+      "version": "0.2.1",
+      "enabledFeatures": null,
+      "enabled": true
+    },
+    "pi-harper-grammar": {
+      "version": "0.3.1",
+      "enabledFeatures": null,
+      "enabled": true
+    },
+    "pi-mason-bridge": {
+      "version": "0.2.2",
+      "enabledFeatures": null,
+      "enabled": true
+    },
+    "pi-output-styles": {
+      "version": "0.3.4",
+      "enabledFeatures": null,
+      "enabled": true
+    },
+    "@loneexile/omp-superpowers": {
+      "version": "6.4.2-omp.4",
+      "enabledFeatures": null,
+      "enabled": true
+    },
+    "omp-cursor-sdk": {
+      "version": "0.4.5",
+      "enabledFeatures": null,
+      "enabled": true
+    }
+  },
+  "settings": {}
+}
