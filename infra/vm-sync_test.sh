@@ -21,6 +21,10 @@ TOKEN=fixture0ghtoken0123456789abcdefABCDEF01
 BASE='{"testvm-alpha":{"node":"n1","vmid":901,"mac":"02:00:5E:10:00:01","ipv4_cidr":"203.0.113.10/24","gateway":"203.0.113.1","dns":["198.51.100.53"],"cores":2,"memory_mb":2048,"disk_gb":20,"role":"agent"}}'
 CLEAN='{"testvm-alpha":{"node":"n1","vmid":901,"mac":"02:00:5E:10:00:01","ipv4_cidr":"203.0.113.10/24","gateway":"203.0.113.1","dns":["198.51.100.53"],"cores":2,"memory_mb":2048,"disk_gb":20}}'
 ALL_ON='{"gh":true,"plugins":true,"skills":true}'
+HS_ON='{"gh":false,"plugins":false,"skills":false,"hindsight":true}'
+HS_URL=https://hindsight.fixture.example
+HS_KEY=fixture0hstoken0123456789abcdefABCD
+HS_MAP="{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"$HS_KEY\"}}"
 
 # shims VMS-JSON [TOKEN-MAP-JSON [VM-CONFIG-JSON]]: PATH directory $T/bin and the fake world.
 #   secretspec get|run   a file-backed vault ($T/store); VM_GH_TOKENS absent reads as {} (the manifest default)
@@ -31,6 +35,7 @@ shims() {
   mkdir -p "$T/bin" "$T/store" "$T/vm"
   printf '%s' "$1" >"$T/store/TF_VAR_vms"
   [ -z "${2:-}" ] || printf '%s' "$2" >"$T/store/VM_GH_TOKENS"
+  [ -z "${4:-}" ] || printf '%s' "$4" >"$T/store/VM_HINDSIGHT"
   printf '%s' "${3:-$ALL_ON}" >"$T/vm-config.json"
   cat >"$T/bin/secretspec" <<'EOF'
 #!/bin/sh
@@ -38,9 +43,26 @@ case "$1" in
   get)
     printf 'get %s\n' "$2" >>"$STUB_SEQ"
     if [ -f "$STUB_DIR/$2" ]; then cat "$STUB_DIR/$2"
-    elif [ "$2" = VM_GH_TOKENS ]; then printf '{}'
+    elif [ "$2" = VM_GH_TOKENS ] || [ "$2" = VM_HINDSIGHT ]; then printf '{}'
     else exit 1; fi ;;
   run) shift; [ "$1" = -- ] && shift; TF_VAR_vms=$(cat "$STUB_DIR/TF_VAR_vms") exec "$@" ;;
+esac
+EOF
+  # python3 stands for the Hindsight health check (the real one has its own test): it logs the arguments it got
+  # and the stdin, and answers by $STUB_HEALTH (200, 401, 500 or unreachable). Any other python3 call is a bug.
+  cat >"$T/bin/python3" <<'EOF'
+#!/bin/sh
+case "$1" in
+  */vm-hindsight-health.py)
+    printf 'health\n' >>"$STUB_SEQ"
+    printf '%s\n' "$*" >>"$STUB_PYARGS"
+    cat >"$STUB_DIR/health.stdin"
+    case "${STUB_HEALTH:-200}" in
+      200) echo "hindsight: the gate accepts the key (HTTP 200)"; exit 0 ;;
+      unreachable) echo "vm-hindsight-health: could not reach the Hindsight gate (stub)" >&2; exit 1 ;;
+      *) echo "vm-hindsight-health: the Hindsight gate answered HTTP $STUB_HEALTH instead of 200 (stub)" >&2; exit 1 ;;
+    esac ;;
+  *) echo "unexpected python3 call: $*" >&2; exit 99 ;;
 esac
 EOF
   cat >"$T/bin/terragrunt" <<'EOF'
@@ -114,7 +136,7 @@ EOF
   chmod +x "$T/bin/"*
   : >"$T/sshlog" >"$T/seq" >"$T/sshopts"
   printf '203.0.113.10 ok\n' >"$T/known_hosts"
-  export STUB_DIR="$T/store" STUB_SSHLOG="$T/sshlog" STUB_SSHOPTS="$T/sshopts" STUB_KNOWN_HOSTS="$T/known_hosts" STUB_SEQ="$T/seq" STUB_VM_HOME="$T/vm"
+  export STUB_DIR="$T/store" STUB_SSHLOG="$T/sshlog" STUB_SSHOPTS="$T/sshopts" STUB_KNOWN_HOSTS="$T/known_hosts" STUB_SEQ="$T/seq" STUB_VM_HOME="$T/vm" STUB_PYARGS="$T/pyargs"
   export VM_SYNC_CONFIG_PATH="$T/vm-config.json" VM_SYNC_POLL=0 VM_SYNC_WAIT=2 PATH="$T/bin:$PATH"
   # a library of skills, with things that must not be synced
   local d
@@ -138,6 +160,7 @@ sync_run() { bash "$ROOT/infra/vm-sync.sh" "${1:-testvm-alpha}" "$ROOT" >"$T/out
 deploy() { (cd "$ROOT" && bash "$ROOT/infra/vm-deploy.sh" "${1:-testvm-alpha}" "$ROOT") >"$T/out" 2>"$T/err"; echo $?; }
 VMSKILLS() { echo "$T/vm/.omp/agent/skills"; }
 HOSTS() { echo "$T/vm/.config/gh/hosts.yml"; }
+VMHS() { echo "$T/vm/.config/dotfiles/hindsight.env"; }
 # hashes DIR: sorted per-file hashes of DIR, relative paths.
 hashes() { (cd "$1" && find . -type f | LC_ALL=C sort | while IFS= read -r f; do printf '%s %s\n' "$(shasum -a 256 <"$f" | cut -c1-64)" "$f"; done); }
 
@@ -190,6 +213,78 @@ test_token_script_takes_one_argument() {
   shims "$BASE"
   assert_rc "none" "$(tok)" 2
   assert_rc "two" "$(tok a b)" 2
+}
+
+# ---- vm-hindsight-entry.sh
+
+ent() { bash "$ROOT/infra/vm-hindsight-entry.sh" "$@" >"$T/out" 2>"$T/err"; echo $?; }
+
+test_entry_script_prints_url_and_key_of_the_named_vm_only() {
+  shims "$BASE" "" "" "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"$HS_KEY\"},\"testvm-beta\":{\"url\":\"https://other.fixture.example\",\"token\":\"fixture0other0hstoken0123456789ab\"}}"
+  assert_rc "entry" "$(ent testvm-alpha)" 0
+  assert_eq "the url, then the key, and nothing else" "$HS_URL
+$HS_KEY" "$(cat "$T/out")"
+  assert_eq "stderr empty" "" "$(cat "$T/err")"
+  assert_lacks "not the other VM's" "$T/out" "other"
+}
+
+test_entry_script_prints_nothing_without_an_entry() {
+  shims "$BASE" "" "" '{"testvm-beta":{"url":"https://other.fixture.example","token":"fixture0other0hstoken0123456789ab"}}'
+  assert_rc "no entry for the VM" "$(ent testvm-alpha)" 0
+  assert_eq "nothing on stdout" "" "$(cat "$T/out")"
+  shims "$BASE"
+  assert_rc "key absent from the vault (default {})" "$(ent testvm-alpha)" 0
+  assert_eq "nothing" "" "$(cat "$T/out")"
+  shims "$BASE" "" "" '{"testvm-alpha":null}'
+  assert_rc "a null entry" "$(ent testvm-alpha)" 0
+  assert_eq "nothing" "" "$(cat "$T/out")"
+}
+
+test_entry_script_refuses_a_malformed_vault_value_without_echoing_it() {
+  local bad
+  for bad in 'not json' "[\"$HS_KEY\"]" '{"testvm-alpha":"x"}' '{"testvm-alpha":["x"]}' '{"testvm-alpha":{}}' \
+    "{\"testvm-alpha\":{\"url\":\"$HS_URL\"}}" "{\"testvm-alpha\":{\"token\":\"$HS_KEY\"}}" \
+    "{\"testvm-alpha\":{\"url\":\"http://hindsight.fixture.example\",\"token\":\"$HS_KEY\"}}" \
+    "{\"testvm-alpha\":{\"url\":\"$HS_URL/p?x=1\",\"token\":\"$HS_KEY\"}}" \
+    "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"short\"}}" \
+    "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"has space in it 0123456789abcdef\"}}" \
+    "{\"testvm-alpha\":{\"url\":7,\"token\":\"$HS_KEY\"}}"; do
+    shims "$BASE" "" "" "$bad"
+    assert_rc "bad value: $bad" "$(ent testvm-alpha)" 1
+    assert_has "names the vault key" "$T/err" "VM_HINDSIGHT"
+    assert_eq "stdout empty" "" "$(cat "$T/out")"
+    assert_lacks "stderr hides the key" "$T/err" "hstoken0123456789"
+    assert_lacks "stderr hides the url" "$T/err" "hindsight.fixture.example"
+  done
+}
+
+test_entry_script_fails_when_the_vault_cannot_be_read() {
+  shims "$BASE"
+  printf '#!/bin/sh\nexit 1\n' >"$T/bin/secretspec"
+  assert_rc "secretspec fails" "$(ent testvm-alpha)" 1
+  assert_has "says it" "$T/err" "cannot read VM_HINDSIGHT"
+}
+
+test_entry_script_says_what_is_wrong_with_the_map_or_the_entry() {
+  local bad
+  for bad in 'null' '7' '"x"' '["x"]'; do
+    shims "$BASE" "" "" "$bad"
+    assert_rc "map: $bad" "$(ent testvm-alpha)" 1
+    assert_has "says it is not a JSON object" "$T/err" "is not a JSON object"
+    assert_eq "stdout empty" "" "$(cat "$T/out")"
+  done
+  for bad in '{"testvm-alpha":"x"}' '{"testvm-alpha":7}' '{"testvm-alpha":["x"]}'; do
+    shims "$BASE" "" "" "$bad"
+    assert_rc "entry: $bad" "$(ent testvm-alpha)" 1
+    assert_has "says it is not an object" "$T/err" "not an object"
+    assert_eq "stdout empty" "" "$(cat "$T/out")"
+  done
+}
+
+test_entry_script_takes_one_argument() {
+  shims "$BASE"
+  assert_rc "none" "$(ent)" 2
+  assert_rc "two" "$(ent a b)" 2
 }
 
 # ---- vm-sync.sh
@@ -455,6 +550,112 @@ test_deploy_of_the_clean_role_removes_what_the_sync_placed_first() {
   assert_absent "gamma is gone" "$(VMSKILLS)/gamma"
   assert_eq "the user's skill stays" mine "$(cat "$(VMSKILLS)/mine/SKILL.md")"
   assert_eq "another file stays" cfg "$(cat "$T/vm/keepme")"
+}
+
+# ---- vm-sync.sh: the Hindsight piece
+
+test_sync_hindsight_checks_the_gate_then_writes_the_file_and_puts_nothing_in_an_argument() {
+  shims "$BASE" "" "$HS_ON" "$HS_MAP"
+  mkdir -p "$T/vm/.omp"
+  printf 'mine' >"$T/vm/.omp/.env"
+  assert_rc "sync" "$(sync_run)" 0
+  assert_has "url line" "$(VMHS)" "HINDSIGHT_API_URL='$HS_URL'"
+  assert_has "key line" "$(VMHS)" "HINDSIGHT_API_TOKEN='$HS_KEY'"
+  assert_eq "mode 600" 600 "$(tl_mode "$(VMHS)")"
+  assert_eq "the health check ran once" 1 "$(grep -c '^health$' "$T/seq")"
+  assert_eq "the check ran before the write" "yes" "$(awk '/^health$/ {h=NR} /^ssh lex$/ {s=NR} END {print (h && s && h < s) ? "yes" : "no"}' "$T/seq")"
+  assert_eq "the check got the script path only" "$ROOT/infra/vm-hindsight-health.py" "$(cat "$T/pyargs")"
+  assert_eq "the check got the url and the key on stdin" "$HS_URL
+$HS_KEY" "$(cat "$T/store/health.stdin")"
+  assert_lacks "no key on any ssh command line" "$T/sshlog" "$HS_KEY"
+  assert_lacks "no url on any ssh command line" "$T/sshlog" "hindsight.fixture.example"
+  assert_lacks "no key in the output" "$T/out" "$HS_KEY"
+  assert_lacks "no key in stderr" "$T/err" "$HS_KEY"
+  assert_eq "the user's ~/.omp/.env is untouched" "mine" "$(cat "$T/vm/.omp/.env")"
+  assert_eq "the gh token was not read" 0 "$(grep -c 'get VM_GH_TOKENS' "$T/seq")"
+}
+
+test_sync_hindsight_pushes_nothing_when_the_gate_does_not_accept_the_key() {
+  local st rc
+  for st in 401 500 unreachable; do
+    shims "$BASE" "" "$HS_ON" "$HS_MAP"
+    rc=$(STUB_HEALTH=$st sync_run)
+    assert_rc "gate says $st" "$rc" 1
+    assert_has "names the VM" "$T/err" "testvm-alpha"
+    assert_has "says nothing was written" "$T/err" "nothing was written to the VM"
+    assert_absent "no file for $st" "$(VMHS)"
+    assert_eq "no hindsight call reached the VM for $st" 0 "$(grep -c "'hindsight'" "$T/sshlog")"
+    assert_lacks "no key in stderr" "$T/err" "$HS_KEY"
+  done
+  shims "$BASE" "" "$HS_ON" "$HS_MAP"
+  assert_rc "first, accepted" "$(sync_run)" 0
+  local before
+  before=$(shasum -a 256 <"$(VMHS)")
+  assert_rc "then revoked" "$(STUB_HEALTH=401 sync_run)" 1
+  assert_eq "the file on the VM is as it was" "$before" "$(shasum -a 256 <"$(VMHS)")"
+}
+
+test_sync_hindsight_without_an_entry_removes_the_file_with_one_notice() {
+  shims "$BASE" "" "$HS_ON" "$HS_MAP"
+  assert_rc "first sync" "$(sync_run)" 0
+  assert_eq "the file is there" yes "$([ -f "$(VMHS)" ] && echo yes)"
+  printf '{"testvm-beta":{"url":"https://other.fixture.example","token":"fixture0other0hstoken0123456789ab"}}' >"$T/store/VM_HINDSIGHT"
+  assert_rc "second sync, no entry" "$(sync_run)" 0
+  assert_absent "the file is gone" "$(VMHS)"
+  assert_eq "one line about hindsight" 1 "$(grep -c '^hindsight:' "$T/out")"
+  assert_has "names the vault key and the VM" "$T/out" "no entry for testvm-alpha in VM_HINDSIGHT"
+  assert_eq "the check did not run again" 1 "$(grep -c '^health$' "$T/seq")"
+  assert_rc "third sync, nothing to remove" "$(sync_run)" 0
+  assert_eq "one line again" 1 "$(grep -c '^hindsight:' "$T/out")"
+  assert_has "says there is nothing" "$T/out" "no file to remove"
+  shims "$BASE" "" "$HS_ON"
+  assert_rc "key absent from the vault (default {})" "$(sync_run)" 0
+  assert_has "same notice" "$T/out" "no entry for testvm-alpha in VM_HINDSIGHT"
+}
+
+test_sync_hindsight_does_nothing_when_the_vms_option_is_off() {
+  shims "$BASE" "" "$ALL_ON" "$HS_MAP"
+  assert_rc "option absent" "$(sync_run)" 0
+  assert_absent "no file" "$(VMHS)"
+  printf '{"gh":false,"plugins":false,"skills":false,"hindsight":false}' >"$T/vm-config.json"
+  assert_rc "option false" "$(sync_run)" 0
+  assert_absent "still no file" "$(VMHS)"
+  assert_eq "the vault entry was not read" 0 "$(grep -c 'get VM_HINDSIGHT' "$T/seq")"
+  assert_eq "no check ran" 0 "$(grep -c '^health$' "$T/seq")"
+}
+
+test_sync_hindsight_refuses_a_malformed_vault_map_and_writes_nothing() {
+  local bad
+  for bad in 'not json' '{"testvm-alpha":"x"}' "{\"testvm-alpha\":{\"url\":\"http://hindsight.fixture.example\",\"token\":\"$HS_KEY\"}}" "{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"short\"}}"; do
+    shims "$BASE" "" "$HS_ON" "$bad"
+    assert_rc "bad map: $bad" "$(sync_run)" 1
+    assert_has "names the vault key" "$T/err" "VM_HINDSIGHT"
+    assert_absent "no file" "$(VMHS)"
+    assert_eq "no check ran" 0 "$(grep -c '^health$' "$T/seq")"
+  done
+}
+
+test_deploy_of_the_agent_role_syncs_hindsight_after_the_switch() {
+  shims "$BASE" "" '{"gh":true,"plugins":true,"skills":true,"hindsight":true}' "$HS_MAP"
+  assert_rc "deploy" "$(deploy)" 0
+  assert_has "key line" "$(VMHS)" "HINDSIGHT_API_TOKEN='$HS_KEY'"
+  assert_eq "the check ran" 1 "$(grep -c '^health$' "$T/seq")"
+  assert_eq "the switch is before the first remote call as the user" "yes" "$(awk '/^nix$/ {n=NR} /^ssh lex$/ && !f {f=NR} END {print (n && f && n < f) ? "yes" : "no"}' "$T/seq")"
+}
+
+test_deploy_of_the_clean_role_removes_the_hindsight_file_and_nothing_else() {
+  shims "$BASE" "" "$HS_ON" "$HS_MAP"
+  mkdir -p "$T/vm/.omp"
+  printf 'mine' >"$T/vm/.omp/.env"
+  assert_rc "sync" "$(sync_run)" 0
+  printf 'user file' >"$T/vm/.config/dotfiles/mine.txt"
+  : >"$T/seq"
+  printf '%s' "$CLEAN" >"$T/store/TF_VAR_vms"
+  assert_rc "deploy as clean" "$(deploy)" 0
+  assert_absent "the hindsight file is gone" "$(VMHS)"
+  assert_eq "the user's file in the same directory stays" "user file" "$(cat "$T/vm/.config/dotfiles/mine.txt")"
+  assert_eq "~/.omp/.env stays" "mine" "$(cat "$T/vm/.omp/.env")"
+  assert_absent "no manifest left" "$T/vm/.local/state/dotfiles/vm-sync/manifest"
 }
 
 test_deploy_of_the_clean_role_skips_the_removal_when_there_is_no_user() {

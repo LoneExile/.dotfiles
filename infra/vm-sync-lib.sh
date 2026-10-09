@@ -2,9 +2,15 @@
 # Functions of the VM sync, sourced by vm-sync.sh and vm-deploy.sh. Needs ssh, rsync, jq, base64.
 #
 # What the sync is: the agent role (modules/nixos/agent-dev.nix) lists in /etc/dotfiles-agent-sync.json
-# which of three things it wants (options dotfiles.agent.sync.gh, .plugins and .skills):
+# which of four things it wants (options dotfiles.agent.sync.gh, .plugins, .skills and .hindsight):
 #   gh       the agent user's gh login: the token of this VM from the vault map VM_GH_TOKENS (no entry:
 #            skipped with a notice), written to ~/.config/gh/hosts.yml over ssh stdin
+#   hindsight the public Hindsight API of this VM: the URL and key from the vault map VM_HINDSIGHT. The
+#            Mac first asks the gate (GET <url>/health with the key, infra/vm-hindsight-health.py): not
+#            200 means nothing is pushed. Then ~/.config/dotfiles/hindsight.env (mode 600, over ssh
+#            stdin) holds HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN, which zsh exports (home/linux/
+#            agent.nix) and omp prefers over its config file. No entry: the file is removed, with a
+#            one-line notice. ~/.omp/.env is never touched.
 #   skills   the skills of the Mac's skills library (the directories of ~/.skills-manager/skills that
 #            hold a SKILL.md), each mirrored with rsync into ~/.omp/agent/skills on the VM
 #   plugins  the captured omp plugin manifests: placed and installed by the VM itself (Home Manager and
@@ -115,9 +121,9 @@ sync_skill_names() {
   printf '%s' "$names"
 }
 
-# vm_sync NAME REPO IP: gh login and skills, as far as the VM's options ask for them.
+# vm_sync NAME REPO IP: gh login, Hindsight file and skills, as far as the VM's options ask for them.
 vm_sync() {
-  local name=$1 repo=$2 ip=$3 cfg cfgpath on token names n count=0
+  local name=$1 repo=$2 ip=$3 cfg cfgpath on token entry names n count=0
   cfgpath=${VM_SYNC_CONFIG_PATH:-/etc/dotfiles-agent-sync.json}
   sync_wait_ssh "$name" "$ip"
   cfg=$(ssh "${sync_ssh_opts[@]}" "$sync_user@$ip" "cat $cfgpath") || sync_die "cannot read $cfgpath on the VM (deploy the agent role first)"
@@ -132,6 +138,20 @@ vm_sync() {
       printf '%s' "$token" | sync_remote "$repo" "$ip" gh || sync_die "could not write the gh login on the VM"
     fi
     token=""
+  fi
+
+  on=$(printf '%s' "$cfg" | jq -r '.hindsight // false')
+  if [ "$on" = true ]; then
+    entry=$(SECRETSPEC_FILE="$repo/infra/secretspec.toml" SECRETSPEC_REASON="dotfiles infra" bash "$repo/infra/vm-hindsight-entry.sh" "$name") || exit 1
+    if [ -z "$entry" ]; then
+      sync_remote "$repo" "$ip" hindsight-remove "$name" || sync_die "could not remove the Hindsight file on the VM (see above)"
+    else
+      command -v python3 >/dev/null 2>&1 || sync_die "python3 not found: the Hindsight key is checked with it before it is pushed"
+      printf '%s\n' "$entry" | python3 "$repo/infra/vm-hindsight-health.py" ||
+        sync_die "Hindsight: the gate did not accept the key of $name (see above): nothing was written to the VM for this piece"
+      printf '%s\n' "$entry" | sync_remote "$repo" "$ip" hindsight || sync_die "could not write the Hindsight file on the VM"
+    fi
+    entry=""
   fi
 
   on=$(printf '%s' "$cfg" | jq -r '.skills // false')

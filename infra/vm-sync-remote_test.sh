@@ -10,6 +10,10 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 HELPER=$ROOT/infra/vm-sync-remote.sh
 TOKEN=fixture0ghtoken0123456789abcdefABCDEF01
 TOKEN2=fixture0ghtoken0second0123456789ABCDEF
+HS_URL=https://hindsight.fixture.example
+HS_TOKEN=fixture0hstoken0123456789abcdefABCD
+HS_TOKEN2=fixture0hstoken0second012345678ABCD
+HS_MARK='# vm-sync: written from the vault map VM_HINDSIGHT; vm-sync removes it when the VM has no entry'
 
 # h SUBCOMMAND ARGS...: run the helper as the user (stdin from $T/stdin, empty unless set).
 h() {
@@ -19,6 +23,9 @@ h() {
 }
 # hgh TOKEN: the gh subcommand with TOKEN on stdin (printed as is, a trailing newline is added).
 hgh() { printf '%s\n' "$1" >"$T/stdin"; h gh; }
+# hhs URL TOKEN: the hindsight subcommand with the two lines on stdin.
+hhs() { printf '%s\n%s\n' "$1" "$2" >"$T/stdin"; h hindsight; }
+HSENV() { echo "$T_HOME/.config/dotfiles/hindsight.env"; }
 MANIFEST() { echo "$T_HOME/.local/state/dotfiles/vm-sync/manifest"; }
 HOSTS() { echo "$T_HOME/.config/gh/hosts.yml"; }
 SKILLS() { echo "$T_HOME/.omp/agent/skills"; }
@@ -330,6 +337,116 @@ test_unsync_stops_the_install_service_first_when_systemd_is_there() {
   HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
   assert_rc "unsync" "$?" 0
   assert_has "stopped the unit" "$T/systemctl.log" "--user stop omp-plugins-install.service"
+}
+
+# ---- hindsight
+
+test_hindsight_writes_the_env_file_for_zsh() {
+  assert_rc "hindsight" "$(hhs "$HS_URL" "$HS_TOKEN")" 0
+  assert_bytes "file content" "$(HSENV)" "$HS_MARK
+HINDSIGHT_API_URL='$HS_URL'
+HINDSIGHT_API_TOKEN='$HS_TOKEN'
+"
+  assert_eq "mode 600" 600 "$(tl_mode "$(HSENV)")"
+  assert_eq "its directory is 700" 700 "$(tl_mode "$T_HOME/.config/dotfiles")"
+  assert_has "manifest lists the file" "$(MANIFEST)" "file .config/dotfiles/hindsight.env"
+  assert_has "manifest lists the directory it made" "$(MANIFEST)" "dir .config/dotfiles"
+  assert_lacks "the key is not in stdout" "$T/out" "$HS_TOKEN"
+  assert_lacks "the key is not in stderr" "$T/err" "$HS_TOKEN"
+  assert_lacks "the key is not in the manifest" "$(MANIFEST)" "$HS_TOKEN"
+  assert_absent "~/.omp/.env is not touched" "$T_HOME/.omp/.env"
+}
+
+test_hindsight_file_is_valid_for_a_shell_and_exports_both_variables() {
+  assert_rc "hindsight" "$(hhs "https://h.fixture.example:8443/api" "$HS_TOKEN")" 0
+  local got
+  got=$(env -i PATH="$PATH" HOME="$T_HOME" bash -c 'set -a; . "$HOME/.config/dotfiles/hindsight.env"; set +a; printf "%s|%s" "$HINDSIGHT_API_URL" "$HINDSIGHT_API_TOKEN"')
+  assert_eq "what a shell reads from it" "https://h.fixture.example:8443/api|$HS_TOKEN" "$got"
+}
+
+test_hindsight_rejects_a_url_or_key_of_a_wrong_shape_and_writes_nothing() {
+  local bad
+  for bad in 'http://hindsight.fixture.example' 'ftp://hindsight.fixture.example' 'https://hindsight.fixture.example/p?x=1' 'https://user@hindsight.fixture.example' 'https://hind sight.fixture.example' "https://hindsight.fixture.example/'x" 'https://hindsight.fixture.example/$x' 'https://hindsight.fixture.example;id' 'hindsight.fixture.example' 'https://' ''; do
+    assert_rc "url: $bad" "$(hhs "$bad" "$HS_TOKEN")" 1
+    assert_absent "no file for the url: $bad" "$(HSENV)"
+    assert_lacks "stderr hides the key" "$T/err" "$HS_TOKEN"
+  done
+  for bad in 'short' 'has space in it 0123456789abcdef' "quote'0123456789abcdefghijklmnop" 'dollar$0123456789abcdefghijklmnop' '~0123456789abcdefghijklmnop' 'slash/0123456789abcdefghijklmnop' 'semi;0123456789abcdefghijklmnop' ''; do
+    assert_rc "key: $bad" "$(hhs "$HS_URL" "$bad")" 1
+    assert_absent "no file for the key: $bad" "$(HSENV)"
+    assert_lacks "stderr hides the key" "$T/err" "0123456789abcdefghijklmnop"
+  done
+  printf '%s\n%s\n%s\n' "$HS_URL" "$HS_TOKEN" "$HS_TOKEN2" >"$T/stdin"
+  assert_rc "three lines" "$(h hindsight)" 1
+  printf '%s\n' "$HS_URL" >"$T/stdin"
+  assert_rc "one line" "$(h hindsight)" 1
+  assert_absent "no file" "$(HSENV)"
+  assert_absent "no manifest" "$(MANIFEST)"
+}
+
+test_hindsight_overwrites_its_own_file_and_keeps_a_file_it_did_not_write() {
+  assert_rc "first" "$(hhs "$HS_URL" "$HS_TOKEN")" 0
+  assert_rc "second" "$(hhs "$HS_URL" "$HS_TOKEN2")" 0
+  assert_has "new key" "$(HSENV)" "$HS_TOKEN2"
+  assert_lacks "old key gone" "$(HSENV)" "$HS_TOKEN"
+  assert_absent "no backup of its own file" "$(HSENV).dotfiles-backup"
+  assert_eq "listed once" 1 "$(grep -cx 'file .config/dotfiles/hindsight.env' "$(MANIFEST)")"
+  assert_rc "unsync" "$(h unsync)" 0
+  assert_absent "file removed" "$(HSENV)"
+  assert_absent "its directory removed too" "$T_HOME/.config/dotfiles"
+  # a file the user made there
+  mkdir -p "$T_HOME/.config/dotfiles"
+  printf 'HINDSIGHT_API_URL=mine\n' >"$(HSENV)"
+  assert_rc "over the user's file" "$(hhs "$HS_URL" "$HS_TOKEN")" 0
+  assert_has "the user's file is kept" "$(HSENV).dotfiles-backup" "HINDSIGHT_API_URL=mine"
+  assert_rc "unsync" "$(h unsync)" 0
+  assert_has "and put back" "$(HSENV)" "HINDSIGHT_API_URL=mine"
+}
+
+test_hindsight_remove_deletes_its_file_and_says_so_in_one_line() {
+  assert_rc "write" "$(hhs "$HS_URL" "$HS_TOKEN")" 0
+  assert_rc "remove" "$(h hindsight-remove testvm-alpha)" 0
+  assert_absent "file gone" "$(HSENV)"
+  assert_eq "one line of output" 1 "$(wc -l <"$T/out" | tr -d ' ')"
+  assert_has "names the VM and the vault key" "$T/out" "no entry for testvm-alpha in VM_HINDSIGHT"
+  assert_has "says it removed" "$T/out" "removed"
+  assert_lacks "no key in the notice" "$T/out" "$HS_TOKEN"
+  assert_lacks "the manifest forgets the file" "$(MANIFEST)" "hindsight.env"
+}
+
+test_hindsight_remove_with_no_file_or_a_file_it_did_not_write() {
+  assert_rc "no file" "$(h hindsight-remove testvm-alpha)" 0
+  assert_eq "one line" 1 "$(wc -l <"$T/out" | tr -d ' ')"
+  assert_has "says there is nothing" "$T/out" "no file to remove"
+  mkdir -p "$T_HOME/.config/dotfiles"
+  printf 'HINDSIGHT_API_URL=mine\n' >"$(HSENV)"
+  assert_rc "a file of the user" "$(h hindsight-remove testvm-alpha)" 0
+  assert_eq "it stays" "HINDSIGHT_API_URL=mine" "$(cat "$(HSENV)")"
+  assert_eq "one line" 1 "$(wc -l <"$T/out" | tr -d ' ')"
+  assert_has "says why" "$T/out" "not written by vm-sync"
+}
+
+test_hindsight_remove_takes_one_plain_name() {
+  assert_rc "none" "$(h hindsight-remove)" 2
+  assert_rc "bad name" "$(h hindsight-remove 'a b')" 1
+  assert_rc "two" "$(h hindsight-remove a b)" 2
+}
+
+test_hindsight_remove_does_not_follow_a_link_above_the_file() {
+  mkdir -p "$T/elsewhere" "$T_HOME/.config"
+  printf '%s\nHINDSIGHT_API_URL=x\n' "$HS_MARK" >"$T/elsewhere/hindsight.env"
+  ln -s "$T/elsewhere" "$T_HOME/.config/dotfiles"
+  assert_rc "remove" "$(h hindsight-remove testvm-alpha)" 1
+  assert_has "the file behind the link stays" "$T/elsewhere/hindsight.env" "HINDSIGHT_API_URL=x"
+}
+
+test_hindsight_write_does_not_follow_a_link_above_the_file() {
+  mkdir -p "$T/elsewhere" "$T_HOME/.config"
+  ln -s "$T/elsewhere" "$T_HOME/.config/dotfiles"
+  assert_rc "write" "$(hhs "$HS_URL" "$HS_TOKEN")" 1
+  assert_absent "nothing was written behind the link" "$T/elsewhere/hindsight.env"
+  assert_has "says why" "$T/err" "is a link"
+  assert_lacks "stderr hides the key" "$T/err" "$HS_TOKEN"
 }
 
 # ---- plugins-status

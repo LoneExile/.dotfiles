@@ -1,8 +1,9 @@
 # Home Manager for the agent user of a NixOS VM (modules/nixos/agent-dev.nix imports it).
 # It is not the Mac's home/default.nix, which assumes darwin, Homebrew and secretspec: this one
 # holds the shell, the dev tools and the config files an agent needs, and nothing that needs a
-# secret. Secrets stay with the user on the VM (~/.omp/.env, `gh auth login`); the one exception is
-# the gh login that `just vm-sync` writes from the vault (infra/vm-sync-lib.sh), never Nix.
+# secret. Secrets stay with the user on the VM (~/.omp/.env, `gh auth login`); the exceptions are
+# what `just vm-sync` writes from the vault (infra/vm-sync-lib.sh): the gh login and the Hindsight
+# URL and key. Nix never holds them; it only sets up how they are read.
 {
   config,
   lib,
@@ -82,6 +83,7 @@ in {
     sync = {
       gh = lib.mkEnableOption "gh as git's credential helper for github.com (the login is written by vm-sync)";
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
+      hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
       pluginPackages = lib.mkOption {
         type = lib.types.listOf lib.types.package;
         default = [pkgs.bun pkgs.nodejs];
@@ -182,6 +184,22 @@ in {
         "https://github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";
         "https://gist.github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";
       };
+    })
+
+    (lib.mkIf cfg.sync.hindsight {
+      # omp reads HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN from the environment before its config
+      # file (measured on the VM). .zshenv runs for every zsh: the login shell of an ssh session, the
+      # shell of a Tern session and the one that runs `ssh host command`. ~/.omp/.env stays the
+      # user's own: `just vm-sync` never writes it. The file is only read when it exists, so a VM
+      # with no entry in the vault map runs as before. `set -a` exports what the file sets and
+      # nothing else.
+      programs.zsh.envExtra = ''
+        if [[ -r "$HOME/.config/dotfiles/hindsight.env" ]]; then
+          set -a
+          . "$HOME/.config/dotfiles/hindsight.env"
+          set +a
+        fi
+      '';
     })
 
     (lib.mkIf cfg.sync.plugins {

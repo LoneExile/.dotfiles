@@ -2,7 +2,9 @@
 # Fail when a git-tracked file holds an identifying server value from TF_VAR_*,
 # the S3 endpoint host (TF_STATE_S3_ENDPOINT), the S3 secret key (AWS_SECRET_ACCESS_KEY)
 # or a LUKS passphrase (VM_LUKS_KEYS, a JSON map of VM name to passphrase), or a GitHub token
-# (VM_GH_TOKENS, a JSON map of VM name to token; optional: unset, empty or {} means none yet).
+# (VM_GH_TOKENS, a JSON map of VM name to token), or the Hindsight host and key of a VM
+# (VM_HINDSIGHT, a JSON map of VM name to {url, token}); the last two are optional: unset, empty or {}
+# means none yet.
 # Skipped on purpose: the other TF_VAR_* values (datastores, bridge, node, sizing: generic),
 # TF_STATE_S3_BUCKET (generic, like datastores), AWS_ACCESS_KEY_ID (its value equals the
 # public project name and it cannot authenticate without the secret key) and
@@ -79,6 +81,18 @@ printf '%s' "$gh_map" | jq -r 'if type == "object" then .[] | if type == "string
 while IFS= read -r line; do
   add "github token" "$line"
 done <"$ghlist"
+
+# VM_HINDSIGHT: optional JSON object, VM name -> {"url": ..., "token": ...} (the public Hindsight API of
+# that VM and its key). The URL's host and the key are patterns; a null entry counts as no entry.
+hs_map=${VM_HINDSIGHT:-}
+[[ -n $hs_map ]] || hs_map='{}'
+hslist=$work/hs
+printf '%s' "$hs_map" | jq -r 'if type == "object" then .[] | select(. != null) | if type == "object" and (.url | type) == "string" and (.token | type) == "string" then .url, .token else error("bad entry") end else error("not an object") end' >"$hslist" 2>/dev/null ||
+  die 2 "VM_HINDSIGHT is not a JSON object of {url, token} entries"
+while IFS= read -r line && IFS= read -r hs_key; do
+  add "hindsight host" "$(endpoint_host "$line")"
+  add "hindsight key" "$hs_key"
+done <"$hslist"
 
 sort -u "$raw" >"$patterns"
 nvalues=$(wc -l <"$patterns" | tr -d ' ')

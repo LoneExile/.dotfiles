@@ -14,7 +14,8 @@
 #   - the sync from the Mac (options `dotfiles.agent.sync.*`, run by `just vm-sync` and by vm-deploy):
 #     gh as git's credential helper (the login itself is written from the vault), the captured omp
 #     plugins (manifests plus a user service that installs them, and harper-cli), rsync for the
-#     skills the Mac mirrors in; /etc/dotfiles-agent-sync.json tells vm-sync which of the three.
+#     skills the Mac mirrors in, and the zsh side of the Hindsight URL and key (the file itself is
+#     written from the vault); /etc/dotfiles-agent-sync.json tells vm-sync which of the four.
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -58,6 +59,7 @@ in {
       gh = piece "gh as git's credential helper for github.com (the login itself comes from `just vm-sync`, with the token stored for this VM)";
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
       skills = piece "the skills that `just vm-sync` mirrors from the Mac into ~/.omp/agent/skills (needs rsync on the VM)";
+      hindsight = piece "the public Hindsight API for omp: zsh reads ~/.config/dotfiles/hindsight.env (written by `just vm-sync` from the vault) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN, which omp prefers over its config file";
     };
   };
 
@@ -123,7 +125,7 @@ in {
             };
             tern.enable = cfg.tern.enable;
             sync = {
-              inherit (cfg.sync) gh plugins;
+              inherit (cfg.sync) gh plugins hindsight;
               pluginPackages = [unstable.bun unstable.nodejs_24];
             };
           };
@@ -139,10 +141,14 @@ in {
           assertion = !cfg.sync.plugins || cfg.omp.enable;
           message = "dotfiles.agent.sync.plugins needs dotfiles.agent.omp.enable";
         }
+        {
+          assertion = !cfg.sync.hindsight || cfg.omp.enable;
+          message = "dotfiles.agent.sync.hindsight needs dotfiles.agent.omp.enable";
+        }
       ];
 
       # What the VM wants synced, read by vm-sync (infra/vm-sync-lib.sh). No secret, world readable.
-      environment.etc."dotfiles-agent-sync.json".text = builtins.toJSON {inherit (cfg.sync) gh plugins skills;};
+      environment.etc."dotfiles-agent-sync.json".text = builtins.toJSON {inherit (cfg.sync) gh plugins skills hindsight;};
     }
 
     (lib.mkIf cfg.omp.enable {

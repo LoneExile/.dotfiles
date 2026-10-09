@@ -20,6 +20,8 @@ fixture_env() {
   export VM_INITRD_HOST_KEYS='{"testvm-alpha":"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFixtureInitrdHostKey0000000000000000000000"}'
   # Optional secret: the GitHub token of each VM. Fixture value, no real token shape.
   export VM_GH_TOKENS='{"testvm-alpha":"fixture0ghtoken0123456789abcdefABCDEF01"}'
+  # Optional secret: the Hindsight URL and key of each VM. Fixture values.
+  export VM_HINDSIGHT='{"testvm-alpha":{"url":"https://hindsight.fixture.example","token":"fixture0hstoken0123456789abcdefABCD"}}'
 }
 fresh_repo() {
   git init -q "$T/r"
@@ -323,6 +325,73 @@ test_short_github_token_aborts_naming_the_label() {
   fresh_repo
   assert_rc "short token" "$(check)" 2
   assert_has "names the label" "$T/err" "github token"
+  assert_has "says why" "$T/err" "shorter than 4"
+  assert_lacks "does not echo the value" "$T/err" "x1"
+}
+
+test_hindsight_key_and_host_are_checked() {
+  fixture_env
+  fresh_repo
+  track h1.txt 'fixture0hstoken0123456789abcdefABCD'
+  assert_rc "hindsight key" "$(check)" 1
+  assert_has "names the path" "$T/out" "LEAK in h1.txt"
+  assert_lacks "stdout hides the key" "$T/out" "fixture0hstoken"
+  assert_lacks "stderr hides the key" "$T/err" "fixture0hstoken"
+  rm -rf "$T/r"
+  fresh_repo
+  track h2.txt 'api at hindsight.fixture.example'
+  assert_rc "hindsight host" "$(check)" 1
+  assert_has "names the path" "$T/out" "LEAK in h2.txt"
+  assert_lacks "stdout hides the host" "$T/out" "hindsight.fixture.example"
+  assert_lacks "stderr hides the host" "$T/err" "hindsight.fixture.example"
+}
+
+test_every_hindsight_entry_is_checked() {
+  fixture_env
+  export VM_HINDSIGHT='{"testvm-alpha":{"url":"https://hindsight.fixture.example","token":"fixture0hstoken0123456789abcdefABCD"},"testvm-beta":{"url":"https://other.fixture.example:8443/api","token":"fixture0hsother00123456789abcdefABCD"}}'
+  fresh_repo
+  track h3.txt 'fixture0hsother00123456789abcdefABCD'
+  assert_rc "second key" "$(check)" 1
+  rm -rf "$T/r"
+  fresh_repo
+  track h4.txt 'other.fixture.example'
+  assert_rc "second host (the port and path are not part of it)" "$(check)" 1
+}
+
+test_hindsight_entries_are_optional() {
+  fixture_env
+  unset VM_HINDSIGHT
+  fresh_repo
+  assert_rc "unset" "$(check)" 0
+  assert_has "reports no leaks" "$T/out" "no leaks"
+  export VM_HINDSIGHT=
+  assert_rc "empty" "$(check)" 0
+  export VM_HINDSIGHT='{}'
+  assert_rc "empty map" "$(check)" 0
+  export VM_HINDSIGHT='{"testvm-alpha":null}'
+  assert_rc "a null entry" "$(check)" 0
+}
+
+test_malformed_hindsight_map_fails_closed() {
+  local bad
+  for bad in 'not json' '["x"]' '{"testvm-alpha":"https://hindsight.fixture.example"}' '{"testvm-alpha":{"url":7,"token":"fixture0hstoken0123456789abcdefABCD"}}' '{"testvm-alpha":{"url":"https://hindsight.fixture.example"}}' '{"testvm-alpha":{"token":"fixture0hstoken0123456789abcdefABCD"}}'; do
+    fixture_env
+    export VM_HINDSIGHT=$bad
+    fresh_repo
+    assert_rc "malformed VM_HINDSIGHT: $bad" "$(check)" 2
+    assert_has "names the variable" "$T/err" "VM_HINDSIGHT"
+    assert_lacks "no success line" "$T/out" "no leaks"
+    assert_lacks "stderr hides the key" "$T/err" "fixture0hstoken"
+    rm -rf "$T/r"
+  done
+}
+
+test_short_hindsight_key_aborts_naming_the_label() {
+  fixture_env
+  export VM_HINDSIGHT='{"testvm-alpha":{"url":"https://hindsight.fixture.example","token":"x1"}}'
+  fresh_repo
+  assert_rc "short key" "$(check)" 2
+  assert_has "names the label" "$T/err" "hindsight key"
   assert_has "says why" "$T/err" "shorter than 4"
   assert_lacks "does not echo the value" "$T/err" "x1"
 }

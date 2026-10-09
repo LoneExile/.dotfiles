@@ -3,6 +3,9 @@
 # runs nothing inside the user's home). The Mac sends this file over SSH and calls one subcommand:
 #
 #   gh                      read a GitHub token (one line) on stdin, write ~/.config/gh/hosts.yml
+#   hindsight               read the Hindsight URL and API key (two lines) on stdin, write
+#                           ~/.config/dotfiles/hindsight.env (zsh reads it, see home/linux/agent.nix)
+#   hindsight-remove NAME   remove that file (the vault map has no entry for the VM NAME), one line
 #   skills-prepare NAME...  make ~/.omp/agent/skills, check the named entries, record them
 #   plugins-status          say whether the captured omp plugins are installed
 #   unsync                  remove exactly what the sync placed
@@ -94,6 +97,59 @@ cmd_gh() {
   }
   mv -f -- "$tmp" "$hosts" || die 1 "cannot place hosts.yml"
   echo "gh: wrote ~/$rel"
+}
+
+# hindsight.env is ours when the manifest has it or its first line is the marker.
+hs_rel=.config/dotfiles/hindsight.env
+hs_mark='# vm-sync: written from the vault map VM_HINDSIGHT; vm-sync removes it when the VM has no entry'
+hs_is_ours() { # hs_is_ours FILE
+  grep -qxF -- "file $hs_rel" "$manifest" 2>/dev/null || [ "$(head -n 1 -- "$1" 2>/dev/null)" = "$hs_mark" ]
+}
+
+cmd_hindsight() {
+  local url key rest file=$HOME/$hs_rel tmp
+  IFS= read -r url || true
+  IFS= read -r key || true
+  if IFS= read -r rest; then die 1 "more than two lines on stdin"; fi
+  [[ $url =~ ^https://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?(/[A-Za-z0-9._/-]*)?$ ]] ||
+    die 1 "the Hindsight URL on stdin has an unexpected shape (https://host[:port][/path], letters, digits and . - _ / only)"
+  [[ $key =~ ^[A-Za-z0-9_-]{20,255}$ ]] ||
+    die 1 "the Hindsight key on stdin has an unexpected shape (one line of 20 to 255 letters, digits, underscores or dashes)"
+  parent_is_plain "$hs_rel" || die 1 "a directory above ~/$hs_rel is a link"
+  mkdir_recorded .config/dotfiles 700
+  if { [ -e "$file" ] || [ -L "$file" ]; } && ! hs_is_ours "$file"; then
+    mv -f -- "$file" "$file.dotfiles-backup" || die 1 "cannot keep the existing hindsight.env"
+    record backup "$hs_rel.dotfiles-backup"
+    echo "hindsight: kept the existing hindsight.env as hindsight.env.dotfiles-backup (unsync puts it back)"
+  fi
+  record file "$hs_rel"
+  tmp=$(mktemp "$HOME/.config/dotfiles/.hindsight.env.XXXXXX") || die 1 "cannot create a temporary file"
+  printf '%s\nHINDSIGHT_API_URL='"'%s'"'\nHINDSIGHT_API_TOKEN='"'%s'"'\n' "$hs_mark" "$url" "$key" >"$tmp" || {
+    rm -f "$tmp"
+    die 1 "cannot write the Hindsight file"
+  }
+  mv -f -- "$tmp" "$file" || die 1 "cannot place hindsight.env"
+  echo "hindsight: wrote ~/$hs_rel"
+}
+
+cmd_hindsight_remove() {
+  [ $# -eq 1 ] || die 2 "hindsight-remove needs one VM name"
+  valid_name "$1" || die 1 "not a usable VM name: $(printf '%q' "$1")"
+  local file=$HOME/$hs_rel tmp
+  parent_is_plain "$hs_rel" || die 1 "a directory above ~/$hs_rel is a link: left alone"
+  if [ ! -e "$file" ] && [ ! -L "$file" ]; then
+    echo "hindsight: no entry for $1 in VM_HINDSIGHT, no file to remove"
+  elif [ -L "$file" ] || [ -d "$file" ] || ! hs_is_ours "$file"; then
+    echo "hindsight: no entry for $1 in VM_HINDSIGHT; ~/$hs_rel left alone (not written by vm-sync)"
+  else
+    rm -f -- "$file" || die 1 "cannot remove ~/$hs_rel"
+    if [ -f "$manifest" ]; then
+      tmp=$(mktemp "$state_dir/.manifest.XXXXXX") || die 1 "cannot update the manifest"
+      grep -vxF -- "file $hs_rel" "$manifest" >"$tmp" || true
+      mv -f -- "$tmp" "$manifest" || die 1 "cannot update the manifest"
+    fi
+    echo "hindsight: no entry for $1 in VM_HINDSIGHT, removed ~/$hs_rel"
+  fi
 }
 
 cmd_skills_prepare() {
@@ -249,11 +305,13 @@ cmd_unsync() {
   return "$rc"
 }
 
-[ $# -ge 1 ] || die 2 "usage: vm-sync-remote.sh gh | skills-prepare NAME... | plugins-status | unsync"
+[ $# -ge 1 ] || die 2 "usage: vm-sync-remote.sh gh | hindsight | hindsight-remove NAME | skills-prepare NAME... | plugins-status | unsync"
 sub=$1
 shift
 case $sub in
   gh) cmd_gh ;;
+  hindsight) cmd_hindsight ;;
+  hindsight-remove) cmd_hindsight_remove "$@" ;;
   skills-prepare) cmd_skills_prepare "$@" ;;
   plugins-status) cmd_plugins_status ;;
   unsync) cmd_unsync ;;

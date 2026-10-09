@@ -35,10 +35,11 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           execStart = u.systemd.user.services.omp-plugins-install.Service.ExecStart or null;
           wantedBy = u.systemd.user.services.omp-plugins-install.Install.WantedBy or null;
           restart = u.systemd.user.services.omp-plugins-install.Service.Restart or null;
+          zshenv = u.programs.zsh.envExtra;
         }
         else null;
     };
-    syncOff = { dotfiles.agent.sync = { gh = false; plugins = false; skills = false; }; };
+    syncOff = { dotfiles.agent.sync = { gh = false; plugins = false; skills = false; hindsight = false; }; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
@@ -68,10 +69,11 @@ check "agent: exactly one normal user, lingering, outside wheel" '(.agent.normal
 check "agent: nix-ld, podman, zram, omp, Home Manager on" '.agent | [.nixLd, .podman, .zram, .omp, .homeManager] | all'
 check "both: root by key only, no password login" '[.guest, .agent] | all(.rootLogin == "prohibit-password" and .passwordAuth == false)'
 check "clean: none of the sync (no harper, no sync file, no user wiring)" '(.guest | [.harper, (.syncFile != null), (.userSync != null)] | any) | not'
-check "agent: the sync options are on by default" '.agent.syncFile == {"gh": true, "plugins": true, "skills": true}'
+check "agent: the sync options are on by default" '.agent.syncFile == {"gh": true, "plugins": true, "skills": true, "hindsight": true}'
 check "agent: harper (harper-cli) is installed" '.agent.harper'
 check "agent: plugin install service and activation, gh as git credential helper" '.agent.userSync.service and .agent.userSync.activation and (.agent.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$"))'
 check "agent: the manifests are placed before the user units reload, and the unit carries the hash of the captured files" '.agent.userSync.before == ["reloadSystemd"] and ([.agent.userSync.execStart] | flatten | map(test(" [0-9a-f]{64}$")) | any)'
 check "agent: the plugin install unit starts with the user manager at boot and is retried on failure" '.agent.userSync.wantedBy == ["default.target"] and .agent.userSync.restart == "on-failure"'
-check "agent with every sync option off: no harper, no service, no activation, no helper" '.agentOff | (.syncFile == {"gh": false, "plugins": false, "skills": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper == null)'
+check "agent: zsh reads the hindsight file for every shell, and never ~/.omp/.env" '.agent.userSync.zshenv | (contains("config/dotfiles/hindsight.env") and (contains(".omp/.env") | not) and contains("set -a") and contains("set +a"))'
+check "agent with every sync option off: no harper, no service, no activation, no helper, no hindsight in zsh" '.agentOff | (.syncFile == {"gh": false, "plugins": false, "skills": false, "hindsight": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper == null) and (.userSync.zshenv | contains("hindsight") | not)'
 exit "$fail"
