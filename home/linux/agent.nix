@@ -91,6 +91,8 @@ in {
     };
     tern.enable = lib.mkEnableOption "the Tern remote service settings";
     gh.enable = lib.mkEnableOption "gh as git's credential helper for github.com (the user logs in with `gh auth login`)";
+    tools.enable = lib.mkEnableOption "just, lazygit and lazydocker as packages of the user";
+    docker.enable = lib.mkEnableOption "starting the rootless Docker user unit (NixOS defines it) when Home Manager activates";
     sync = {
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
       hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
@@ -204,6 +206,23 @@ in {
         "https://github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";
         "https://gist.github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";
       };
+    })
+
+    (lib.mkIf cfg.tools.enable {
+      # On lex's PATH (/etc/profiles/per-user/lex/bin), which every login shell, Tern shell and `zsh -c` gets. No
+      # config file of any of them is managed: lazygit and lazydocker write their own under ~/.config.
+      home.packages = [pkgs.just pkgs.lazygit pkgs.lazydocker];
+    })
+
+    (lib.mkIf cfg.docker.enable {
+      # The rootless Docker daemon is a NixOS user unit (virtualisation.docker.rootless, modules/nixos/agent-dev.nix),
+      # and the NixOS switch only loads a user unit that it adds: it starts with the user manager, at the next boot.
+      # Home Manager starts only its own units, so this step, after reloadSystemd, starts docker.service; at boot
+      # Home Manager runs before the user manager exists, and the step does nothing then (start-user-unit.sh).
+      home.activation.dockerRootlessStart = lib.hm.dag.entryAfter ["reloadSystemd"] ''
+        ${builtins.readFile ./start-user-unit.sh}
+        start_user_unit ${pkgs.systemd}/bin/systemctl docker.service
+      '';
     })
 
     (lib.mkIf cfg.sync.hindsight {

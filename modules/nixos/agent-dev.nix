@@ -21,6 +21,10 @@
 #     from nixpkgs, and a user service that installs the servers of home/omp/mason-lsp.txt into
 #     ~/.local/share/nvim/mason, where the pi-mason-bridge plugin finds them. Nothing else of Neovim;
 #     plus shellcheck (nixpkgs) on lex's PATH, because bash-language-server takes its diagnostics from it.
+#   - rootless Docker with Compose (option `dotfiles.agent.docker.enable`): the daemon is a user service of lex, there is no
+#     rootful daemon, no docker group and no /var/run/docker.sock (that group would be root on the machine); DOCKER_HOST
+#     points every login at the rootless socket. Rootless podman stays beside it.
+#   - just, lazygit and lazydocker as packages of lex (option `dotfiles.agent.tools.enable`).
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -60,6 +64,8 @@ in {
     gh.enable = piece "the GitHub CLI, with git's credential helper for github.com (the user logs in by hand with `gh auth login`)";
     mason.enable = piece "the Mason language servers of home/omp/mason-lsp.txt for omp's LSP tool, installed by a user service with a minimal Neovim (mason.nvim only; no Neovim config, no other plugin), and shellcheck for bash-language-server";
     podman.enable = piece "rootless podman";
+    docker.enable = piece "rootless Docker with Compose: a user service of the user (no rootful daemon, no docker group, no /var/run/docker.sock), and DOCKER_HOST for the rootless socket in every login, so that lazydocker and the docker CLI find it";
+    tools.enable = piece "just, lazygit and lazydocker, as packages of the user";
 
     sync = {
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
@@ -130,6 +136,8 @@ in {
             };
             tern.enable = cfg.tern.enable;
             gh.enable = cfg.gh.enable;
+            tools.enable = cfg.tools.enable;
+            docker.enable = cfg.docker.enable;
             sync = {
               inherit (cfg.sync) plugins hindsight;
               pluginPackages = [unstable.bun unstable.nodejs_24];
@@ -175,6 +183,23 @@ in {
       # Rootless: NixOS gives a normal user subuid and subgid ranges, and the setuid newuidmap and
       # newgidmap wrappers come with the shadow module.
       virtualisation.podman.enable = true;
+    })
+
+    (lib.mkIf cfg.docker.enable {
+      # Rootless only. NixOS runs dockerd-rootless as a user service of every user (ConditionUser=!root) and
+      # needs no group: the daemon, its socket (/run/user/<uid>/docker.sock) and its data (~/.local/share/docker)
+      # belong to the user, so it is no more than the user is. The rootful daemon (virtualisation.docker.enable)
+      # stays off on purpose: it listens on /var/run/docker.sock for the docker group, and that group is root on
+      # the machine, which the user (no sudo, not in wheel) must not be. The nixos-25.11 default package,
+      # pkgs.docker (28.5.2), is marked insecure (unmaintained since November 2025) and refuses to evaluate;
+      # docker_29 (29.6.0) is the same nixpkgs and ships the compose plugin (`docker compose`) and buildx.
+      # setSocketVariable puts DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock into /etc/set-environment, which
+      # every login shell of the system reads. dockerCompat of podman stays off: `docker` is Docker's.
+      virtualisation.docker.rootless = {
+        enable = true;
+        setSocketVariable = true;
+        package = pkgs.docker_29;
+      };
     })
 
     (lib.mkIf cfg.tern.enable {

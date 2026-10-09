@@ -2,7 +2,9 @@
 # Guards the roles: the clean guest (proxmox-guest) must stay clean, and the agent (proxmox-agent)
 # must stay confined and carry its sync pieces (plugin install, harper, rsync, /etc/dotfiles-agent-sync.json,
 # the Hindsight zsh side) only while the dotfiles.agent.sync options are on, and keep gh as git's credential helper with no Home Manager hand on ~/.config/gh. The agent carries the Mason language server install
-# (a user service with an exact PATH, neovim on no PATH, nothing of ~/.config/nvim) only while dotfiles.agent.mason.enable is on, whatever the sync options say. One `nix eval` of
+# (a user service with an exact PATH, neovim on no PATH, nothing of ~/.config/nvim) only while dotfiles.agent.mason.enable is on, whatever the sync options say. Docker is rootless or absent in
+# every role (no rootful daemon, no docker group, no docker socket, podman not posing as docker) and comes, with just, lazygit and lazydocker as user packages, only while
+# dotfiles.agent.docker.enable and dotfiles.agent.tools.enable are on. One `nix eval` of
 # the configurations, then plain assertions. No VM, no vault, no network beyond what evaluating the
 # flake needs. Run it from anywhere: roles-check.sh [flake-dir].
 set -uo pipefail
@@ -26,6 +28,31 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
       harper = builtins.any (p: (p.pname or "") == "harper") cfg.environment.systemPackages;
       neovim = builtins.any (p: builtins.match "neovim.*" (p.pname or "") != null) cfg.environment.systemPackages;
       shellcheck = builtins.any (p: builtins.match "[Ss]hell[Cc]heck" (p.pname or "") != null) cfg.environment.systemPackages;
+      # Docker: rootless or nothing. The rootful daemon, a docker group (root on the machine), a docker socket and podman posing as docker must not exist in any role.
+      dockerRootful = cfg.virtualisation.docker.enable;
+      dockerRootless = cfg.virtualisation.docker.rootless.enable;
+      dockerSocketVar = cfg.virtualisation.docker.rootless.setSocketVariable;
+      dockerVersion = cfg.virtualisation.docker.rootless.package.version;
+      dockerVulnerabilities = cfg.virtualisation.docker.rootless.package.meta.knownVulnerabilities or [ ];
+      dockerSystemPackage = builtins.any (p: (p.pname or "") == "docker") cfg.environment.systemPackages;
+      dockerGroup = cfg.users.groups ? docker;
+      dockerGroupMembers = cfg.users.groups.docker.members or [ ];
+      dockerUsers = builtins.filter (n: builtins.elem "docker" cfg.users.users.${n}.extraGroups) (builtins.attrNames cfg.users.users);
+      dockerSocketUnits = builtins.filter (n: builtins.match ".*docker.*" n != null) (builtins.attrNames cfg.systemd.sockets);
+      dockerUnit =
+        if cfg.systemd.user.services ? docker
+        then let svc = cfg.systemd.user.services.docker; in {
+          execStart = svc.serviceConfig.ExecStart;
+          wantedBy = svc.wantedBy;
+          notRoot = svc.unitConfig.ConditionUser;
+          restart = svc.serviceConfig.Restart;
+        }
+        else null;
+      podmanDockerCompat = cfg.virtualisation.podman.dockerCompat;
+      podmanDockerSocket = cfg.virtualisation.podman.dockerSocket.enable;
+      extraInit = cfg.environment.extraInit;
+      # just, lazygit and lazydocker are user packages of lex on the agent; as system packages they are in no role.
+      systemTools = builtins.listToAttrs (map (n: { name = n; value = builtins.any (p: (p.pname or "") == n) cfg.environment.systemPackages; }) [ "just" "lazygit" "lazydocker" ]);
       # rsync is not a role signal: the clean guest has it too (the module still names it for the skills sync).
       syncFile = if cfg.environment.etc ? "dotfiles-agent-sync.json" then builtins.fromJSON cfg.environment.etc."dotfiles-agent-sync.json".text else null;
       userSync =
@@ -53,6 +80,10 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           neovimPackaged = builtins.any (p: builtins.match "neovim.*" (p.pname or "") != null) u.home.packages;
           # shellcheck as a user package (pkgs.shellcheck has pname ShellCheck and name shellcheck-0.11.0; the pattern takes both cases): bash-language-server runs it for its diagnostics
           shellcheck = builtins.any (p: builtins.match "[Ss]hell[Cc]heck" (p.pname or "") != null) u.home.packages;
+          # just, lazygit and lazydocker as user packages (the agent-tools piece)
+          tools = builtins.listToAttrs (map (n: { name = n; value = builtins.any (p: (p.pname or "") == n) u.home.packages; }) [ "just" "lazygit" "lazydocker" ]);
+          # the step that starts Docker
+          dockerStart = if u.home.activation ? dockerRootlessStart then { after = u.home.activation.dockerRootlessStart.after; data = u.home.activation.dockerRootlessStart.data; } else null;
           nvimConfigOwned = (u.programs.neovim.enable or false)
             || builtins.any (f: builtins.match "(.*/)?\\.config/nvim(/.*)?" f.target != null) (builtins.attrValues u.home.file)
             || builtins.any (n: builtins.match "nvim(/.*)?" n != null) (builtins.attrNames u.xdg.configFile);
@@ -65,11 +96,15 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     };
     syncOff = { dotfiles.agent.sync = { plugins = false; skills = false; hindsight = false; }; };
     masonOff = { dotfiles.agent.mason.enable = false; };
+    dockerOff = { dotfiles.agent.docker.enable = false; };
+    toolsOff = { dotfiles.agent.tools.enable = false; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
     agentOff = summary (c.proxmox-agent.extendModules { modules = [ syncOff ]; }).config;
     masonOff = summary (c.proxmox-agent.extendModules { modules = [ masonOff ]; }).config;
+    dockerOff = summary (c.proxmox-agent.extendModules { modules = [ dockerOff ]; }).config;
+    toolsOff = summary (c.proxmox-agent.extendModules { modules = [ toolsOff ]; }).config;
   }
 ') || {
   echo "roles-check: nix eval failed" >&2
@@ -119,6 +154,21 @@ check "agent with every sync option off: the Mason unit stays (it is not part of
 check "agent: shellcheck is a user package, on lex's login PATH (bash-language-server gets its diagnostics from it)" '.agent.userSync.shellcheck'
 check "agent with the Mason option off: no shellcheck (it goes with the Mason servers), and the Mason unit's PATH never names it" '(.masonOff.userSync.shellcheck | not) and ([.agent.userSync.mason.environment] | flatten | map(ascii_downcase | contains("shellcheck")) | any | not)'
 check "clean and agent: shellcheck is no system package (it is a user package of lex on the agent only)" '(.guest.shellcheck | not) and (.agent.shellcheck | not)'
+
+# The Docker piece (rootless only) and the tools piece (just, lazygit, lazydocker). The agent has no sudo and is not in wheel; a docker group, or a rootful daemon,
+# would be root on the machine for that user, so no role may have either.
+check "clean: no Docker of any kind (no daemon, no unit, no docker group, no docker socket unit, no docker package) and none of just, lazygit, lazydocker" '.guest | ([.dockerRootful, .dockerRootless, .dockerSystemPackage, .dockerGroup, (.dockerSocketUnits != []), (.dockerUnit != null), ([.systemTools[]] | any)] | any) | not'
+check "agent: Docker is rootless (the rootless daemon is on, the rootful one is off) and every login gets DOCKER_HOST for the rootless socket" '.agent | .dockerRootless and (.dockerRootful | not) and .dockerSocketVar and (.extraInit | test("DOCKER_HOST=\"unix://\\$XDG_RUNTIME_DIR/docker\\.sock\""))'
+check "agent: no docker group, nobody in it, no docker socket unit, podman is not docker (no dockerCompat, no docker socket), and the user is outside wheel" '.agent | (.dockerGroup | not) and (.dockerGroupMembers == []) and (.dockerUsers == []) and (.dockerSocketUnits == []) and (.podmanDockerCompat | not) and (.podmanDockerSocket | not) and (.wheel == [])'
+check "agent: the daemon is Docker 29 (nixos-25.11 marks its default pkgs.docker, 28, insecure) and the docker CLI is a system package" '.agent | (.dockerVersion | startswith("29.")) and (.dockerVulnerabilities == []) and .dockerSystemPackage'
+check "agent: the rootless daemon is a user unit that runs dockerd-rootless, starts with the user manager at boot, never for root, and restarts" '.agent.dockerUnit | (.execStart | test("/bin/dockerd-rootless ")) and (.wantedBy == ["default.target"]) and (.notRoot == "!root") and (.restart == "always")'
+check "agent: just, lazygit and lazydocker are user packages of lex, and in no system package list of either role" '(.agent.userSync.tools == {"just": true, "lazygit": true, "lazydocker": true}) and ([.guest.systemTools, .agent.systemTools] | map([.[]] | any) | any | not)'
+check "agent with the Docker option off: no Docker at all (no daemon, unit, package, DOCKER_HOST), while the tools and podman stay" '.dockerOff | ([.dockerRootless, .dockerRootful, .dockerSystemPackage, (.dockerUnit != null), (.extraInit | contains("DOCKER_HOST"))] | any | not) and ([.userSync.tools[]] | all) and .podman'
+check "agent with the tools option off: none of just, lazygit, lazydocker, while Docker and podman stay" '.toolsOff | ([.userSync.tools[]] | any | not) and .dockerRootless and .podman'
+
+# The start of the rootless Docker unit by Home Manager.
+check "agent: Home Manager starts the rootless Docker unit after reloadSystemd (a NixOS switch loads a new user unit but does not start it), with the systemctl of the store" '.agent.userSync.dockerStart | (.after == ["reloadSystemd"]) and (.data | (contains("start_user_unit()")) and test("\nstart_user_unit /nix/store/[a-z0-9]{32}-systemd-[0-9.]+/bin/systemctl docker\\.service\n"))'
+check "agent with the Docker option off: no such start step" '.dockerOff.userSync.dockerStart == null'
 
 # The init file that the unit hands to nvim: mason.nvim and Neovim's own runtime, nothing else.
 initcode=$(grep -v '^--' "$init")

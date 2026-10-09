@@ -8,7 +8,8 @@
 #   skills-prepare NAME...  make ~/.omp/agent/skills, check the named entries, record them
 #   plugins-status          say whether the captured omp plugins are installed
 #   unsync                  remove exactly what the sync placed (and stop the Mason install service, whose
-#                           output, ~/.local/share/nvim/mason, stays)
+#                           output, ~/.local/share/nvim/mason, stays, and the rootless Docker service with its
+#                           containers: ~/.local/share/docker stays; a daemon that does not stop fails it)
 #
 # The sync keeps a record of what it placed, so that `unsync` (run by vm-deploy before the VM leaves
 # the agent role) removes that and nothing else: ~/.local/state/dotfiles/vm-sync/manifest, one line
@@ -170,11 +171,19 @@ cmd_unsync() {
   # Both install services stop first: a running install would go on as the removed user. The Mason install
   # (home/linux/mason-lsp-install.sh) is only stopped: what it installed is the data directory of any Neovim
   # (~/.local/share/nvim/mason), shared with a config that the user may set up later, and nothing records which
-  # files are its own, so unsync leaves it, and its stamp, alone.
+  # files are its own, so unsync leaves it, and its stamp, alone. The rootless Docker daemon (the user unit
+  # docker.service, modules/nixos/agent-dev.nix) stops too, and with it the containers it runs (it stops them
+  # on SIGTERM): after the switch no user is left to own them. Its data, ~/.local/share/docker, stays like the
+  # rest of the home. A daemon that is still up after the stop fails the unsync, so the deploy stops before the
+  # role changes; "not loaded" (no such unit) and "failed" are down.
   if command -v systemctl >/dev/null 2>&1; then
     for unit in omp-plugins-install.service mason-lsp-install.service; do
       systemctl --user stop "$unit" >/dev/null 2>&1 || true
     done
+    systemctl --user stop docker.service >/dev/null 2>&1 || true
+    case $(systemctl --user is-active docker.service 2>/dev/null) in
+      active | activating | deactivating | reloading) unsync_failed "the rootless Docker service (still up after the stop)" ;;
+    esac
   fi
 
   if [ -f "$manifest" ]; then

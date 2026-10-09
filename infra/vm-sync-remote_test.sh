@@ -321,6 +321,71 @@ test_unsync_stops_the_install_service_first_when_systemd_is_there() {
   assert_has "stopped the Mason install too, so that none runs on as the removed user" "$T/systemctl.log" "--user stop mason-lsp-install.service"
 }
 
+# stub_systemctl ACTIVE [STOP_RC]: a systemctl that logs every call to $T/systemctl.log, prints ACTIVE for `--user is-active docker.service`
+# (what the unit reports after the stop: inactive, active, deactivating, ...) and exits STOP_RC (default 0) for a stop of docker.service.
+stub_systemctl() {
+  mkdir -p "$T/bin"
+  cat >"$T/bin/systemctl" <<EOF
+#!/bin/sh
+printf '%s\n' "\$*" >>"$T/systemctl.log"
+case "\$*" in
+  "--user is-active docker.service") echo "$1"; [ "$1" = active ] && exit 0; exit 3 ;;
+  "--user stop docker.service") exit ${2:-0} ;;
+esac
+exit 0
+EOF
+  chmod +x "$T/bin/systemctl"
+}
+
+test_unsync_stops_the_rootless_docker_service_and_looks_that_it_is_down() {
+  stub_systemctl inactive
+  mkplugins
+  HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
+  assert_rc "unsync" "$?" 0
+  assert_has "stopped the rootless Docker service, so that its daemon and containers do not run on as the removed user" "$T/systemctl.log" "--user stop docker.service"
+  assert_has "asked whether it is down" "$T/systemctl.log" "--user is-active docker.service"
+  assert_eq "the stop came before the question" "--user stop docker.service" "$(grep -F 'docker.service' "$T/systemctl.log" | head -n 1)"
+}
+
+test_unsync_refuses_while_the_rootless_docker_service_is_still_up() {
+  stub_systemctl active
+  assert_rc "hindsight" "$(hhs "$HS_URL" "$HS_TOKEN")" 0
+  HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
+  assert_rc "unsync" "$?" 1
+  assert_has "names the service" "$T/err" "rootless Docker service"
+  assert_eq "the manifest is kept for a retry" yes "$([ -f "$(MANIFEST)" ] && echo yes)"
+  stub_systemctl deactivating
+  HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
+  assert_rc "a service that is still stopping is not down either" "$?" 1
+  stub_systemctl failed
+  HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
+  assert_rc "a failed service has no process left: down" "$?" 0
+}
+
+test_unsync_without_a_docker_unit_is_fine() {
+  stub_systemctl inactive 5
+  mkplugins
+  HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
+  assert_rc "a stop that says not loaded (5) is no failure when nothing runs" "$?" 0
+  assert_lacks "and nothing is reported" "$T/err" "Docker"
+}
+
+test_unsync_leaves_the_docker_and_podman_data_alone() {
+  stub_systemctl inactive
+  mkplugins
+  lput .local/share/docker/volumes/v1/_data/db 'rows' 644
+  lput .local/share/docker/image/overlay2/repositories.json '{}' 644
+  lput .local/share/containers/storage/overlay-images/images.json '[]' 644
+  lput .config/docker/daemon.json '{}' 644
+  lput .config/lazydocker/config.yml 'mine: 1' 644
+  lput .config/lazygit/config.yml 'mine: 2' 644
+  local want
+  want=$(cd "$T_HOME" && find .local/share/docker .local/share/containers .config/docker .config/lazydocker .config/lazygit -type f | LC_ALL=C sort | xargs shasum -a 256)
+  HOME=$T_HOME PATH="$T/bin:$PATH" bash "$HELPER" unsync >"$T/out" 2>"$T/err"
+  assert_rc "unsync" "$?" 0
+  assert_eq "no Docker, podman, lazydocker or lazygit file was removed or changed" "$want" "$(cd "$T_HOME" && find .local/share/docker .local/share/containers .config/docker .config/lazydocker .config/lazygit -type f | LC_ALL=C sort | xargs shasum -a 256)"
+}
+
 test_unsync_leaves_the_mason_install_and_every_neovim_file_alone() {
   mkdir -p "$T/bin"
   printf '#!/bin/sh\nexit 0\n' >"$T/bin/systemctl"
