@@ -5,6 +5,8 @@ set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 # shellcheck source=../secretspec/testlib.sh
 . "$ROOT/home/secretspec/testlib.sh" || exit 1
+# shellcheck source=minpath_testlib.sh
+. "$ROOT/home/linux/minpath_testlib.sh" || exit 1
 SCRIPT=$ROOT/home/linux/start-user-unit.sh
 
 # mksystemctl CAT_RC START_RC: logs "XDG_RUNTIME_DIR|arguments" per call; `cat` exits CAT_RC, `start` exits START_RC.
@@ -25,6 +27,8 @@ EOF
 # step [RUNTIME-DIR] [RUN-DEFINITION]: the activation step as Home Manager runs it (`run` is its wrapper); prints the exit status.
 step() {
   (
+    PATH=$(minimal_path "$T/minbin")
+    export PATH
     unset XDG_RUNTIME_DIR
     [ -z "${1:-}" ] || export XDG_RUNTIME_DIR=$1
     # shellcheck disable=SC2329 # called by start_user_unit

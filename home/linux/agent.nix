@@ -77,6 +77,29 @@
       python.compile = false;
     };
   };
+
+  # The jumphost's host values, one source with the Mac (home/default.nix): home/ssh/jumphost.nix.
+  jumphost = import ../ssh/jumphost.nix;
+  jumphostKeyFile = "~/.ssh/id_ed25519_jumphost";
+
+  # lazydocker for an ssh:// Docker context: the wrapper of home/linux/lazydocker-ssh.sh in front of the real binary (see its header
+  # for why lazydocker cannot use the ssh:// context itself with the restricted key).
+  lazydockerSsh = pkgs.symlinkJoin {
+    pname = "lazydocker";
+    inherit (pkgs.lazydocker) version;
+    paths = [pkgs.lazydocker];
+    passthru.wrapped = true;
+    postBuild = ''
+      rm $out/bin/lazydocker
+      install -m 755 ${pkgs.replaceVars ./lazydocker-ssh.sh {
+        lazydocker = "${pkgs.lazydocker}/bin/lazydocker";
+        docker = "${cfg.docker.package}/bin/docker";
+        socat = "${pkgs.socat}/bin/socat";
+        ssh = "${pkgs.openssh}/bin/ssh";
+      }} $out/bin/lazydocker
+    '';
+    meta.mainProgram = "lazydocker";
+  };
 in {
   imports = [./zsh.nix];
 
@@ -94,7 +117,16 @@ in {
     tern.enable = lib.mkEnableOption "the Tern remote service settings";
     gh.enable = lib.mkEnableOption "gh as git's credential helper for github.com (the user logs in with `gh auth login`)";
     tools.enable = lib.mkEnableOption "just, lazygit and lazydocker as packages of the user";
-    docker.enable = lib.mkEnableOption "starting the rootless Docker user unit (NixOS defines it) when Home Manager activates";
+    docker = {
+      enable = lib.mkEnableOption "the Docker contexts of the user and the start of the rootless Docker user unit (NixOS defines it) when Home Manager activates";
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.docker_29;
+        defaultText = lib.literalExpression "pkgs.docker_29";
+        description = "The docker package whose CLI makes the contexts (the NixOS module runs the same package as the rootless daemon).";
+      };
+    };
+    jumphost.enable = lib.mkEnableOption "the jumphost: its ssh entry with a pinned host key, the user's own key made on this machine, the Docker context `jumphost`, and lazydocker through a bridge";
     sync = {
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
       hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
@@ -212,8 +244,17 @@ in {
 
     (lib.mkIf cfg.tools.enable {
       # On lex's PATH (/etc/profiles/per-user/lex/bin), which every login shell, Tern shell and `zsh -c` gets. No
-      # config file of any of them is managed: lazygit and lazydocker write their own under ~/.config.
-      home.packages = [pkgs.just pkgs.lazygit pkgs.lazydocker];
+      # config file of any of them is managed: lazygit and lazydocker write their own under ~/.config. With the jumphost piece
+      # lazydocker is the wrapper for ssh:// contexts (lazydockerSsh above).
+      home.packages = [
+        pkgs.just
+        pkgs.lazygit
+        (
+          if cfg.jumphost.enable
+          then lazydockerSsh
+          else pkgs.lazydocker
+        )
+      ];
     })
 
     (lib.mkIf cfg.docker.enable {
@@ -224,6 +265,45 @@ in {
       home.activation.dockerRootlessStart = lib.hm.dag.entryAfter ["reloadSystemd"] ''
         ${builtins.readFile ./start-user-unit.sh}
         start_user_unit ${pkgs.systemd}/bin/systemctl docker.service
+      '';
+
+      # The local daemon is the Docker context `rootless`, current when Home Manager creates it: DOCKER_HOST is not exported, because
+      # while it is set `docker context use`, DOCKER_CONTEXT and lazydocker's context lookup are ignored (measured). A context that
+      # the user switched to stays current (docker-contexts.sh). With the jumphost piece, the context `jumphost` is ssh://<alias>.
+      home.activation.dockerContexts = lib.hm.dag.entryAfter ["writeBoundary"] ''
+        ${builtins.readFile ./docker-contexts.sh}
+        ensure_docker_context ${cfg.docker.package}/bin/docker rootless "unix:///run/user/$(id -u)/docker.sock" current
+        ${lib.optionalString cfg.jumphost.enable "ensure_docker_context ${cfg.docker.package}/bin/docker jumphost ssh://${jumphost.alias}"}
+      '';
+    })
+
+    (lib.mkIf cfg.jumphost.enable {
+      # ssh for the jumphost, and nothing else: one entry (HostName and User from home/ssh/jumphost.nix, shared with the Mac, whose
+      # `Host *` block, User root, StrictHostKeyChecking no and UseKeychain are not here), the key that is made on this VM (below),
+      # only that key (IdentitiesOnly), strict host key checking against one pinned ed25519 key and no other known_hosts file.
+      # The pinned key is the jumphost's PUBLIC host key, which is fine in the repo.
+      programs.ssh = {
+        enable = true;
+        enableDefaultConfig = false;
+        matchBlocks.${jumphost.alias} = {
+          inherit (jumphost) hostname user;
+          identityFile = [jumphostKeyFile];
+          identitiesOnly = true;
+          userKnownHostsFile = "~/.ssh/known_hosts.d/${jumphost.alias}";
+          extraOptions = {
+            StrictHostKeyChecking = "yes";
+            GlobalKnownHostsFile = "/dev/null";
+          };
+        };
+      };
+      home.file.".ssh/known_hosts.d/${jumphost.alias}".text = "${jumphost.hostname} ${jumphost.hostKey}\n";
+
+      # The user's own key for it, made here, once, and never replaced: its private half never leaves the VM (ssh-key.sh). Before
+      # the links of Home Manager, so that a missing ~/.ssh is made with mode 700. `just vm-jumphost-authorize <vm>` (on the Mac) reads
+      # the public half and restricts it on the jumphost to `docker system dial-stdio`. The context `jumphost` is made by dockerContexts.
+      home.activation.jumphostKey = lib.hm.dag.entryBetween ["linkGeneration"] ["writeBoundary"] ''
+        ${builtins.readFile ./ssh-key.sh}
+        ensure_ssh_key ${pkgs.openssh}/bin/ssh-keygen "$HOME/.ssh/id_ed25519_jumphost" docker-jumphost
       '';
     })
 

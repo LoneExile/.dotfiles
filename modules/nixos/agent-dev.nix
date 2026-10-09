@@ -22,8 +22,10 @@
 #     ~/.local/share/nvim/mason, where the pi-mason-bridge plugin finds them. Nothing else of Neovim;
 #     plus shellcheck (nixpkgs) on lex's PATH, because bash-language-server takes its diagnostics from it.
 #   - rootless Docker with Compose (option `dotfiles.agent.docker.enable`): the daemon is a user service of lex, there is no
-#     rootful daemon, no docker group and no /var/run/docker.sock (that group would be root on the machine); DOCKER_HOST
-#     points every login at the rootless socket. Rootless podman stays beside it.
+#     rootful daemon, no docker group and no /var/run/docker.sock (that group would be root on the machine); the docker
+#     context `rootless` points at its socket (DOCKER_HOST is not exported: it would override contexts). Rootless podman stays beside it.
+#   - the jumphost (option `dotfiles.agent.jumphost.enable`): the Docker context `jumphost` = ssh://jumphost_server for lex, with an ssh key made on the VM
+#     that `just vm-jumphost-authorize` restricts, on the jumphost, to `docker system dial-stdio`; lazydocker reaches it through a local bridge.
 #   - just, lazygit and lazydocker as packages of lex (option `dotfiles.agent.tools.enable`).
 #   - lex's interactive zsh gets the Mac's aliases, options, keybindings and zsh plugins (option `dotfiles.agent.zsh.enable`, home/linux/zsh.nix):
 #     the files of home/zsh/config as they are, the plugins from nixpkgs, one cached compinit; /etc/zshrc's own compinit is off then.
@@ -48,6 +50,10 @@ inputs: {
   # builds harper-cli, 25.11's has harper-ls alone) and bun and node (the plugin install service
   # reads a lockfile that a current bun wrote).
   unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+
+  # nixos-25.11's default pkgs.docker (28.5.2) is marked insecure (unmaintained since November 2025) and refuses to evaluate;
+  # docker_29 is in the same nixpkgs. The one package of the rootless daemon and of the CLI that Home Manager runs.
+  dockerPackage = pkgs.docker_29;
 in {
   imports = [inputs.home-manager-nixos.nixosModules.home-manager];
 
@@ -66,9 +72,10 @@ in {
     gh.enable = piece "the GitHub CLI, with git's credential helper for github.com (the user logs in by hand with `gh auth login`)";
     mason.enable = piece "the Mason language servers of home/omp/mason-lsp.txt for omp's LSP tool, installed by a user service with a minimal Neovim (mason.nvim only; no Neovim config, no other plugin), and shellcheck for bash-language-server";
     podman.enable = piece "rootless podman";
-    docker.enable = piece "rootless Docker with Compose: a user service of the user (no rootful daemon, no docker group, no /var/run/docker.sock), and DOCKER_HOST for the rootless socket in every login, so that lazydocker and the docker CLI find it";
+    docker.enable = piece "rootless Docker with Compose: a user service of the user (no rootful daemon, no docker group, no /var/run/docker.sock), and the Docker context `rootless` (current) for its socket; DOCKER_HOST is not exported, so that contexts work";
     tools.enable = piece "just, lazygit and lazydocker, as packages of the user";
     zsh.enable = piece "the Mac's aliases, options, keybindings and zsh plugins (nixpkgs) in the interactive zsh of the user, with fzf, and one cached compinit";
+    jumphost.enable = piece "the jumphost's Docker daemon as the Docker context `jumphost` (ssh://jumphost_server) for the user: an ssh key made on the VM (restricted on the jumphost to `docker system dial-stdio` by `just vm-jumphost-authorize`), a strict ssh entry with a pinned host key, and lazydocker through a local bridge";
 
     sync = {
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
@@ -140,8 +147,12 @@ in {
             tern.enable = cfg.tern.enable;
             gh.enable = cfg.gh.enable;
             tools.enable = cfg.tools.enable;
-            docker.enable = cfg.docker.enable;
+            docker = {
+              inherit (cfg.docker) enable;
+              package = dockerPackage;
+            };
             zsh.enable = cfg.zsh.enable;
+            jumphost.enable = cfg.jumphost.enable;
             sync = {
               inherit (cfg.sync) plugins hindsight;
               pluginPackages = [unstable.bun unstable.nodejs_24];
@@ -168,6 +179,10 @@ in {
         {
           assertion = !cfg.sync.hindsight || cfg.omp.enable;
           message = "dotfiles.agent.sync.hindsight needs dotfiles.agent.omp.enable";
+        }
+        {
+          assertion = !cfg.jumphost.enable || cfg.docker.enable;
+          message = "dotfiles.agent.jumphost needs dotfiles.agent.docker.enable (its context is a Docker context)";
         }
       ];
 
@@ -197,12 +212,13 @@ in {
       # the machine, which the user (no sudo, not in wheel) must not be. The nixos-25.11 default package,
       # pkgs.docker (28.5.2), is marked insecure (unmaintained since November 2025) and refuses to evaluate;
       # docker_29 (29.6.0) is the same nixpkgs and ships the compose plugin (`docker compose`) and buildx.
-      # setSocketVariable puts DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock into /etc/set-environment, which
-      # every login shell of the system reads. dockerCompat of podman stays off: `docker` is Docker's.
+      # DOCKER_HOST is NOT exported (setSocketVariable stays off): while it is set, `docker context use`, DOCKER_CONTEXT and
+      # lazydocker's context lookup are all ignored (measured), and the jumphost is a context. The local daemon is the Docker
+      # context `rootless`, made current for the user by Home Manager (home/linux/agent.nix) when it creates it.
+      # dockerCompat of podman stays off: `docker` is Docker's.
       virtualisation.docker.rootless = {
         enable = true;
-        setSocketVariable = true;
-        package = pkgs.docker_29;
+        package = dockerPackage;
       };
     })
 

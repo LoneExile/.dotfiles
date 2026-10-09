@@ -17,6 +17,9 @@
   # gawk/gnugrep in home.packages below, which only reach the login shell's PATH.
   dotfilesSecrets = pkgs.callPackage ./secretspec/package.nix {};
 
+  # The jumphost's HostName and User: one source with the agent VMs (home/linux/agent.nix, jumphost piece).
+  jumphost = import ./ssh/jumphost.nix;
+
   # atuin maps ATUIN_AI__API_TOKEN to ai.api_token (only when config.toml sets
   # none). ~/.config/atuin/ai-token is materialized from OpenBao (ATUIN_AI_TOKEN).
   # Only shells with a TTY export it; ones spawned without (agents, CI) don't.
@@ -634,9 +637,9 @@ in {
       };
 
       ## office
-      "jumphost_server" = {
-        HostName = "192.168.50.29";
-        User = "jumphost";
+      ${jumphost.alias} = {
+        HostName = jumphost.hostname;
+        User = jumphost.user;
         IdentityFile = "~/.ssh/id_ed25519_unit_px";
       };
       "jumphost_server_lab" = {

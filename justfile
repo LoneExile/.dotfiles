@@ -185,7 +185,7 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts, the Docker start step, the interactive zsh of the agent role and its writable config copies (no network, no vault)
+# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts, the Docker start step, the Docker contexts, the ssh key and lazydocker bridge of the jumphost piece, the jumphost authorization, the interactive zsh of the agent role and its writable config copies (no network, no vault)
 test-infra:
   @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles, VM sync, plugin and Mason scripts and writable config copies..."
   bash infra/leak-check_test.sh
@@ -204,6 +204,10 @@ test-infra:
   bash home/linux/mason-lsp-install_test.sh
   bash home/linux/start-user-unit_test.sh
   bash home/linux/zshrc_test.sh
+  bash home/linux/ssh-key_test.sh
+  bash home/linux/docker-contexts_test.sh
+  bash home/linux/lazydocker-ssh_test.sh
+  bash infra/vm-jumphost-authorize_test.sh
 
 # Guard the roles: proxmox-guest stays clean (TCP 22 only, no user), proxmox-agent stays confined (evaluates the flake, no VM)
 test-roles:
@@ -241,6 +245,12 @@ vm-deploy name:
   #!/usr/bin/env bash
   set -euo pipefail
   bash "{{infra_dir}}/vm-deploy.sh" {{quote(name)}} "{{justfile_directory()}}"
+
+# Authorize the agent VM's own jumphost key (made on the VM, public half only) on the jumphost, restricted to `docker system dial-stdio`: backup first, once, no other line touched (the jumphost option of the agent role must be deployed)
+vm-jumphost-authorize name:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  bash "{{infra_dir}}/vm-jumphost-authorize.sh" {{quote(name)}} "{{justfile_directory()}}"
 
 # Sync the Hindsight URL and key (this VM's entry in the vault map VM_HINDSIGHT) and the Mac's skills library to the agent user of a VM (role agent); vm-deploy runs it after an agent deploy
 vm-sync name:

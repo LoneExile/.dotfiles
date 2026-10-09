@@ -32,6 +32,8 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
       dockerRootful = cfg.virtualisation.docker.enable;
       dockerRootless = cfg.virtualisation.docker.rootless.enable;
       dockerSocketVar = cfg.virtualisation.docker.rootless.setSocketVariable;
+      # an assertion that fails (its message): none in a role as built, one for a jumphost without Docker
+      failedAssertions = map (a: a.message) (builtins.filter (a: !a.assertion) cfg.assertions);
       dockerVersion = cfg.virtualisation.docker.rootless.package.version;
       dockerVulnerabilities = cfg.virtualisation.docker.rootless.package.meta.knownVulnerabilities or [ ];
       dockerSystemPackage = builtins.any (p: (p.pname or "") == "docker") cfg.environment.systemPackages;
@@ -87,6 +89,20 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           # the interactive zsh piece: the whole ~/.zshrc (Home Manager merges the ordered pieces into initContent), fzf, and the step that starts Docker
           zshrc = u.programs.zsh.initContent;
           fzf = builtins.any (p: (p.pname or "") == "fzf") u.home.packages;
+          # the Docker contexts, the ssh entry and key of the jumphost, and lazydocker as the wrapper for ssh:// contexts
+          dockerContexts = if u.home.activation ? dockerContexts then { after = u.home.activation.dockerContexts.after; data = u.home.activation.dockerContexts.data; } else null;
+          jumphostKey = if u.home.activation ? jumphostKey then { after = u.home.activation.jumphostKey.after; before = u.home.activation.jumphostKey.before; data = u.home.activation.jumphostKey.data; } else null;
+          sshEnabled = u.programs.ssh.enable or false;
+          sshDefaultConfig = u.programs.ssh.enableDefaultConfig or null;
+          sshBlocks = builtins.attrNames (u.programs.ssh.matchBlocks or { });
+          sshJumphost =
+            if (u.programs.ssh.matchBlocks or { }) ? jumphost_server
+            then let e = u.programs.ssh.matchBlocks.jumphost_server; b = e.data or e; in {
+              inherit (b) hostname user identityFile identitiesOnly userKnownHostsFile extraOptions;
+            }
+            else null;
+          knownHosts = if u.home.file ? ".ssh/known_hosts.d/jumphost_server" then u.home.file.".ssh/known_hosts.d/jumphost_server".text else null;
+          lazydockerWrapped = builtins.any (p: (p.pname or "") == "lazydocker" && (p.wrapped or false)) u.home.packages;
           dockerStart = if u.home.activation ? dockerRootlessStart then { after = u.home.activation.dockerRootlessStart.after; data = u.home.activation.dockerRootlessStart.data; } else null;
           nvimConfigOwned = (u.programs.neovim.enable or false)
             || builtins.any (f: builtins.match "(.*/)?\\.config/nvim(/.*)?" f.target != null) (builtins.attrValues u.home.file)
@@ -103,6 +119,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     dockerOff = { dotfiles.agent.docker.enable = false; };
     toolsOff = { dotfiles.agent.tools.enable = false; };
     zshOff = { dotfiles.agent.zsh.enable = false; };
+    jumphostOff = { dotfiles.agent.jumphost.enable = false; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
@@ -111,9 +128,16 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     dockerOff = summary (c.proxmox-agent.extendModules { modules = [ dockerOff ]; }).config;
     toolsOff = summary (c.proxmox-agent.extendModules { modules = [ toolsOff ]; }).config;
     zshOff = summary (c.proxmox-agent.extendModules { modules = [ zshOff ]; }).config;
+    jumphostOff = summary (c.proxmox-agent.extendModules { modules = [ jumphostOff ]; }).config;
   }
 ') || {
   echo "roles-check: nix eval failed" >&2
+  exit 2
+}
+
+# The jumphost's host values: the one file that the Mac (home/default.nix) and the agent VMs (home/linux/agent.nix) both read.
+jh=$(nix eval --json --file "$repo/home/ssh/jumphost.nix") || {
+  echo "roles-check: nix eval of home/ssh/jumphost.nix failed" >&2
   exit 2
 }
 
@@ -164,7 +188,7 @@ check "clean and agent: shellcheck is no system package (it is a user package of
 # The Docker piece (rootless only) and the tools piece (just, lazygit, lazydocker). The agent has no sudo and is not in wheel; a docker group, or a rootful daemon,
 # would be root on the machine for that user, so no role may have either.
 check "clean: no Docker of any kind (no daemon, no unit, no docker group, no docker socket unit, no docker package) and none of just, lazygit, lazydocker" '.guest | ([.dockerRootful, .dockerRootless, .dockerSystemPackage, .dockerGroup, (.dockerSocketUnits != []), (.dockerUnit != null), ([.systemTools[]] | any)] | any) | not'
-check "agent: Docker is rootless (the rootless daemon is on, the rootful one is off) and every login gets DOCKER_HOST for the rootless socket" '.agent | .dockerRootless and (.dockerRootful | not) and .dockerSocketVar and (.extraInit | test("DOCKER_HOST=\"unix://\\$XDG_RUNTIME_DIR/docker\\.sock\""))'
+check "agent: Docker is rootless (the rootless daemon is on, the rootful one is off) and DOCKER_HOST is exported by no login (it would override Docker contexts)" '.agent | .dockerRootless and (.dockerRootful | not) and (.dockerSocketVar | not) and (.extraInit | contains("DOCKER_HOST") | not) and (.userSync.zshenv | contains("DOCKER_HOST") | not) and (.userSync.zshrc | contains("DOCKER_HOST") | not)'
 check "agent: no docker group, nobody in it, no docker socket unit, podman is not docker (no dockerCompat, no docker socket), and the user is outside wheel" '.agent | (.dockerGroup | not) and (.dockerGroupMembers == []) and (.dockerUsers == []) and (.dockerSocketUnits == []) and (.podmanDockerCompat | not) and (.podmanDockerSocket | not) and (.wheel == [])'
 check "agent: the daemon is Docker 29 (nixos-25.11 marks its default pkgs.docker, 28, insecure) and the docker CLI is a system package" '.agent | (.dockerVersion | startswith("29.")) and (.dockerVulnerabilities == []) and .dockerSystemPackage'
 check "agent: the rootless daemon is a user unit that runs dockerd-rootless, starts with the user manager at boot, never for root, and restarts" '.agent.dockerUnit | (.execStart | test("/bin/dockerd-rootless ")) and (.wantedBy == ["default.target"]) and (.notRoot == "!root") and (.restart == "always")'
@@ -184,6 +208,24 @@ check "agent: none of it is in ~/.zshenv, which every shell reads (omp and the a
 check "agent with the zsh option off: ~/.zshrc names none of the Mac's files or plugins, no compinit, no early exit, no fzf" '.zshOff | (.userSync.zshrc | (contains("aliases.zsh") or contains("compinit") or contains("zsh-autosuggestions") or contains("[[ ! -t 0")) | not) and (.userSync.fzf | not)'
 check "agent: Home Manager starts the rootless Docker unit after reloadSystemd (a NixOS switch loads a new user unit but does not start it), with the systemctl of the store" '.agent.userSync.dockerStart | (.after == ["reloadSystemd"]) and (.data | (contains("start_user_unit()")) and test("\nstart_user_unit /nix/store/[a-z0-9]{32}-systemd-[0-9.]+/bin/systemctl docker\\.service\n"))'
 check "agent with the Docker option off: no such start step" '.dockerOff.userSync.dockerStart == null'
+
+# Docker contexts (no DOCKER_HOST): `rootless` is the local socket and the current context, `jumphost` is ssh://<alias>, made once by an activation step.
+check "agent: the context rootless (the user's runtime socket) is made current, with the docker CLI of the daemon's package, after writeBoundary" '.agent.userSync.dockerContexts | (.after == ["writeBoundary"]) and (.data | (contains("ensure_docker_context()")) and test("\nensure_docker_context /nix/store/[a-z0-9]{32}-docker-29\\.[0-9.]+/bin/docker rootless \"unix:///run/user/\\$\\(id -u\\)/docker\\.sock\" current\n"))'
+check "agent: the context jumphost is ssh://jumphost_server (the alias of home/ssh/jumphost.nix), not made current" '.agent.userSync.dockerContexts.data | test("\nensure_docker_context /nix/store/[a-z0-9]{32}-docker-29\\.[0-9.]+/bin/docker jumphost ssh://jumphost_server\n")' --argjson jh "$jh"
+check "agent with the Docker option off: no Docker contexts" '.dockerOff.userSync.dockerContexts == null'
+check "agent with the jumphost option off: the context rootless stays, the context jumphost goes" '.jumphostOff.userSync.dockerContexts.data | (contains(" rootless ")) and (contains("jumphost") | not)'
+check "agent: the jumphost needs Docker (an assertion refuses the jumphost without it), and no assertion fails otherwise" '(.agent.failedAssertions == []) and (.dockerOff.failedAssertions | length == 1) and (.dockerOff.failedAssertions[0] | contains("jumphost"))'
+
+# The jumphost piece: one ssh entry from the shared values, the VM's own key, a pinned host key, nothing of the Mac's `Host *` block.
+check "agent: the ssh entry of the jumphost has the shared HostName and User, only the key made on the VM (IdentitiesOnly), strict host key checking against one pinned file and no global known_hosts" '.agent.userSync.sshJumphost as $j | $j.hostname == $jh.hostname and $j.user == $jh.user and ($j.identityFile == ["~/.ssh/id_ed25519_jumphost"]) and $j.identitiesOnly and ($j.userKnownHostsFile == "~/.ssh/known_hosts.d/jumphost_server") and ($j.extraOptions.StrictHostKeyChecking == "yes") and ($j.extraOptions.GlobalKnownHostsFile == "/dev/null")' --argjson jh "$jh"
+check "agent: no other ssh entry, no Host * defaults of the Mac (no User root, no StrictHostKeyChecking no, no UseKeychain)" '.agent.userSync | .sshEnabled and (.sshDefaultConfig == false) and (.sshBlocks == ["jumphost_server"])'
+check "agent: the pinned known_hosts file holds exactly the shared host key of the jumphost, under its address" '.agent.userSync.knownHosts == ($jh.hostname + " " + $jh.hostKey + "\n")' --argjson jh "$jh"
+check "agent: the shared host key is an ed25519 public key (not a private key)" '$jh.hostKey | test("^ssh-ed25519 AAAAC3NzaC1lZDI1NTE5[A-Za-z0-9+/]{48}$")' --argjson jh "$jh"
+check "agent: the VM makes its own jumphost key once (ensure_ssh_key, ed25519, never replaced) after writeBoundary and before the links of Home Manager, with the ssh-keygen of the store" '.agent.userSync.jumphostKey | (.after == ["writeBoundary"]) and (.before == ["linkGeneration"]) and (.data | (contains("ensure_ssh_key()")) and test("\nensure_ssh_key /nix/store/[a-z0-9]{32}-openssh-[^/]+/bin/ssh-keygen \"\\$HOME/\\.ssh/id_ed25519_jumphost\" docker-jumphost\n"))'
+check "agent: lazydocker is the wrapper for ssh:// contexts" '.agent.userSync.lazydockerWrapped'
+check "agent with the jumphost option off: no ssh entry or known_hosts file, no key, plain lazydocker; Docker, the tools and podman stay" '.jumphostOff | (.userSync | (.sshJumphost == null) and (.knownHosts == null) and (.jumphostKey == null) and (.lazydockerWrapped | not) and (.sshBlocks == []) and (.tools == {"just": true, "lazygit": true, "lazydocker": true})) and .dockerRootless and .podman'
+check "agent with the Docker option off: the jumphost piece is refused by an assertion, never half-applied" '.dockerOff.failedAssertions | length == 1'
+check "clean: no jumphost, no ssh entry, no key, no Docker context (no Home Manager user at all), and no failing assertion" '.guest | (.userSync == null) and (.failedAssertions == [])'
 
 # The init file that the unit hands to nvim: mason.nvim and Neovim's own runtime, nothing else.
 initcode=$(grep -v '^--' "$init")
@@ -230,4 +272,12 @@ if command -v zsh >/dev/null 2>&1; then
 else
   echo "  skip zsh snippet checks: zsh is not installed"
 fi
+# The Mac: the jumphost entry of home/default.nix takes HostName, User and the Host name from home/ssh/jumphost.nix (one source), with no literal address of its own.
+gcheck() { # gcheck LABEL WANT GOT
+  if [ "$2" = "$3" ]; then printf '  ok   %s\n' "$1"; else printf '  FAIL %s (got: %s)\n' "$1" "$3"; fail=1; fi
+}
+mac_jh=$(grep -c -E 'jumphost\.hostname|jumphost\.user|\$\{jumphost\.alias\}' "$repo/home/default.nix" || true)
+gcheck "mac: home/default.nix reads the jumphost's host name, address and user from home/ssh/jumphost.nix (3 references)" 3 "$mac_jh"
+mac_lit=$(grep -c -E '^[[:space:]]*"jumphost_server"[[:space:]]*=|192\.168\.50\.29' "$repo/home/default.nix" || true)
+gcheck "mac: home/default.nix holds no literal jumphost Host name or address of its own" 0 "$mac_lit"
 exit "$fail"
