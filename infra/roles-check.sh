@@ -4,7 +4,8 @@
 # the Hindsight zsh side) only while the dotfiles.agent.sync options are on, and keep gh as git's credential helper with no Home Manager hand on ~/.config/gh. The agent carries the Mason language server install
 # (a user service with an exact PATH, neovim on no PATH, nothing of ~/.config/nvim) only while dotfiles.agent.mason.enable is on, whatever the sync options say. Docker is rootless or absent in
 # every role (no rootful daemon, no docker group, no docker socket, podman not posing as docker) and comes, with just, lazygit and lazydocker as user packages, only while
-# dotfiles.agent.docker.enable and dotfiles.agent.tools.enable are on. One `nix eval` of
+# dotfiles.agent.docker.enable and dotfiles.agent.tools.enable are on. The browser (headless Chromium behind /opt/google/chrome/chrome, no service, the sandbox on) comes only while
+# dotfiles.agent.browser.enable is on. One `nix eval` of
 # the configurations, then plain assertions. No VM, no vault, no network beyond what evaluating the
 # flake needs. Run it from anywhere: roles-check.sh [flake-dir].
 set -uo pipefail
@@ -57,6 +58,53 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
       zshGlobalCompInit = cfg.programs.zsh.enableGlobalCompInit;
       # just, lazygit and lazydocker are user packages of lex on the agent; as system packages they are in no role.
       systemTools = builtins.listToAttrs (map (n: { name = n; value = builtins.any (p: (p.pname or "") == n) cfg.environment.systemPackages; }) [ "just" "lazygit" "lazydocker" ]);
+      # The browser piece (dotfiles.agent.browser). chromium is a package of no role: it is reached through the link that systemd-tmpfiles makes, so these
+      # facts look at the rules, the option wrapper, the units, and what confines the user (groups, setuid wrappers, sysctl for user namespaces).
+      chromiumSystemPackage = builtins.any (p: (p.pname or "") == "chromium") cfg.environment.systemPackages;
+      browserOption = cfg.dotfiles.agent.browser.enable or false;
+      browserTmpfiles = builtins.filter (r: builtins.match ".*(/opt/google|[Cc]hrom).*" r != null) cfg.systemd.tmpfiles.rules;
+      browserWrapper = let p = cfg.dotfiles.agent.browser.package or null; in
+        if p == null then null else { inherit (p) pname version; path = p.outPath; command = p.drvAttrs.buildCommand; };
+      browserUnits = let
+          hit = n: builtins.match ".*([Cc]hrom|axi|[Dd]evtools|[Bb]rowser|[Pp]uppeteer).*" n != null;
+          lexUser = if cfg ? home-manager && cfg.home-manager.users ? lex then cfg.home-manager.users.lex else null;
+          hmNames = if lexUser == null then [ ] else builtins.concatMap (k: builtins.attrNames lexUser.systemd.user.${k}) [ "services" "sockets" "timers" ];
+        in builtins.filter hit (builtins.concatLists (map (k: builtins.attrNames cfg.systemd.${k}) [ "services" "sockets" "timers" ] ++ map (k: builtins.attrNames cfg.systemd.user.${k}) [ "services" "sockets" "timers" ] ++ [ hmNames ]));
+      suidSandbox = cfg.security.chromiumSuidSandbox.enable;
+      chromeWrappers = builtins.filter (n: builtins.match ".*[Cc]hrom.*" n != null) (builtins.attrNames cfg.security.wrappers);
+      usernsSysctl = builtins.filter (k: builtins.match ".*(userns|user_namespaces|namespaces).*" k != null) (builtins.attrNames cfg.boot.kernel.sysctl);
+      normalUserGroups = builtins.concatMap (n: cfg.users.users.${n}.extraGroups) (builtins.filter (n: cfg.users.users.${n}.isNormalUser) (builtins.attrNames cfg.users.users));
+      # What the browser piece must not touch, by value and not by name: all of it is compared with the same agent with the option off, so a rule, unit, wrapper, sysctl, group, package,
+      # variable or sudo entry that the piece adds under any name shows up as a difference.
+      confine = let
+          lexUser = if cfg ? home-manager && cfg.home-manager.users ? lex then cfg.home-manager.users.lex else null;
+          normalNames = builtins.filter (n: cfg.users.users.${n}.isNormalUser) (builtins.attrNames cfg.users.users);
+          pkgName = p: p.name or (p.pname or "unnamed");
+          unitNames = attrs: builtins.concatMap (k: if attrs ? ${k} && builtins.isAttrs attrs.${k} then builtins.attrNames attrs.${k} else [ ]) [ "services" "sockets" "timers" "paths" "targets" "slices" ];
+          flat = builtins.replaceStrings [ "\n" ] [ " " ] cfg.security.sudo.configFile;
+        in {
+          setuidWrappers = builtins.filter (n: let w = cfg.security.wrappers.${n}; in (w.setuid or false) || (w.setgid or false) || ((w.capabilities or "") != "")) (builtins.attrNames cfg.security.wrappers);
+          sysctl = cfg.boot.kernel.sysctl;
+          tmpfilesRules = cfg.systemd.tmpfiles.rules;
+          tmpfilesSettings = cfg.systemd.tmpfiles.settings;
+          units = {
+            system = unitNames cfg.systemd;
+            user = unitNames cfg.systemd.user;
+            hm = if lexUser == null then [ ] else unitNames lexUser.systemd.user;
+          };
+          envVariables = cfg.environment.variables;
+          envSession = cfg.environment.sessionVariables;
+          hmSession = if lexUser == null then { } else lexUser.home.sessionVariables;
+          userManagerSession = cfg.systemd.user.extraConfig;
+          systemPackages = map pkgName cfg.environment.systemPackages;
+          userPackages = builtins.concatMap (n: map pkgName cfg.users.users.${n}.packages) normalNames;
+          hmPackages = if lexUser == null then [ ] else map pkgName lexUser.home.packages;
+          userGroups = builtins.sort builtins.lessThan (builtins.concatMap (n: cfg.users.users.${n}.extraGroups) normalNames
+            ++ builtins.filter (g: builtins.any (n: builtins.elem n (cfg.users.groups.${g}.members or [ ])) normalNames) (builtins.attrNames cfg.users.groups));
+          wheelMembers = cfg.users.groups.wheel.members or [ ];
+          sudoConfig = cfg.security.sudo.configFile;
+          sudoNamesTheUser = builtins.any (n: builtins.match (".*[^A-Za-z0-9_]" + n + "[^A-Za-z0-9_].*") flat != null) normalNames;
+        };
       # rsync is not a role signal: the clean guest has it too (the module still names it for the skills sync).
       syncFile = if cfg.environment.etc ? "dotfiles-agent-sync.json" then builtins.fromJSON cfg.environment.etc."dotfiles-agent-sync.json".text else null;
       userSync =
@@ -120,6 +168,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     toolsOff = { dotfiles.agent.tools.enable = false; };
     zshOff = { dotfiles.agent.zsh.enable = false; };
     jumphostOff = { dotfiles.agent.jumphost.enable = false; };
+    browserOff = { dotfiles.agent.browser.enable = false; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
@@ -129,6 +178,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     toolsOff = summary (c.proxmox-agent.extendModules { modules = [ toolsOff ]; }).config;
     zshOff = summary (c.proxmox-agent.extendModules { modules = [ zshOff ]; }).config;
     jumphostOff = summary (c.proxmox-agent.extendModules { modules = [ jumphostOff ]; }).config;
+    browserOff = summary (c.proxmox-agent.extendModules { modules = [ browserOff ]; }).config;
   }
 ') || {
   echo "roles-check: nix eval failed" >&2
@@ -227,11 +277,37 @@ check "agent with the jumphost option off: no ssh entry or known_hosts file, no 
 check "agent with the Docker option off: the jumphost piece is refused by an assertion, never half-applied" '.dockerOff.failedAssertions | length == 1'
 check "clean: no jumphost, no ssh entry, no key, no Docker context (no Home Manager user at all), and no failing assertion" '.guest | (.userSync == null) and (.failedAssertions == [])'
 
+# The browser piece: chromium from the role's nixpkgs, reached through the link /opt/google/chrome/chrome (where the stable channel of chrome-devtools-mcp looks for it),
+# headless by its wrapper, started by the CLI on demand. No service, no port, no change to what confines the user.
+check "clean: no browser at all (no chromium package, no /opt/google or chrome rule, no browser option or wrapper, no unit, no setuid sandbox, no chrome wrapper)" '.guest | ([.chromiumSystemPackage, .browserOption, (.browserTmpfiles != []), (.browserUnits != []), (.browserWrapper != null), .suidSandbox, (.chromeWrappers != [])] | any) | not'
+check "agent: the browser piece is on by default, and chromium is no system package: it is reached through exactly three tmpfiles rules, the directories of /opt/google/chrome (root, 0755) and the one link /opt/google/chrome/chrome to bin/chromium of the option's package" '.agent as $a | ($a.browserWrapper.path + "/bin/chromium") as $bin | $a.browserOption and ($a.chromiumSystemPackage | not) and (($a.browserTmpfiles | sort) == (["d /opt/google 0755 root root -", "d /opt/google/chrome 0755 root root -", "L+ /opt/google/chrome/chrome - - - - " + $bin] | sort))'
+check "agent: the package is chromium of the role's nixpkgs (a four-part version), not a download" '.agent.browserWrapper | (.pname == "chromium") and (.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$")) and (.path | test("^/nix/store/[a-z0-9]{32}-chromium-"))'
+check "agent: the wrapper adds exactly --headless=new and --disable-gpu to chromium (the VM has no display; without a GPU Chromium's software GL fallback runs its GPU process with no seccomp filter) and nothing else: no flag that turns a sandbox off, opens a debug port, runs in one process or opts in to SwiftShader" '.agent.browserWrapper.command | ([scan("--add-flags \u0027([^\u0027]*)\u0027")] == [["--headless=new --disable-gpu"]])'
+check "agent: no default of the piece turns the sandbox off (the tmpfiles rules, the wrapper, ~/.zshenv and the environment of the system, the session and Home Manager name no such flag and no PUPPETEER_DANGEROUS_NO_SANDBOX), and the zsh env sets the idle timeout of the CLI and no other variable of it (no flags, no executable path, no display)" '.agent | ([.browserTmpfiles[], .userSync.zshenv, .browserWrapper.command, (.confine.envVariables | tostring), (.confine.envSession | tostring), (.confine.hmSession | tostring)] | map(test("--(no|disable)-[a-z-]*sandbox|NO_SANDBOX|remote-debugging"; "i")) | any | not) and ([.userSync.zshenv | match("CHROME_DEVTOOLS_AXI_[A-Z_]+"; "g").string] == ["CHROME_DEVTOOLS_AXI_IDLE_TIMEOUT_MS"]) and (.userSync.zshenv | test("DISPLAY") | not)'
+check "agent: the zsh env that every shell reads exports the idle timeout (exactly 900000 ms, a line of its own) next to the Hindsight snippet, so that a browser that nobody stopped is stopped by its CLI" '.agent.userSync.zshenv | test("(^|\n)export CHROME_DEVTOOLS_AXI_IDLE_TIMEOUT_MS=900000(\n|$)") and contains("hindsight.env")'
+check "agent: the user stays outside wheel (no extra group, not a member of wheel by either list, no sudo entry that names the user), and the piece adds no chromium setuid sandbox and no setuid wrapper named for chrome or a kernel setting for user namespaces (the sandbox runs on the user namespaces that rootless Docker and podman use)" '.agent | (.wheel == []) and (.normalUserGroups == []) and (.confine.wheelMembers == []) and (.confine.userGroups | index("wheel") | not) and (.confine.sudoNamesTheUser | not) and (.suidSandbox | not) and (.chromeWrappers == []) and (.usernsSysctl == [])'
+check "agent: the browser facts are populated (a comparison of two empty facts would prove nothing): units of the system, the user manager and Home Manager, wrappers, sysctl, tmpfiles rules, the session environment, the packages of the system and of Home Manager, sudo" '.agent.confine | ([(.units.system | length), (.units.user | length), (.units.hm | length), (.setuidWrappers | length), (.sysctl | length), (.tmpfilesRules | length), (.envSession | length), (.systemPackages | length), (.hmPackages | length), (.sudoConfig | length)] | all(. > 0))'
+check "agent: the browser piece adds exactly three tmpfiles rules and one line of ~/.zshenv, and nothing else, whatever its name: every other fact (setuid or capability wrappers, kernel settings, tmpfiles settings, every unit, socket, timer, path and target of the system, the user manager and Home Manager, the environment variables of the system, the session and Home Manager, the packages of the system, of the user and of Home Manager, the groups of the user, sudo, the firewall) equals the agent with the option off" '(.agent.confine | del(.tmpfilesRules)) == (.browserOff.confine | del(.tmpfilesRules)) and ((.agent.confine.tmpfilesRules - .browserOff.confine.tmpfilesRules) | length) == 3 and ((.browserOff.confine.tmpfilesRules - .agent.confine.tmpfilesRules) | length) == 0 and ((.agent.userSync.zshenv | sub("export CHROME_DEVTOOLS_AXI_IDLE_TIMEOUT_MS=900000\n"; "") | gsub("\n\n+"; "\n") | ltrimstr("\n")) == (.browserOff.userSync.zshenv | gsub("\n\n+"; "\n") | ltrimstr("\n"))) and (.agent.tcp == .browserOff.tcp) and (.agent.udp == .browserOff.udp) and (.agent.wheel == .browserOff.wheel) and (.agent.linger == .browserOff.linger)'
+check "no role has a browser service, socket or timer by name (system, user, or of the user's Home Manager), and the piece opens no port" '([.guest, .agent, .browserOff] | all(.browserUnits == [])) and (.browserOff.tcp == .agent.tcp) and (.browserOff.udp == .agent.udp)'
+check "agent with the browser option off: no link, no chromium package, none of its variables in zsh (the Hindsight snippet stays)" '.browserOff | (.browserTmpfiles == []) and (.chromiumSystemPackage | not) and (.userSync.zshenv | (contains("CHROME_DEVTOOLS_AXI") | not) and contains("hindsight.env"))'
+
 # The init file that the unit hands to nvim: mason.nvim and Neovim's own runtime, nothing else.
 initcode=$(grep -v '^--' "$init")
 icheck() { # icheck LABEL EXIT-STATUS
   if [ "$2" -eq 0 ]; then printf '  ok   %s\n' "$1"; else printf '  FAIL %s\n' "$1"; fail=1; fi
 }
+# No source of the Nix modules or of Home Manager names a flag that turns a sandbox of Chromium off (a comment would be found as well). The scan fails closed: grep's own errors are shown,
+# its exit status 2 (a missing or unreadable directory) fails the check, and a positive control shows that it reads the two files that carry the piece.
+scan_dirs=("$repo/modules" "$repo/home")
+scan_raw=$(grep -rIEn -e '--(no|disable)-[a-z-]*sandbox' "${scan_dirs[@]}")
+scan_rc=$?
+bad=$(printf '%s' "$scan_raw" | cut -d: -f1,2 | sed "s#^$repo/##" | tr '\n' ' ')
+[ "$scan_rc" -le 1 ] && [ -z "$bad" ]
+scan_ok=$?
+icheck "no file under modules/ or home/ names a flag that turns the Chromium sandbox off${bad:+ (found: $bad)}" "$scan_ok"
+[ "$(grep -rIlF -e 'cfg.browser.enable' "${scan_dirs[@]}" | wc -l | tr -d ' ')" -eq 2 ]
+pos_ok=$?
+icheck "the sandbox scan reads the two files that carry the browser piece (positive control: both name cfg.browser.enable)" "$pos_ok"
 printf '%s\n' "$initcode" | grep -qxF 'vim.opt.runtimepath = { mason, vim.env.VIMRUNTIME }'
 icheck "init file: the runtime path is mason.nvim and Neovim's own runtime, so no ~/.config/nvim and no site plugin is read" $?
 printf '%s\n' "$initcode" | grep -qxF 'vim.opt.packpath = {}'
@@ -269,6 +345,7 @@ if command -v zsh >/dev/null 2>&1; then
   zcheck "zsh snippet: no file, no output and no variables" "|" "$(zrun "$work/without" true 'echo "${HINDSIGHT_API_URL-}|${HINDSIGHT_API_TOKEN-}"')"
   zcheck "zsh snippet: allexport stays off afterwards" off "$(zrun "$work/with" true '[[ -o allexport ]] && echo on || echo off')"
   zcheck "zsh snippet: a shell that had allexport on keeps it on" on "$(zrun "$work/with" 'setopt allexport' '[[ -o allexport ]] && echo on || echo off')"
+  zcheck "zsh snippet: the idle timeout of the browser CLI reaches a child process of the shell, and no other variable of the browser is set (no executable path, no flags, no display)" "900000:" "$(zrun "$work/without" true 'sh -c "echo \$CHROME_DEVTOOLS_AXI_IDLE_TIMEOUT_MS:\${CHROME_DEVTOOLS_AXI_CHROME_ARGS-}\${CHROME_DEVTOOLS_AXI_MCP_PATH-}\${CHROME_DEVTOOLS_AXI_CHANNEL-}\${DISPLAY-}"')"
 else
   echo "  skip zsh snippet checks: zsh is not installed"
 fi

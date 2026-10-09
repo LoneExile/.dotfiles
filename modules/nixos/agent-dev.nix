@@ -29,6 +29,8 @@
 #   - just, lazygit and lazydocker as packages of lex (option `dotfiles.agent.tools.enable`).
 #   - lex's interactive zsh gets the Mac's aliases, options, keybindings and zsh plugins (option `dotfiles.agent.zsh.enable`, home/linux/zsh.nix):
 #     the files of home/zsh/config as they are, the plugins from nixpkgs, one cached compinit; /etc/zshrc's own compinit is off then.
+#   - a headless browser for the browser tools (option `dotfiles.agent.browser.enable`): chromium of nixpkgs behind /opt/google/chrome/chrome, where chrome-devtools-mcp
+#     (the chrome-devtools-axi CLI, omp's chrome-devtools MCP server) looks for Chrome. They start it on demand; nothing runs while they do not; its sandbox stays on.
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -76,6 +78,22 @@ in {
     tools.enable = piece "just, lazygit and lazydocker, as packages of the user";
     zsh.enable = piece "the Mac's aliases, options, keybindings and zsh plugins (nixpkgs) in the interactive zsh of the user, with fzf, and one cached compinit";
     jumphost.enable = piece "the jumphost's Docker daemon as the Docker context `jumphost` (ssh://jumphost_server) for the user: an ssh key made on the VM (restricted on the jumphost to `docker system dial-stdio` by `just vm-jumphost-authorize`), a strict ssh entry with a pinned host key, and lazydocker through a local bridge";
+    browser = {
+      enable = piece "headless Chromium for the chrome-devtools-axi CLI and omp's chrome-devtools MCP server: a link at /opt/google/chrome/chrome (where chrome-devtools-mcp looks for Chrome) to chromium of nixpkgs, started by those tools on demand (no service, no debug port) with its sandbox on, and the idle timeout of the CLI in the user's zsh environment";
+      package = lib.mkOption {
+        type = lib.types.package;
+        # Only the wrapper of nixpkgs is overridden (a few KB); the browser itself is the stock chromium-unwrapped of the role's nixpkgs. Two flags:
+        # --headless=new: the VM has no display, so every launch is headless whatever the caller asks for; omp's MCP entry (the Mac's, with no
+        #   --headless) would otherwise stop at "Missing X server".
+        # --disable-gpu: the VM has no GPU, so Chromium falls back to software GL, and with that fallback its GPU process runs with no seccomp
+        #   filter (measured: seccomp 0 in every launch, 2 with this flag; the renderers and the network service are sandboxed either way).
+        #   Chromium itself calls the fallback "lower security guarantees" (its own message) and deprecates it. Without a GPU, pages are drawn in software
+        #   anyway; what is lost is WebGL (measured: webgl-yes without the flag, webgl-no with it, also through the CLI).
+        default = pkgs.chromium.override {commandLineArgs = "--headless=new --disable-gpu";};
+        defaultText = lib.literalExpression ''pkgs.chromium.override {commandLineArgs = "--headless=new --disable-gpu";}'';
+        description = "The browser that /opt/google/chrome/chrome points to: the link names the main program of the package (bin/chromium for the default).";
+      };
+    };
 
     sync = {
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
@@ -153,6 +171,7 @@ in {
             };
             zsh.enable = cfg.zsh.enable;
             jumphost.enable = cfg.jumphost.enable;
+            browser.enable = cfg.browser.enable;
             sync = {
               inherit (cfg.sync) plugins hindsight;
               pluginPackages = [unstable.bun unstable.nodejs_24];
@@ -220,6 +239,23 @@ in {
         enable = true;
         package = dockerPackage;
       };
+    })
+
+    (lib.mkIf cfg.browser.enable {
+      # chrome-devtools-axi (the chrome-devtools-axi skill, `npx -y chrome-devtools-axi ...`) and omp's chrome-devtools MCP server both run
+      # chrome-devtools-mcp, which launches Chrome itself, when a command needs it and not before, over a pipe (no debug port), and looks for
+      # the stable channel at /opt/google/chrome/chrome on Linux. It has a flag for another executable, but chrome-devtools-axi has no way to
+      # pass one (its CHROME_ARGS go to Chrome, not to the MCP server) and omp's server entry is the Mac's file. So the path it looks at is a
+      # link to chromium of this nixpkgs: no wrapper script, no variable, no service, and the one place that both consumers read. The link
+      # is made at boot and at every switch (systemd-tmpfiles); the tmpfiles rules name the store path, so the package stays in the closure.
+      # The directories are root's, and /opt above them is root:root 0755 on the VM (measured): the user cannot replace the link.
+      # Chromium is not a system package and is on nobody's PATH. The sandbox is Chromium's own user-namespace sandbox, the one that rootless
+      # Docker and podman already depend on: nothing here turns it off, adds a setuid wrapper or touches a kernel setting.
+      systemd.tmpfiles.rules = [
+        "d /opt/google 0755 root root -"
+        "d /opt/google/chrome 0755 root root -"
+        "L+ /opt/google/chrome/chrome - - - - ${lib.getExe cfg.browser.package}"
+      ];
     })
 
     (lib.mkIf cfg.zsh.enable {

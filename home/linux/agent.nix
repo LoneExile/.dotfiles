@@ -127,6 +127,7 @@ in {
       };
     };
     jumphost.enable = lib.mkEnableOption "the jumphost: its ssh entry with a pinned host key, the user's own key made on this machine, the Docker context `jumphost`, and lazydocker through a bridge";
+    browser.enable = lib.mkEnableOption "the idle timeout of the chrome-devtools-axi CLI in every zsh of the user (the browser is the NixOS side of the piece)";
     sync = {
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
       hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
@@ -304,6 +305,18 @@ in {
       home.activation.jumphostKey = lib.hm.dag.entryBetween ["linkGeneration"] ["writeBoundary"] ''
         ${builtins.readFile ./ssh-key.sh}
         ensure_ssh_key ${pkgs.openssh}/bin/ssh-keygen "$HOME/.ssh/id_ed25519_jumphost" docker-jumphost
+      '';
+    })
+
+    (lib.mkIf cfg.browser.enable {
+      # The browser itself is NixOS side (modules/nixos/agent-dev.nix: the link at /opt/google/chrome/chrome). What is here is how the CLI runs it.
+      # chrome-devtools-axi starts a small bridge process (a listener on 127.0.0.1) and, through chrome-devtools-mcp, a browser, at the first
+      # command, and keeps both until its `stop`. An agent that forgets `stop` would leave a browser of about 1.5 GiB of resident memory (0.7 GiB
+      # with shared pages counted once; measured) on a 7.8 GiB machine, and a port open. With this timeout the CLI stops its own bridge, and the browser with it, after 15 minutes without a command.
+      # .zshenv, like the Hindsight snippet below: every zsh reads it (an ssh login, `zsh -c`, the shell of a Tern session, the shell that omp runs
+      # its commands in). Nothing else of the CLI is set: its default is a headless, isolated browser of the stable channel, which is what the link serves.
+      programs.zsh.envExtra = ''
+        export CHROME_DEVTOOLS_AXI_IDLE_TIMEOUT_MS=900000
       '';
     })
 
