@@ -184,6 +184,7 @@ test-infra:
   bash infra/vm-flow_test.sh
   bash infra/vm-sync-remote_test.sh
   bash infra/vm-sync_test.sh
+  bash infra/vm-hindsight-health_test.sh
   bash home/linux/writable-copy_test.sh
   bash home/linux/omp-plugins-install_test.sh
   bash home/omp/plugins-capture_test.sh
