@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fail when a git-tracked file holds an identifying server value from TF_VAR_*,
 # the S3 endpoint host (TF_STATE_S3_ENDPOINT), the S3 secret key (AWS_SECRET_ACCESS_KEY)
-# or a LUKS passphrase (VM_LUKS_KEYS, a JSON map of VM name to passphrase).
+# or a LUKS passphrase (VM_LUKS_KEYS, a JSON map of VM name to passphrase), or a GitHub token
+# (VM_GH_TOKENS, a JSON map of VM name to token; optional: unset, empty or {} means none yet).
 # Skipped on purpose: the other TF_VAR_* values (datastores, bridge, node, sizing: generic),
 # TF_STATE_S3_BUCKET (generic, like datastores), AWS_ACCESS_KEY_ID (its value equals the
 # public project name and it cannot authenticate without the secret key) and
@@ -67,6 +68,17 @@ printf '%s' "$VM_LUKS_KEYS" | jq -r 'if type == "object" then .[] | if type == "
 while IFS= read -r line; do
   add "luks passphrase" "$line"
 done <"$lukslist"
+
+# VM_GH_TOKENS: optional JSON object, VM name -> GitHub token of that VM. Every non-empty value is
+# a pattern; an entry with an empty value counts as no entry (vm-sync skips it the same way).
+gh_map=${VM_GH_TOKENS:-}
+[[ -n $gh_map ]] || gh_map='{}'
+ghlist=$work/gh
+printf '%s' "$gh_map" | jq -r 'if type == "object" then .[] | if type == "string" then select(length > 0) else error("not a string") end else error("not an object") end' >"$ghlist" 2>/dev/null ||
+  die 2 "VM_GH_TOKENS is not a JSON object of strings"
+while IFS= read -r line; do
+  add "github token" "$line"
+done <"$ghlist"
 
 sort -u "$raw" >"$patterns"
 nvalues=$(wc -l <"$patterns" | tr -d ' ')

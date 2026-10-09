@@ -18,6 +18,8 @@ fixture_env() {
   export VM_LUKS_KEYS='{"testvm-alpha":"fixture0luks0pass0123456789abcdef0123456789abcdef0123456789ab"}'
   # Exported to prove the script skips it (spec §10): a public key, not a secret.
   export VM_INITRD_HOST_KEYS='{"testvm-alpha":"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFixtureInitrdHostKey0000000000000000000000"}'
+  # Optional secret: the GitHub token of each VM. Fixture value, no real token shape.
+  export VM_GH_TOKENS='{"testvm-alpha":"fixture0ghtoken0123456789abcdefABCDEF01"}'
 }
 fresh_repo() {
   git init -q "$T/r"
@@ -266,6 +268,61 @@ test_short_luks_passphrase_aborts_naming_the_label() {
   fresh_repo
   assert_rc "short luks passphrase" "$(check)" 2
   assert_has "names the label" "$T/err" "luks passphrase"
+  assert_has "says why" "$T/err" "shorter than 4"
+  assert_lacks "does not echo the value" "$T/err" "x1"
+}
+
+test_github_token_is_checked() {
+  fixture_env
+  fresh_repo
+  track g.txt 'fixture0ghtoken0123456789abcdefABCDEF01'
+  assert_rc "github token" "$(check)" 1
+  assert_has "names the path" "$T/out" "LEAK in g.txt"
+  assert_lacks "stdout hides the value" "$T/out" "fixture0ghtoken"
+  assert_lacks "stderr hides the value" "$T/err" "fixture0ghtoken"
+}
+
+test_every_github_token_is_checked() {
+  fixture_env
+  export VM_GH_TOKENS='{"testvm-alpha":"fixture0ghtoken0123456789abcdefABCDEF01","testvm-beta":"fixture0ghother00123456789abcdefABCDEF01"}'
+  fresh_repo
+  track g2.txt 'fixture0ghother00123456789abcdefABCDEF01'
+  assert_rc "second token" "$(check)" 1
+}
+
+test_github_tokens_are_optional() {
+  fixture_env
+  unset VM_GH_TOKENS
+  fresh_repo
+  assert_rc "unset" "$(check)" 0
+  assert_has "reports no leaks" "$T/out" "no leaks"
+  export VM_GH_TOKENS=
+  assert_rc "empty" "$(check)" 0
+  export VM_GH_TOKENS='{}'
+  assert_rc "empty map" "$(check)" 0
+  export VM_GH_TOKENS='{"testvm-alpha":""}'
+  assert_rc "an entry with no value" "$(check)" 0
+}
+
+test_malformed_github_token_map_fails_closed() {
+  local bad
+  for bad in 'not json' '["fixture0ghtoken0123456789abcdefABCDEF01"]' '{"testvm-alpha":["x"]}' '{"testvm-alpha":7}' '{"testvm-alpha":null}'; do
+    fixture_env
+    export VM_GH_TOKENS=$bad
+    fresh_repo
+    assert_rc "malformed VM_GH_TOKENS: $bad" "$(check)" 2
+    assert_has "names the variable" "$T/err" "VM_GH_TOKENS"
+    assert_lacks "no success line" "$T/out" "no leaks"
+    rm -rf "$T/r"
+  done
+}
+
+test_short_github_token_aborts_naming_the_label() {
+  fixture_env
+  export VM_GH_TOKENS='{"testvm-alpha":"x1"}'
+  fresh_repo
+  assert_rc "short token" "$(check)" 2
+  assert_has "names the label" "$T/err" "github token"
   assert_has "says why" "$T/err" "shorter than 4"
   assert_lacks "does not echo the value" "$T/err" "x1"
 }
