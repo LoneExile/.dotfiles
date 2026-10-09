@@ -296,6 +296,26 @@ test_a_finding_inside_valid_json_stops_the_capture() {
   assert_absent "dest not created" "$T/dest"
 }
 
+test_rejects_free_form_content_in_the_lock_file() {
+  local label filter
+  while IFS='|' read -r label filter; do
+    rm -rf "$T/src" "$T/dest"
+    mkhome "$T/src"
+    jq "$filter" "$T/src/omp-plugins.lock.json" >"$T/j" && mv "$T/j" "$T/src/omp-plugins.lock.json"
+    assert_rc "$label" "$(cap "$T/src" "$T/dest")" 1
+    assert_has "$label: names the file" "$T/err" "omp-plugins.lock.json"
+    assert_has "$label: says what is allowed" "$T/err" "enabledFeatures"
+    assert_lacks "$label: stderr hides the value" "$T/err" "fixture-free-form-value"
+    assert_absent "$label: dest not created" "$T/dest"
+  done <<'EOF2'
+a setting|.settings.note = "fixture-free-form-value"
+an extra key of a plugin|.plugins["plug-a"].apiKey = "fixture-free-form-value"
+an extra top-level key|.extra = "fixture-free-form-value"
+a feature that is not a name|.plugins["plug-a"].enabledFeatures = [{"a": "fixture-free-form-value"}]
+an enabled that is not a boolean|.plugins["plug-a"].enabled = "fixture-free-form-value"
+EOF2
+}
+
 tl_init_pure
 tl_run_all
 tl_done

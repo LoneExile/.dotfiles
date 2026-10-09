@@ -36,18 +36,29 @@ snapshot() {
     fi
   done)
 }
-# wcstamp NAME: the writable-copy record the Home Manager activation keeps for a file of ~/.omp/plugins.
-wcstamp() { echo "$T_HOME/.local/state/dotfiles/writable-copy/${T_HOME//\//_}_.omp_plugins_$1"; }
+# wcinstall NAME: install ~/.omp/plugins/NAME the way the Home Manager activation does, with the real writable_copy
+# (home/linux/writable-copy.sh), so that the record it keeps has its real name and unsync is tested against that.
+wcinstall() {
+  mkdir -p "$T/psrc"
+  [ -f "$T/psrc/$1" ] || printf '{}' >"$T/psrc/$1"
+  (
+    export HOME=$T_HOME
+    set -eu -o pipefail
+    run() { "$@"; }
+    # shellcheck source=../home/linux/writable-copy.sh
+    . "$ROOT/home/linux/writable-copy.sh"
+    writable_copy "$T/psrc/$1" "$T_HOME/.omp/plugins/$1"
+  ) >/dev/null
+}
+# wcrecords: how many writable-copy records of the plugin files there are.
+wcrecords() { ls "$T_HOME/.local/state/dotfiles/writable-copy" 2>/dev/null | grep -c '_\.omp_plugins_'; }
 # mkplugins: what the plugin sync leaves: manifests, node_modules, records, the install stamp.
 mkplugins() {
-  mkdir -p "$T_HOME/.omp/plugins/node_modules/some-plugin" "$T_HOME/.local/state/dotfiles/writable-copy"
-  printf '{}' >"$T_HOME/.omp/plugins/package.json"
-  printf '{}' >"$T_HOME/.omp/plugins/bun.lock"
-  printf '{}' >"$T_HOME/.omp/plugins/omp-plugins.lock.json"
+  mkdir -p "$T_HOME/.omp/plugins/node_modules/some-plugin" "$T_HOME/.local/state/dotfiles"
+  wcinstall package.json
+  wcinstall bun.lock
+  wcinstall omp-plugins.lock.json
   printf 'x' >"$T_HOME/.omp/plugins/node_modules/some-plugin/index.js"
-  printf 'h1' >"$(wcstamp package.json)"
-  printf 'h2' >"$(wcstamp bun.lock)"
-  printf 'h3' >"$(wcstamp omp-plugins.lock.json)"
   printf 'h4' >"$T_HOME/.local/state/dotfiles/omp-plugins.stamp"
 }
 # mkhome: a user's home with things the sync must never touch.
@@ -166,12 +177,11 @@ test_unsync_leaves_everything_else_exactly_as_it_was() {
 test_unsync_removes_the_plugin_install_and_its_records() {
   mkhome
   mkplugins
+  assert_eq "the records are those of the real writable_copy" 3 "$(wcrecords)"
   assert_rc "unsync" "$(h unsync)" 0
   assert_absent "plugins home" "$T_HOME/.omp/plugins"
   assert_absent "install stamp" "$T_HOME/.local/state/dotfiles/omp-plugins.stamp"
-  assert_absent "record of package.json" "$(wcstamp package.json)"
-  assert_absent "record of bun.lock" "$(wcstamp bun.lock)"
-  assert_absent "record of the lock file" "$(wcstamp omp-plugins.lock.json)"
+  assert_eq "the three records are gone" 0 "$(wcrecords)"
   assert_eq "omp's own config stays" "provider: x" "$(cat "$T_HOME/.omp/agent/config.yml")"
 }
 
@@ -187,7 +197,7 @@ test_unsync_does_not_follow_a_link_in_place_of_the_plugins_home() {
   printf 'keep' >"$T/elsewhere/f"
   mkdir -p "$T_HOME/.omp" "$T_HOME/.local/state/dotfiles/writable-copy"
   ln -s "$T/elsewhere" "$T_HOME/.omp/plugins"
-  printf 'h1' >"$(wcstamp package.json)"
+  wcinstall package.json
   assert_rc "unsync" "$(h unsync)" 0
   assert_eq "the link's target is untouched" keep "$(cat "$T/elsewhere/f")"
 }
@@ -236,6 +246,56 @@ EOF
   assert_eq "a name with a space is not a manifest entry" keep "$(cat "$T_HOME/bad name")"
   assert_eq "a name with a semicolon is not a manifest entry" keep "$(cat "$T_HOME/.bad;name")"
   assert_has "says a line was refused" "$T/err" "refused"
+}
+
+test_unsync_exits_1_and_keeps_its_evidence_when_a_removal_fails() {
+  mkhome
+  mkplugins
+  assert_rc "prepare" "$(h skills-prepare alpha)" 0
+  mkdir -p "$(SKILLS)/alpha/sub"
+  printf 'a' >"$(SKILLS)/alpha/sub/f"
+  chmod 555 "$(SKILLS)/alpha/sub" "$T_HOME/.omp/plugins/node_modules/some-plugin"
+  assert_rc "unsync with two removals that fail" "$(h unsync)" 1
+  assert_has "names the skill" "$T/err" "could not remove ~/.omp/agent/skills/alpha"
+  assert_has "names the plugin install" "$T/err" "could not remove ~/.omp/plugins"
+  assert_lacks "does not claim there was nothing to do" "$T/out" "nothing to remove"
+  assert_eq "the manifest is kept for a retry" yes "$([ -f "$(MANIFEST)" ] && echo yes)"
+  assert_eq "the three records are kept" 3 "$(wcrecords)"
+  assert_eq "the install stamp is kept" yes "$([ -f "$T_HOME/.local/state/dotfiles/omp-plugins.stamp" ] && echo yes)"
+  chmod 755 "$(SKILLS)/alpha/sub" "$T_HOME/.omp/plugins/node_modules/some-plugin"
+  assert_rc "the retry works" "$(h unsync)" 0
+  assert_absent "skill gone" "$(SKILLS)/alpha"
+  assert_absent "plugin install gone" "$T_HOME/.omp/plugins"
+  assert_eq "the records are gone" 0 "$(wcrecords)"
+  assert_absent "manifest gone" "$(MANIFEST)"
+}
+
+test_unsync_refuses_manifest_lines_for_files_of_the_user_inside_the_home() {
+  mkhome
+  mkdir -p "$T_HOME/.config/gh" "$T_HOME/.omp/agent/skills/theirs" "$T_HOME/.local/state/dotfiles/vm-sync"
+  printf 'login' >"$T_HOME/.config/gh/hosts.yml"
+  printf 'keys' >"$T_HOME/.omp/.env"
+  printf 'theirs' >"$T_HOME/.omp/agent/skills/theirs/SKILL.md"
+  printf 'user' >"$T_HOME/precious.dotfiles-backup"
+  cat >"$(MANIFEST)" <<EOF
+file .config/gh/hosts.yml
+file .omp/.env
+file .zshrc
+backup precious.dotfiles-backup
+backup .config/gh/hosts.yml.dotfiles-backup
+dir .config/gh
+dir .local
+dir .ssh
+skill ..
+EOF
+  assert_rc "unsync" "$(h unsync)" 1
+  assert_eq "hosts.yml stays" login "$(cat "$T_HOME/.config/gh/hosts.yml")"
+  assert_eq "~/.omp/.env stays" keys "$(cat "$T_HOME/.omp/.env")"
+  assert_eq ".zshrc stays" zsh "$(cat "$T_HOME/.zshrc")"
+  assert_eq "the user's skill stays" theirs "$(cat "$T_HOME/.omp/agent/skills/theirs/SKILL.md")"
+  assert_eq "a backup of the user's own stays where it is" user "$(cat "$T_HOME/precious.dotfiles-backup")"
+  assert_eq "every one of the nine lines was refused" 9 "$(grep -c 'refused manifest line' "$T/err")"
+  assert_eq "the manifest is kept" yes "$([ -f "$(MANIFEST)" ] && echo yes)"
 }
 
 test_unsync_with_nothing_to_remove_succeeds_and_twice_is_the_same() {

@@ -36,7 +36,10 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           wantedBy = u.systemd.user.services.omp-plugins-install.Install.WantedBy or null;
           restart = u.systemd.user.services.omp-plugins-install.Service.Restart or null;
           zshenv = u.programs.zsh.envExtra;
-          ghOwned = (u.programs.gh.enable or false) || builtins.any (n: builtins.match "\\.config/gh(/.*)?" n != null) (builtins.attrNames u.home.file);
+          # home.file is keyed by the absolute path for xdg.configFile entries: match the normalised target, and the xdg names
+          ghOwned = (u.programs.gh.enable or false)
+            || builtins.any (f: builtins.match "(.*/)?\\.config/gh(/.*)?" f.target != null) (builtins.attrValues u.home.file)
+            || builtins.any (n: builtins.match "gh(/.*)?" n != null) (builtins.attrNames u.xdg.configFile);
         }
         else null;
     };
@@ -78,4 +81,28 @@ check "agent: the manifests are placed before the user units reload, and the uni
 check "agent: the plugin install unit starts with the user manager at boot and is retried on failure" '.agent.userSync.wantedBy == ["default.target"] and .agent.userSync.restart == "on-failure"'
 check "agent: zsh reads the hindsight file for every shell, and never ~/.omp/.env" '.agent.userSync.zshenv | (contains("config/dotfiles/hindsight.env") and (contains(".omp/.env") | not) and contains("set -a") and contains("set +a"))'
 check "agent with every sync option off: no harper, no service, no activation, no hindsight in zsh; gh stays the credential helper" '.agentOff | (.syncFile == {"plugins": false, "skills": false, "hindsight": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$")) and (.userSync.zshenv | contains("hindsight") | not)'
+
+# The zsh snippet of the hindsight piece, run for real with fixture files (no secret): the file's values reach a
+# child process, no file means no output and no variables, and allexport is left as the shell had it.
+snippet=$(printf '%s' "$facts" | jq -r '.agent.userSync.zshenv')
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+mkdir -p "$work/with/.config/dotfiles" "$work/without"
+printf '# fixture\nHINDSIGHT_API_URL='"'https://hindsight.fixture.example'"'\nHINDSIGHT_API_TOKEN='"'fixture0token'"'\n' >"$work/with/.config/dotfiles/hindsight.env"
+zrun() { # zrun HOME PRE SCRIPT: a clean zsh runs PRE, then the snippet, then SCRIPT; its output (stderr too) comes back
+  env -i HOME="$1" PATH="$PATH" zsh -f -c "$2
+$snippet
+$3" 2>&1
+}
+if command -v zsh >/dev/null 2>&1; then
+  zcheck() { # zcheck LABEL WANT GOT
+    if [ "$2" = "$3" ]; then printf '  ok   %s\n' "$1"; else printf '  FAIL %s (got: %s)\n' "$1" "$3"; fail=1; fi
+  }
+  zcheck "zsh snippet: a child process sees both variables when the file exists" "https://hindsight.fixture.example fixture0token" "$(zrun "$work/with" true 'sh -c "echo \$HINDSIGHT_API_URL \$HINDSIGHT_API_TOKEN"')"
+  zcheck "zsh snippet: no file, no output and no variables" "|" "$(zrun "$work/without" true 'echo "${HINDSIGHT_API_URL-}|${HINDSIGHT_API_TOKEN-}"')"
+  zcheck "zsh snippet: allexport stays off afterwards" off "$(zrun "$work/with" true '[[ -o allexport ]] && echo on || echo off')"
+  zcheck "zsh snippet: a shell that had allexport on keeps it on" on "$(zrun "$work/with" 'setopt allexport' '[[ -o allexport ]] && echo on || echo off')"
+else
+  echo "  skip zsh snippet checks: zsh is not installed"
+fi
 exit "$fail"

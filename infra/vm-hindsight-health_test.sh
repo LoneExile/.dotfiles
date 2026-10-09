@@ -20,12 +20,13 @@ CHECK=$ROOT/infra/vm-hindsight-health.py
 KEY=fixture0hstoken0123456789abcdefABCD
 OTHER=fixture0hstoken0other0123456789ABCD
 
-# start_server: an HTTPS server on 127.0.0.1 in $T/srv; sets URL. Mode (a file): ok (default), redirect, error.
+# start_server: an HTTPS server on 127.0.0.1 in $T/srv; sets URL. Mode (a file): ok (default), redirect, error, hang.
+# HS_SAN (an environment variable of the call) sets the names the certificate is valid for.
 start_server() {
   local i
   mkdir -p "$T/srv"
   printf '%s' "$KEY" >"$T/srv/want"
-  cat >"$T/srv/san.cnf" <<'EOF'
+  cat >"$T/srv/san.cnf" <<EOF
 [req]
 distinguished_name=dn
 x509_extensions=v3
@@ -33,7 +34,7 @@ prompt=no
 [dn]
 CN=localhost
 [v3]
-subjectAltName=DNS:localhost,IP:127.0.0.1
+subjectAltName=${HS_SAN:-DNS:localhost,IP:127.0.0.1}
 EOF
   cat >"$T/srv/server.py" <<'EOF'
 import hashlib, http.server, os, ssl, sys, time
@@ -51,6 +52,11 @@ class H(http.server.BaseHTTPRequestHandler):
             return
         if mode == "error":
             self.send_response(500)
+            self.end_headers()
+            return
+        if mode == "hang":
+            time.sleep(20)
+            self.send_response(200)
             self.end_headers()
             return
         want = open(d + "/want").read().strip()
@@ -152,6 +158,23 @@ test_a_proxy_in_the_environment_is_not_used() {
   printf '%s\n%s\n' "$URL" "$KEY" | HTTPS_PROXY=http://127.0.0.1:9 https_proxy=http://127.0.0.1:9 ALL_PROXY=http://127.0.0.1:9 SSL_CERT_FILE="$T/srv/c.pem" SSL_CERT_DIR="" python3 "$CHECK" >"$T/out" 2>"$T/err"
   assert_eq "check passes" 0 "$?"
   assert_eq "the request went to the server itself" 1 "$(wc -l <"$T/srv/server.log" | tr -d ' ')"
+}
+
+test_a_certificate_for_another_name_fails_before_the_key_is_sent() {
+  HS_SAN="DNS:other.fixture.example" start_server
+  # the certificate is trusted (SSL_CERT_FILE), but it is not valid for 127.0.0.1
+  assert_rc "check" "$(hc "$URL" "$KEY")" 1
+  assert_has "says it could not reach the gate" "$T/err" "could not reach"
+  assert_eq "no request reached the server" 0 "$(wc -l <"$T/srv/server.log" | tr -d ' ')"
+}
+
+test_a_gate_that_never_answers_is_given_up_on() {
+  start_server
+  printf 'hang' >"$T/srv/mode"
+  local t0=$SECONDS
+  assert_rc "no answer" "$(hc "$URL" "$KEY")" 1
+  assert_has "says it could not reach the gate" "$T/err" "could not reach"
+  assert_eq "it gave up before the server would have answered" yes "$([ $((SECONDS - t0)) -lt 19 ] && echo yes)"
 }
 
 test_a_url_that_is_not_https_is_refused_and_nothing_is_sent() {

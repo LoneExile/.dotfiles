@@ -193,12 +193,14 @@ in {
       # shell of a Tern session and the one that runs `ssh host command`. ~/.omp/.env stays the
       # user's own: `just vm-sync` never writes it. The file is only read when it exists, so a VM
       # with no entry in the vault map runs as before. `set -a` exports what the file sets and
-      # nothing else.
+      # nothing else: allexport is put back as it was (infra/roles-check.sh runs this in zsh).
       programs.zsh.envExtra = ''
         if [[ -r "$HOME/.config/dotfiles/hindsight.env" ]]; then
+          [[ -o allexport ]] && hindsight_allexport=1 || hindsight_allexport=0
           set -a
           . "$HOME/.config/dotfiles/hindsight.env"
-          set +a
+          [[ $hindsight_allexport == 1 ]] || set +a
+          unset hindsight_allexport
         fi
       '';
     })

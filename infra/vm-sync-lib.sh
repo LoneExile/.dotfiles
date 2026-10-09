@@ -48,7 +48,7 @@ sync_host_key_state() {
 
 # sync_die_host_key NAME IP: refuse, and say how to pin the key.
 sync_die_host_key() {
-  sync_die "the host key of $2 ($1) is not pinned in known_hosts, or it does not match the pinned one. vm-sync sends secrets, so it never trusts a key on first use. Check that $2 belongs to $1, then run the re-key step of the README (Reinstall): ssh-keygen -R $2, then connect once and compare the fingerprint (ssh -o StrictHostKeyChecking=ask root@$2), or run just vm-deploy $1, which pins the key it sees; then run vm-sync again"
+  sync_die "the host key of $2 ($1) is not pinned in known_hosts, or it does not match the pinned one. vm-sync sends secrets, so it never trusts a key on first use. Check that $2 belongs to $1, then run the re-key step of the README (Reinstall): ssh-keygen -R $2, then connect once (ssh -o StrictHostKeyChecking=ask root@$2; the VM's console has no login, so what you check is the address, not a fingerprint), or run just vm-deploy $1, which pins the key it sees; then run vm-sync again"
 }
 
 # under_secretspec REPO NAME SCRIPT: run an infra script in the Terragrunt unit with the vault's values
@@ -173,11 +173,13 @@ vm_unsync() {
   ssh "${sync_ssh_opts[@]}" "root@$ip" "id -u $sync_user" >/dev/null 2>&1 || rc=$?
   case $rc in
     0) ;;
-    255) sync_die "cannot reach $name as root to look for the user $sync_user" ;;
-    *)
+    1)
+      # id exits 1 for a name that is not a user; any other status is a failed lookup, not an absent user
       echo "vm-sync: $sync_user does not exist on $name: nothing to remove"
       return 0
       ;;
+    255) sync_die "cannot reach $name as root to look for the user $sync_user" ;;
+    *) sync_die "could not look for the user $sync_user on $name (id exited $rc): not changing the role" ;;
   esac
   sync_remote "$repo" "$ip" unsync || sync_die "could not remove what vm-sync placed in the home of $sync_user: not changing the role (fix the cause above, then deploy again)"
 }

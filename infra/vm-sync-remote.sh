@@ -54,15 +54,6 @@ mkdir_recorded() {
 # with dot or dash.
 valid_name() { [[ $1 =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; }
 
-# valid_rel REL: a relative path of such components, with no "." or ".." component.
-valid_rel() {
-  [[ $1 =~ ^[A-Za-z0-9._][A-Za-z0-9._/-]*$ ]] || return 1
-  case "/$1/" in
-    */../* | */./* | *//*) return 1 ;;
-  esac
-  return 0
-}
-
 # parent_is_plain REL: no component above the last one of $HOME/REL is a link.
 parent_is_plain() {
   local rel=${1%/*} part="" comp
@@ -82,8 +73,24 @@ hs_is_ours() { # hs_is_ours FILE
   grep -qxF -- "file $hs_rel" "$manifest" 2>/dev/null || [ "$(head -n 1 -- "$1" 2>/dev/null)" = "$hs_mark" ]
 }
 
+# manifest_allows KIND REL: the only entries the sync ever records. unsync acts on nothing else, so an
+# edited manifest cannot point it at ~/.config/gh, ~/.omp/.env or any other file of the user.
+manifest_allows() {
+  case "$1 $2" in
+    "file $hs_rel" | "backup $hs_rel.dotfiles-backup" | "dir .config" | "dir .config/dotfiles" | "dir .omp" | "dir .omp/agent" | "dir .omp/agent/skills") return 0 ;;
+  esac
+  return 1
+}
+
+# unsync_failed WHAT: a removal failed; unsync goes on, exits 1 and keeps the manifest and the records for a retry.
+# (rc is the local of cmd_unsync that calls this.)
+unsync_failed() {
+  printf 'vm-sync-remote: could not remove %s\n' "$1" >&2
+  rc=1
+}
+
 cmd_hindsight() {
-  local url key rest file=$HOME/$hs_rel tmp
+  local url key rest file=$HOME/$hs_rel
   IFS= read -r url || true
   IFS= read -r key || true
   if IFS= read -r rest; then die 1 "more than two lines on stdin"; fi
@@ -99,12 +106,10 @@ cmd_hindsight() {
     echo "hindsight: kept the existing hindsight.env as hindsight.env.dotfiles-backup (unsync puts it back)"
   fi
   record file "$hs_rel"
-  tmp=$(mktemp "$HOME/.config/dotfiles/.hindsight.env.XXXXXX") || die 1 "cannot create a temporary file"
-  printf '%s\nHINDSIGHT_API_URL='"'%s'"'\nHINDSIGHT_API_TOKEN='"'%s'"'\n' "$hs_mark" "$url" "$key" >"$tmp" || {
-    rm -f "$tmp"
-    die 1 "cannot write the Hindsight file"
-  }
-  mv -f -- "$tmp" "$file" || die 1 "cannot place hindsight.env"
+  hs_tmp=$(mktemp "$HOME/.config/dotfiles/.hindsight.env.XXXXXX") || die 1 "cannot create a temporary file"
+  trap 'rm -f -- "$hs_tmp"' EXIT
+  printf '%s\nHINDSIGHT_API_URL='"'%s'"'\nHINDSIGHT_API_TOKEN='"'%s'"'\n' "$hs_mark" "$url" "$key" >"$hs_tmp" || die 1 "cannot write the Hindsight file"
+  mv -f -- "$hs_tmp" "$file" || die 1 "cannot place hindsight.env"
   echo "hindsight: wrote ~/$hs_rel"
 }
 
@@ -121,7 +126,8 @@ cmd_hindsight_remove() {
     rm -f -- "$file" || die 1 "cannot remove ~/$hs_rel"
     if [ -f "$manifest" ]; then
       tmp=$(mktemp "$state_dir/.manifest.XXXXXX") || die 1 "cannot update the manifest"
-      grep -vxF -- "file $hs_rel" "$manifest" >"$tmp" || true
+      grep -vxF -- "file $hs_rel" "$manifest" >"$tmp"
+      [ $? -le 1 ] || { rm -f -- "$tmp"; die 1 "cannot update the manifest"; }
       mv -f -- "$tmp" "$manifest" || die 1 "cannot update the manifest"
     fi
     echo "hindsight: no entry for $1 in VM_HINDSIGHT, removed ~/$hs_rel"
@@ -159,7 +165,7 @@ cmd_plugins_status() {
 
 cmd_unsync() {
   local rc=0 removed=0 line kind rel n=0 p dest
-  local files="" backups="" skills="" dirs="" wc
+  local files="" backups="" skills="" dirs="" wc plugins_gone=1
   if command -v systemctl >/dev/null 2>&1; then
     systemctl --user stop omp-plugins-install.service >/dev/null 2>&1 || true
   fi
@@ -176,17 +182,10 @@ cmd_unsync() {
       rel=${line#* }
       case $kind in
         file | backup | dir)
-          if valid_rel "$rel"; then
+          if manifest_allows "$kind" "$rel"; then
             case $kind in
               file) files=$files$rel$'\n' ;;
-              backup)
-                if [[ $rel == *.dotfiles-backup ]]; then
-                  backups=$backups$rel$'\n'
-                else
-                  printf 'vm-sync-remote: refused manifest line %s\n' "$n" >&2
-                  rc=1
-                fi
-                ;;
+              backup) backups=$backups$rel$'\n' ;;
               dir) dirs=$dirs$rel$'\n' ;;
             esac
           else
@@ -219,7 +218,7 @@ cmd_unsync() {
         printf 'vm-sync-remote: refused: ~/%s is a directory, not a file\n' "$rel" >&2
         rc=1
       elif [ -e "$p" ] || [ -L "$p" ]; then
-        rm -f -- "$p" && removed=$((removed + 1))
+        rm -f -- "$p" && removed=$((removed + 1)) || unsync_failed "~/$rel"
       fi
     done <<<"$files"
 
@@ -230,7 +229,7 @@ cmd_unsync() {
       if ! parent_is_plain "$rel"; then
         rc=1
       elif [ -e "$p" ] || [ -L "$p" ]; then
-        mv -f -- "$p" "$dest" && removed=$((removed + 1))
+        mv -f -- "$p" "$dest" && removed=$((removed + 1)) || unsync_failed "~/$rel"
       fi
     done <<<"$backups"
 
@@ -241,9 +240,9 @@ cmd_unsync() {
         printf 'vm-sync-remote: refused: a directory above ~/.omp/agent/skills/%s is a link\n' "$rel" >&2
         rc=1
       elif [ -L "$p" ]; then
-        rm -f -- "$p" && removed=$((removed + 1))
+        rm -f -- "$p" && removed=$((removed + 1)) || unsync_failed "~/.omp/agent/skills/$rel"
       elif [ -d "$p" ]; then
-        rm -rf -- "$p" && removed=$((removed + 1))
+        rm -rf -- "$p" && removed=$((removed + 1)) || unsync_failed "~/.omp/agent/skills/$rel"
       fi
     done <<<"$skills"
 
@@ -261,12 +260,21 @@ cmd_unsync() {
   # package.json. A link in place of the directory is left alone.
   wc=$state_root/writable-copy/${HOME//\//_}_.omp_plugins_
   if [ -f "${wc}package.json" ]; then
+    plugins_gone=1
     if [ -L "$HOME/.omp/plugins" ]; then
       echo "vm-sync-remote: ~/.omp/plugins is a link, left alone" >&2
     elif [ -d "$HOME/.omp/plugins" ] && parent_is_plain ".omp/plugins"; then
-      rm -rf -- "$HOME/.omp/plugins" && removed=$((removed + 1))
+      if rm -rf -- "$HOME/.omp/plugins"; then
+        removed=$((removed + 1))
+      else
+        unsync_failed "~/.omp/plugins"
+        plugins_gone=0
+      fi
     fi
-    rm -f -- "${wc}package.json" "${wc}bun.lock" "${wc}omp-plugins.lock.json" "$state_root/omp-plugins.stamp"
+    # the records and the stamp are what lets a retry find the install again: only a removal that worked deletes them
+    if [ "$plugins_gone" -eq 1 ]; then
+      rm -f -- "${wc}package.json" "${wc}bun.lock" "${wc}omp-plugins.lock.json" "$state_root/omp-plugins.stamp"
+    fi
   fi
 
   if [ "$rc" -eq 0 ]; then

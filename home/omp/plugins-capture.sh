@@ -98,6 +98,17 @@ fi
 
 jq -e '(.plugins | type) == "object"' "$src/omp-plugins.lock.json" >/dev/null 2>&1 ||
   die 1 "omp-plugins.lock.json is not a JSON object with a plugins object"
+# The lock file is copied into a public repo as it is, so it may hold only what omp writes: per plugin a
+# version, enabled and enabledFeatures (names), and empty settings. A free-form value (a plugin's own key,
+# say) would not match any token shape, so the shape check above would let it through.
+jq -e '
+  ((keys - ["plugins", "settings"]) | length == 0)
+  and ((.settings // {}) == {})
+  and ([.plugins[] | type == "object" and ((keys - ["version", "enabled", "enabledFeatures"]) | length == 0)] | all)
+  and ([.plugins[] | (.enabledFeatures == null) or ((.enabledFeatures | type) == "array" and (.enabledFeatures | all(type == "string")))] | all)
+  and ([.plugins[] | ((.enabled // true) | type) == "boolean"] | all)
+' "$src/omp-plugins.lock.json" >/dev/null 2>&1 ||
+  die 1 "omp-plugins.lock.json holds more than a version, enabled and enabledFeatures per plugin, or a non-empty settings object: it is copied into a public repo as it is"
 
 # The lock file: keep what package.json depends on, set each version to the installed one.
 deps=$(jq -c '.dependencies | keys' "$src/package.json")

@@ -39,17 +39,24 @@ if [ "$pin" = changed ]; then
   echo "vm-deploy: the host key that $name presents does not match the one pinned in known_hosts: check that the address belongs to $name, then run the re-key step of the README (Reinstall: ssh-keygen -R $ip)" >&2
   exit 1
 fi
+unsynced=0
 if [ "$config" != proxmox-agent ]; then
   if [ "$pin" = unpinned ]; then
-    echo "vm-deploy: the host key of $name is not pinned on this Mac, so nothing was synced from here: the removal of synced files is skipped" >&2
+    echo "vm-deploy: the host key of $name is not pinned on this Mac, so nothing was synced from here: the removal of synced files is skipped (files that a sync from another Mac, or from before the key was cleared, put into the home of the agent user stay there)" >&2
   else
     (vm_unsync "$name" "$repo" "$ip")
+    unsynced=1
   fi
 fi
-NIX_SSHOPTS="-o StrictHostKeyChecking=accept-new" nix shell --inputs-from . nixpkgs-nixos#nixos-rebuild-ng -c nixos-rebuild-ng switch --flake ".#$config" --target-host "root@$ip" --build-host "root@$ip"
+NIX_SSHOPTS="-o StrictHostKeyChecking=accept-new" nix shell --inputs-from . nixpkgs-nixos#nixos-rebuild-ng -c nixos-rebuild-ng switch --flake ".#$config" --target-host "root@$ip" --build-host "root@$ip" || {
+  if [ "$unsynced" -eq 1 ]; then
+    echo "vm-deploy: the switch failed after what vm-sync placed was removed from the home of the agent user (the Hindsight file, the skills, the plugin install; they were removed, not lost: the Mac and the repo still hold them). Fix the cause, then run: just vm-deploy $name (to stay an agent instead: set the role back to agent first; the deploy then syncs again)" >&2
+  fi
+  exit 1
+}
 if [ "$config" = proxmox-agent ]; then
-  if [ "$pin" = unpinned ]; then
-    echo "vm-deploy: $name is deployed, but its host key was not pinned before this deploy (the switch trusted it on first use), and vm-sync sends secrets only to a key that was pinned already. Check the key against the VM, i.e. the re-key step of the README (Reinstall: ssh-keygen -R $ip, then connect once and compare the fingerprint), then run: just vm-sync $name" >&2
+  if [ "$pin" != pinned ]; then
+    echo "vm-deploy: $name is deployed, but its host key was not pinned before this deploy (state: $pin; the switch trusts a key on first use), and vm-sync sends secrets only to a key that was pinned already. Check that the address belongs to $name, i.e. the re-key step of the README (Reinstall: ssh-keygen -R $ip, then connect once; the VM's console has no login, so what you check is the address, not a fingerprint), then run: just vm-sync $name" >&2
     exit 1
   fi
   (vm_sync "$name" "$repo" "$ip") || {

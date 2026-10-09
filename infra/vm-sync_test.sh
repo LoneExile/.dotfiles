@@ -16,6 +16,8 @@ for c in rsync jq base64 shasum; do
     exit 2
   }
 done
+# the real jq, resolved before any shim is on PATH: the shim of a test logs the arguments of every call and runs this one
+REAL_JQ=$(command -v jq)
 
 BASE='{"testvm-alpha":{"node":"n1","vmid":901,"mac":"02:00:5E:10:00:01","ipv4_cidr":"203.0.113.10/24","gateway":"203.0.113.1","dns":["198.51.100.53"],"cores":2,"memory_mb":2048,"disk_gb":20,"role":"agent"}}'
 CLEAN='{"testvm-alpha":{"node":"n1","vmid":901,"mac":"02:00:5E:10:00:01","ipv4_cidr":"203.0.113.10/24","gateway":"203.0.113.1","dns":["198.51.100.53"],"cores":2,"memory_mb":2048,"disk_gb":20}}'
@@ -130,12 +132,19 @@ EOF
 printf 'nix\n' >>"$STUB_SEQ"
 ip=$(printf '%s' "$*" | sed -n 's/.*--target-host root@\([^ ]*\).*/\1/p')
 if [ -n "$ip" ] && ! grep -q "^$ip " "$STUB_KNOWN_HOSTS" 2>/dev/null; then echo "$ip ok" >>"$STUB_KNOWN_HOSTS"; fi
-exit 0
+exit "${STUB_NIX_RC:-0}"
+EOF
+  # jq logs its arguments (never its stdin) and runs the real one: a key must never stand in a jq argument
+  cat >"$T/bin/jq" <<EOF
+#!/bin/sh
+printf '%s\\n' "\$*" >>"\$STUB_JQLOG"
+exec $REAL_JQ "\$@"
 EOF
   chmod +x "$T/bin/"*
   : >"$T/sshlog" >"$T/seq" >"$T/sshopts"
+  : >"$T/jqlog"
   printf '203.0.113.10 ok\n' >"$T/known_hosts"
-  export STUB_DIR="$T/store" STUB_SSHLOG="$T/sshlog" STUB_SSHOPTS="$T/sshopts" STUB_KNOWN_HOSTS="$T/known_hosts" STUB_SEQ="$T/seq" STUB_VM_HOME="$T/vm" STUB_PYARGS="$T/pyargs"
+  export STUB_DIR="$T/store" STUB_SSHLOG="$T/sshlog" STUB_SSHOPTS="$T/sshopts" STUB_KNOWN_HOSTS="$T/known_hosts" STUB_SEQ="$T/seq" STUB_VM_HOME="$T/vm" STUB_PYARGS="$T/pyargs" STUB_JQLOG="$T/jqlog"
   export VM_SYNC_CONFIG_PATH="$T/vm-config.json" VM_SYNC_POLL=0 VM_SYNC_WAIT=2 PATH="$T/bin:$PATH"
   # a library of skills, with things that must not be synced
   local d
@@ -173,6 +182,8 @@ test_entry_script_prints_url_and_key_of_the_named_vm_only() {
 $HS_KEY" "$(cat "$T/out")"
   assert_eq "stderr empty" "" "$(cat "$T/err")"
   assert_lacks "not the other VM's" "$T/out" "other"
+  assert_eq "the jq shim saw calls (positive control)" yes "$([ -s "$T/jqlog" ] && echo yes)"
+  assert_lacks "no jq argument holds the key" "$T/jqlog" "$HS_KEY"
 }
 
 test_entry_script_prints_nothing_without_an_entry() {
@@ -251,6 +262,19 @@ test_sync_mirrors_the_skills() {
   assert_eq "the user's own skill stays" mine "$(cat "$(VMSKILLS)/mine/SKILL.md")"
   assert_eq "script keeps its exec bit" yes "$([ -x "$(VMSKILLS)/beta/scripts/run.sh" ] && echo yes)"
   assert_eq "exactly the three plus the user's" "alpha beta gamma mine" "$(ls "$(VMSKILLS)" | tr '\n' ' ' | sed 's/ $//')"
+}
+
+test_sync_does_not_recreate_links_that_leave_a_skill() {
+  shims "$BASE"
+  # the Mac side: one link inside the skill (kept), one absolute, one that climbs out of the skill
+  ln -s "$T/lib/beta/refs/deep/note.md" "$T/lib/alpha/abs-link"
+  mkdir -p "$T/outside-skill"
+  ln -s ../../outside-skill "$T/lib/alpha/up-link"
+  ln -s refs/deep/note.md "$T/lib/alpha/in-link"
+  assert_rc "sync" "$(sync_run)" 0
+  assert_eq "a link inside the skill arrives" "refs/deep/note.md" "$(readlink "$(VMSKILLS)/alpha/in-link")"
+  assert_absent "an absolute link does not arrive" "$(VMSKILLS)/alpha/abs-link"
+  assert_absent "a link out of the skill does not arrive" "$(VMSKILLS)/alpha/up-link"
 }
 
 test_sync_syncs_only_the_library_skills() {
@@ -490,6 +514,8 @@ $HS_KEY" "$(cat "$T/store/health.stdin")"
   assert_lacks "no url on any ssh command line" "$T/sshlog" "hindsight.fixture.example"
   assert_lacks "no key in the output" "$T/out" "$HS_KEY"
   assert_lacks "no key in stderr" "$T/err" "$HS_KEY"
+  assert_eq "the jq shim saw calls (positive control)" yes "$([ -s "$T/jqlog" ] && echo yes)"
+  assert_lacks "no jq argument holds the key" "$T/jqlog" "$HS_KEY"
   assert_eq "the user's ~/.omp/.env is untouched" "mine" "$(cat "$T/vm/.omp/.env")"
 }
 
@@ -613,6 +639,37 @@ test_deploy_of_the_agent_role_sends_no_secret_over_a_key_that_the_switch_pinned(
   assert_eq "no connection as the agent user" 0 "$(grep -c '^ssh lex' "$T/seq")"
   assert_rc "vm-sync afterwards, with the key pinned" "$(sync_run)" 0
   assert_has "hindsight file now" "$(VMHS)" "HINDSIGHT_API_TOKEN='$HS_KEY'"
+}
+
+test_deploy_of_the_agent_role_syncs_nothing_when_the_probe_could_not_tell_the_key_state() {
+  shims "$BASE" "$SECRET_ON" "$HS_MAP"
+  : >"$T/known_hosts"
+  # the first connection (the probe) fails for a transport reason, so the key state is unreachable, not pinned
+  assert_rc "deploy" "$(STUB_SSH_FAIL_FIRST=1 deploy)" 1
+  assert_has "the switch ran" "$T/seq" "nix"
+  assert_has "says nothing was synced and why" "$T/err" "was not pinned before this deploy"
+  assert_absent "no hindsight file" "$(VMHS)"
+  assert_lacks "the key went nowhere" "$T/sshlog" "$HS_KEY"
+  assert_eq "no connection as the agent user" 0 "$(grep -c '^ssh lex' "$T/seq")"
+}
+
+test_deploy_to_the_clean_role_says_what_to_do_when_the_switch_fails_after_the_removal() {
+  shims "$BASE" "$HS_ON" "$HS_MAP"
+  assert_rc "sync" "$(sync_run)" 0
+  : >"$T/seq"
+  printf '%s' "$CLEAN" >"$T/store/TF_VAR_vms"
+  assert_rc "deploy" "$(STUB_NIX_RC=1 deploy)" 1
+  assert_has "the removal ran before the switch" "$T/seq" "nix"
+  assert_absent "the hindsight file was removed" "$(VMHS)"
+  assert_has "says the synced files are gone" "$T/err" "were removed"
+  assert_has "names what to run" "$T/err" "just vm-deploy testvm-alpha"
+}
+
+test_deploy_stops_when_the_user_lookup_fails_in_a_way_other_than_no_such_user() {
+  shims "$CLEAN"
+  assert_rc "deploy" "$(STUB_USER_RC=127 deploy)" 1
+  assert_eq "no switch" 0 "$(grep -c '^nix$' "$T/seq")"
+  assert_has "says the lookup failed" "$T/err" "could not look for the user"
 }
 
 test_deploy_of_the_clean_role_without_a_pinned_key_skips_the_removal_and_deploys() {
