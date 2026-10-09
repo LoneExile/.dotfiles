@@ -73,6 +73,17 @@ tern-capture:
   echo "captured Tern settings -> $dst"
   git -C "{{justfile_directory()}}" --no-pager diff --stat -- home/tern/settings.json || true
 
+# Copy this Mac's omp plugin manifests (package.json, bun.lock, omp-plugins.lock.json from ~/.omp/plugins)
+# into home/omp/plugins, for the agent VMs: the stale lock entries are dropped, and the capture is
+# refused (nothing written) when a file holds a token, a URL, an absolute path or a local source.
+# Review `git diff`, commit, then `just vm-deploy <name>`. See home/omp/plugins-capture.sh.
+[macos]
+omp-plugins-capture:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  bash "{{justfile_directory()}}/home/omp/plugins-capture.sh" "$HOME/.omp/plugins" "{{justfile_directory()}}/home/omp/plugins"
+  git -C "{{justfile_directory()}}" --no-pager diff --stat -- home/omp/plugins || true
+
 # Once, after every Mac runs this engine: OpenBao then refuses writes to the secrets without check-and-set
 [macos]
 secretspec-enforce-cas:
@@ -163,15 +174,19 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check, the vault map helpers, the VM identity files, the VM roles and the agent role's writable config copies (no network, no vault)
+# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin capture and install scripts and the agent role's writable config copies (no network, no vault)
 test-infra:
-  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles and writable config copies..."
+  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles, VM sync, plugin scripts and writable config copies..."
   bash infra/leak-check_test.sh
   bash infra/vault-map_test.sh
   bash infra/vm-identity_test.sh
   bash infra/vm-role_test.sh
   bash infra/vm-flow_test.sh
+  bash infra/vm-sync-remote_test.sh
+  bash infra/vm-sync_test.sh
   bash home/linux/writable-copy_test.sh
+  bash home/linux/omp-plugins-install_test.sh
+  bash home/omp/plugins-capture_test.sh
 
 # Guard the roles: proxmox-guest stays clean (TCP 22 only, no user), proxmox-agent stays confined (evaluates the flake, no VM)
 test-roles:
@@ -209,6 +224,12 @@ vm-deploy name:
   #!/usr/bin/env bash
   set -euo pipefail
   bash "{{infra_dir}}/vm-deploy.sh" {{quote(name)}} "{{justfile_directory()}}"
+
+# Sync the gh login (this VM's token from the vault map VM_GH_TOKENS) and the Mac's skills library to the agent user of a VM (role agent); vm-deploy runs it after an agent deploy
+vm-sync name:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  bash "{{infra_dir}}/vm-sync.sh" {{quote(name)}} "{{justfile_directory()}}"
 
 ### Development and Validation
 # Check flake syntax and build without switching

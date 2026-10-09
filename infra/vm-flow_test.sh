@@ -17,7 +17,8 @@ REAL_KEYGEN=$(command -v ssh-keygen)
 # shims that log their arguments:
 #   secretspec get|set KEY, run -- CMD...   the file-backed vault; `run` exports TF_VAR_vms first
 #   terragrunt output -json vms             the `vms` output a state would hold (ip and role)
-#   ssh                                     succeeds (the debian@ login check)
+#   ssh                                     succeeds (the debian@ login check); the agent sync config
+#                                           it is asked for says: nothing to sync (vm-sync_test.sh covers the sync)
 #   nix                                     logs its arguments to $T/nix.log (and, for nixos-anywhere,
 #                                           the file names of its --extra-files tree)
 shims() {
@@ -41,6 +42,8 @@ jq -c 'map_values({ip: (.ipv4_cidr | split("/")[0]), node: .node, vmid: .vmid, r
 EOF
   cat >"$T/bin/ssh" <<'EOF'
 #!/bin/sh
+for a; do last=$a; done
+case "$last" in "cat "*dotfiles-agent-sync.json*) echo '{"gh":false,"plugins":false,"skills":false}' ;; esac
 exit 0
 EOF
   # ssh-keygen -R edits the known_hosts of the passwd home, not $HOME: never let a test reach it.
