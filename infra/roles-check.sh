@@ -5,7 +5,7 @@
 # (a user service with an exact PATH, neovim on no PATH, nothing of ~/.config/nvim) only while dotfiles.agent.mason.enable is on, whatever the sync options say. Docker is rootless or absent in
 # every role (no rootful daemon, no docker group, no docker socket, podman not posing as docker) and comes, with just, lazygit and lazydocker as user packages, only while
 # dotfiles.agent.docker.enable and dotfiles.agent.tools.enable are on. The browser (headless Chromium behind /opt/google/chrome/chrome, no service, the sandbox on) comes only while
-# dotfiles.agent.browser.enable is on. One `nix eval` of
+# dotfiles.agent.browser.enable is on. bao and secretspec (the vault piece) are user packages of lex on the agent only, and SSL_CERT_FILE (the caBundle piece) is set for lex's zsh and user manager only. One `nix eval` of
 # the configurations, then plain assertions. No VM, no vault, no network beyond what evaluating the
 # flake needs. Run it from anywhere: roles-check.sh [flake-dir].
 set -uo pipefail
@@ -58,6 +58,8 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
       zshGlobalCompInit = cfg.programs.zsh.enableGlobalCompInit;
       # just, lazygit and lazydocker are user packages of lex on the agent; as system packages they are in no role.
       systemTools = builtins.listToAttrs (map (n: { name = n; value = builtins.any (p: (p.pname or "") == n) cfg.environment.systemPackages; }) [ "just" "lazygit" "lazydocker" ]);
+      # bao (openbao) and secretspec are user packages of lex on the agent (the vault piece); no role has them, or another vault client, as a system package.
+      systemVault = builtins.any (p: builtins.elem (p.pname or "") [ "openbao" "secretspec" "vault" "vault-bin" ]) cfg.environment.systemPackages;
       # The browser piece (dotfiles.agent.browser). chromium is a package of no role: it is reached through the link that systemd-tmpfiles makes, so these
       # facts look at the rules, the option wrapper, the units, and what confines the user (groups, setuid wrappers, sysctl for user namespaces).
       chromiumSystemPackage = builtins.any (p: (p.pname or "") == "chromium") cfg.environment.systemPackages;
@@ -134,6 +136,13 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           shellcheck = builtins.any (p: builtins.match "[Ss]hell[Cc]heck" (p.pname or "") != null) u.home.packages;
           # just, lazygit and lazydocker as user packages (the agent-tools piece)
           tools = builtins.listToAttrs (map (n: { name = n; value = builtins.any (p: (p.pname or "") == n) u.home.packages; }) [ "just" "lazygit" "lazydocker" ]);
+          # the vault piece: bao (openbao) and secretspec as user packages, their versions, and the program that each one runs by name
+          vault = builtins.listToAttrs (map (n: { name = n; value = builtins.any (p: (p.pname or "") == n) u.home.packages; }) [ "openbao" "secretspec" ]);
+          vaultVersions = builtins.listToAttrs (map (p: { name = p.pname; value = p.version; }) (builtins.filter (p: builtins.elem (p.pname or "") [ "openbao" "secretspec" ]) u.home.packages));
+          vaultMain = builtins.listToAttrs (map (p: { name = p.pname; value = p.meta.mainProgram or null; }) (builtins.filter (p: builtins.elem (p.pname or "") [ "openbao" "secretspec" ]) u.home.packages));
+          # the CA bundle piece: the variable in the environment of the user manager (environment.d) and in the session file of Home Manager (it must not be there: see home/linux/agent.nix)
+          sslUserManager = u.systemd.user.sessionVariables.SSL_CERT_FILE or null;
+          sslHmSession = u.home.sessionVariables.SSL_CERT_FILE or null;
           # the interactive zsh piece: the whole ~/.zshrc (Home Manager merges the ordered pieces into initContent), fzf, and the step that starts Docker
           zshrc = u.programs.zsh.initContent;
           fzf = builtins.any (p: (p.pname or "") == "fzf") u.home.packages;
@@ -169,6 +178,8 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     zshOff = { dotfiles.agent.zsh.enable = false; };
     jumphostOff = { dotfiles.agent.jumphost.enable = false; };
     browserOff = { dotfiles.agent.browser.enable = false; };
+    vaultOff = { dotfiles.agent.vault.enable = false; };
+    caBundleOff = { dotfiles.agent.caBundle.enable = false; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
@@ -179,6 +190,8 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     zshOff = summary (c.proxmox-agent.extendModules { modules = [ zshOff ]; }).config;
     jumphostOff = summary (c.proxmox-agent.extendModules { modules = [ jumphostOff ]; }).config;
     browserOff = summary (c.proxmox-agent.extendModules { modules = [ browserOff ]; }).config;
+    vaultOff = summary (c.proxmox-agent.extendModules { modules = [ vaultOff ]; }).config;
+    caBundleOff = summary (c.proxmox-agent.extendModules { modules = [ caBundleOff ]; }).config;
   }
 ') || {
   echo "roles-check: nix eval failed" >&2
@@ -245,6 +258,14 @@ check "agent: the rootless daemon is a user unit that runs dockerd-rootless, sta
 check "agent: just, lazygit and lazydocker are user packages of lex, and in no system package list of either role" '(.agent.userSync.tools == {"just": true, "lazygit": true, "lazydocker": true}) and ([.guest.systemTools, .agent.systemTools] | map([.[]] | any) | any | not)'
 check "agent with the Docker option off: no Docker at all (no daemon, unit, package, DOCKER_HOST), while the tools and podman stay" '.dockerOff | ([.dockerRootless, .dockerRootful, .dockerSystemPackage, (.dockerUnit != null), (.extraInit | contains("DOCKER_HOST"))] | any | not) and ([.userSync.tools[]] | all) and .podman'
 check "agent with the tools option off: none of just, lazygit, lazydocker, while Docker and podman stay" '.toolsOff | ([.userSync.tools[]] | any | not) and .dockerRootless and .podman'
+
+# The vault piece (bao and secretspec as user packages, nothing else) and the CA bundle piece (SSL_CERT_FILE for lex's zsh and user manager).
+check "clean: no bao, no secretspec, no vault client of any name (as a system package), and no user wiring" '(.guest.systemVault | not) and (.guest.userSync == null)'
+check "agent: bao (openbao) and secretspec are user packages of lex, and in no system package list of either role" '(.agent.userSync.vault == {"openbao": true, "secretspec": true}) and ([.guest.systemVault, .agent.systemVault] | any | not)'
+check "agent: bao is the openbao of the role (nixos-25.11, 2.x) whose program is bao, and secretspec is 0.18 or newer (nixos-25.11 has 0.3.3, which is too old for the vault:// manifests with JWT auth)" '.agent.userSync | (.vaultVersions.openbao | test("^2\\.")) and (.vaultMain.openbao == "bao") and (.vaultVersions.secretspec | test("^0\\.(1[89]|[2-9][0-9])\\.")) and (.vaultMain.secretspec == "secretspec")'
+check "agent with the vault option off: neither bao nor secretspec, while the other tools stay" '.vaultOff.userSync | ([.vault[]] | any | not) and ([.tools[]] | all)'
+check "agent: SSL_CERT_FILE is the system bundle in the user manager (every user service) and is set by a line of ~/.zshenv that keeps a value that is already set, not by the once-per-tree session file of Home Manager" '.agent.userSync | (.sslUserManager == "/etc/ssl/certs/ca-certificates.crt") and (.sslHmSession == null) and (.zshenv | test("(^|\n)export SSL_CERT_FILE=\"\\$\\{SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt\\}\"(\n|$)"))'
+check "agent with the CA bundle option off: no SSL_CERT_FILE in the user manager or in ~/.zshenv (the Hindsight snippet stays)" '.caBundleOff.userSync | (.sslUserManager == null) and (.zshenv | (contains("SSL_CERT_FILE") | not) and contains("hindsight.env"))'
 
 # The interactive zsh piece (the Mac's files and plugins) and the start of the rootless Docker unit by Home Manager.
 check "clean: no zsh set up (no system zsh), so /etc/zshrc and the rest are the clean guest's" '.guest.zshSystem | not'
@@ -342,6 +363,11 @@ if command -v zsh >/dev/null 2>&1; then
     if [ "$2" = "$3" ]; then printf '  ok   %s\n' "$1"; else printf '  FAIL %s (got: %s)\n' "$1" "$3"; fail=1; fi
   }
   zcheck "zsh snippet: a child process sees both variables when the file exists" "https://hindsight.fixture.example fixture0token" "$(zrun "$work/with" true 'sh -c "echo \$HINDSIGHT_API_URL \$HINDSIGHT_API_TOKEN"')"
+  zcheck "zsh snippet: SSL_CERT_FILE is the system CA bundle in a shell that had none, and a child process sees it" "/etc/ssl/certs/ca-certificates.crt" "$(zrun "$work/without" true 'sh -c "echo \$SSL_CERT_FILE"')"
+  zcheck "zsh snippet: a SSL_CERT_FILE that the caller already set is kept (the caller's own bundle wins)" "/fixture/own-bundle.crt" "$(env -i HOME="$work/without" PATH="$PATH" SSL_CERT_FILE=/fixture/own-bundle.crt zsh -f -c "$snippet
+sh -c 'echo \$SSL_CERT_FILE'" 2>&1)"
+  zcheck "zsh snippet: a shell whose parent already ran Home Manager's session file (the guard variable is inherited, as in an omp that started before the deploy) still gets it" "/etc/ssl/certs/ca-certificates.crt" "$(env -i HOME="$work/without" PATH="$PATH" __HM_SESS_VARS_SOURCED=1 zsh -f -c "$snippet
+sh -c 'echo \$SSL_CERT_FILE'" 2>&1)"
   zcheck "zsh snippet: no file, no output and no variables" "|" "$(zrun "$work/without" true 'echo "${HINDSIGHT_API_URL-}|${HINDSIGHT_API_TOKEN-}"')"
   zcheck "zsh snippet: allexport stays off afterwards" off "$(zrun "$work/with" true '[[ -o allexport ]] && echo on || echo off')"
   zcheck "zsh snippet: a shell that had allexport on keeps it on" on "$(zrun "$work/with" 'setopt allexport' '[[ -o allexport ]] && echo on || echo off')"

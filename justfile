@@ -185,9 +185,9 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts, the Docker start step, the Docker contexts, the ssh key and lazydocker bridge of the jumphost piece, the jumphost authorization, the interactive zsh of the agent role and its writable config copies (no network, no vault)
+# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts, the Docker start step, the Docker contexts, the ssh key and lazydocker bridge of the jumphost piece, the jumphost authorization, the vault tunnel, the interactive zsh of the agent role and its writable config copies (no network, no vault)
 test-infra:
-  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles, VM sync, plugin and Mason scripts and writable config copies..."
+  @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles, VM sync, plugin and Mason scripts, vault tunnel and writable config copies..."
   bash infra/leak-check_test.sh
   bash infra/vault-map_test.sh
   bash infra/vm-identity_test.sh
@@ -208,6 +208,7 @@ test-infra:
   bash home/linux/docker-contexts_test.sh
   bash home/linux/lazydocker-ssh_test.sh
   bash infra/vm-jumphost-authorize_test.sh
+  bash infra/vm-vault-tunnel_test.sh
 
 # Guard the roles: proxmox-guest stays clean (TCP 22 only, no user), proxmox-agent stays confined (evaluates the flake, no VM)
 test-roles:
@@ -257,6 +258,12 @@ vm-sync name:
   #!/usr/bin/env bash
   set -euo pipefail
   bash "{{infra_dir}}/vm-sync.sh" {{quote(name)}} "{{justfile_directory()}}"
+
+# Forward TCP 8250 of this Mac to the agent VM's, in the foreground, so that `just vault-login` of the UnitLLM repo on the VM can finish its OIDC sign-in in this Mac's browser (the vault allows only that redirect); refuses when 8250 is in use here; Ctrl-C ends it (the vault option of the agent role must be deployed)
+vm-vault-tunnel name:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  bash "{{infra_dir}}/vm-vault-tunnel.sh" {{quote(name)}} "{{justfile_directory()}}"
 
 ### Development and Validation
 # Check flake syntax and build without switching

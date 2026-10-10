@@ -100,6 +100,10 @@
     '';
     meta.mainProgram = "lazydocker";
   };
+
+  # NixOS's CA bundle: /etc/ssl/certs/ca-certificates.crt is a link that security.pki makes on every NixOS (modules/security/ca.nix), the path every other
+  # Linux program that needs a bundle takes. Not a store path: it follows the system's bundle (security.pki.certificateFiles and the rest) after a deploy.
+  caBundleFile = "/etc/ssl/certs/ca-certificates.crt";
 in {
   imports = [./zsh.nix];
 
@@ -117,6 +121,16 @@ in {
     tern.enable = lib.mkEnableOption "the Tern remote service settings";
     gh.enable = lib.mkEnableOption "gh as git's credential helper for github.com (the user logs in with `gh auth login`)";
     tools.enable = lib.mkEnableOption "just, lazygit and lazydocker as packages of the user";
+    vault = {
+      enable = lib.mkEnableOption "bao and secretspec as packages of the user";
+      packages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [pkgs.openbao pkgs.secretspec];
+        defaultText = lib.literalExpression "[pkgs.openbao pkgs.secretspec]";
+        description = "The packages of the vault piece: bao (OpenBao's CLI) and secretspec.";
+      };
+    };
+    caBundle.enable = lib.mkEnableOption "SSL_CERT_FILE in every zsh of the user and in the user manager's environment";
     docker = {
       enable = lib.mkEnableOption "the Docker contexts of the user and the start of the rootless Docker user unit (NixOS defines it) when Home Manager activates";
       package = lib.mkOption {
@@ -256,6 +270,27 @@ in {
           else pkgs.lazydocker
         )
       ];
+    })
+
+    (lib.mkIf cfg.vault.enable {
+      # Only the two programs, on lex's PATH like the tools above: nothing is configured and nobody is logged in. A token or a JWT comes from the
+      # repo that uses them (the UnitLLM repo's `just vault-login` writes its own token file, which is the user's, not this module's).
+      home.packages = cfg.vault.packages;
+    })
+
+    (lib.mkIf cfg.caBundle.enable {
+      # mise's prebuilt Python (python-build-standalone) looks for its CA bundle in a directory of its own build and finds none on NixOS, where /etc/ssl/certs
+      # holds only the links ca-bundle.crt and ca-certificates.crt (measured: CERTIFICATE_VERIFY_FAILED on every HTTPS request in every kind of shell, fixed by
+      # this variable; NixOS 25.11 sets neither SSL_CERT_FILE nor NIX_SSL_CERT_FILE anywhere). Two places, so that it reaches everything that runs as the user:
+      #   - ~/.zshenv, which every zsh reads (an ssh login, `zsh -c`, the shell of a Tern session, the shell that omp runs its commands in). The line is in envExtra,
+      #     not in home.sessionVariables: Home Manager's session file runs once per process tree (it leaves at once when __HM_SESS_VARS_SOURCED is inherited), so a
+      #     shell started by a process that was already running (an omp that started before this was deployed) would never get a variable added later; envExtra runs for every zsh.
+      #     A value that is already set (a caller's own bundle) is kept.
+      #   - the user manager's environment (environment.d), so that user services, and what they start without a shell, have it too.
+      programs.zsh.envExtra = ''
+        export SSL_CERT_FILE="''${SSL_CERT_FILE:-${caBundleFile}}"
+      '';
+      systemd.user.sessionVariables.SSL_CERT_FILE = caBundleFile;
     })
 
     (lib.mkIf cfg.docker.enable {

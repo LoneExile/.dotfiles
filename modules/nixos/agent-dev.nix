@@ -27,6 +27,11 @@
 #   - the jumphost (option `dotfiles.agent.jumphost.enable`): the Docker context `jumphost` = ssh://jumphost_server for lex, with an ssh key made on the VM
 #     that `just vm-jumphost-authorize` restricts, on the jumphost, to `docker system dial-stdio`; lazydocker reaches it through a local bridge.
 #   - just, lazygit and lazydocker as packages of lex (option `dotfiles.agent.tools.enable`).
+#   - bao (OpenBao's CLI) and secretspec as packages of lex (option `dotfiles.agent.vault.enable`): for a vault that a repo on the VM (the UnitLLM repo) logs in to with
+#     `just vault-login`. Only the two programs: no token, no config, no login, no other infra tool. The browser step of that login runs on the Mac, through
+#     `just vm-vault-tunnel <name>` (infra/vm-vault-tunnel.sh).
+#   - SSL_CERT_FILE for lex (option `dotfiles.agent.caBundle.enable`): mise's prebuilt Python finds no CA bundle on NixOS (/etc/ssl/certs holds only the bundle links), so every
+#     HTTPS request of it fails with CERTIFICATE_VERIFY_FAILED. The variable is set in every zsh (~/.zshenv) and in the user manager's environment (its services).
 #   - lex's interactive zsh gets the Mac's aliases, options, keybindings and zsh plugins (option `dotfiles.agent.zsh.enable`, home/linux/zsh.nix):
 #     the files of home/zsh/config as they are, the plugins from nixpkgs, one cached compinit; /etc/zshrc's own compinit is off then.
 #   - a headless browser for the browser tools (option `dotfiles.agent.browser.enable`): chromium of nixpkgs behind /opt/google/chrome/chrome, where chrome-devtools-mcp
@@ -49,8 +54,8 @@ inputs: {
     };
 
   # Packages that nixos-25.11 lacks or has too old: mise (see below), harper (only the unstable one
-  # builds harper-cli, 25.11's has harper-ls alone) and bun and node (the plugin install service
-  # reads a lockfile that a current bun wrote).
+  # builds harper-cli, 25.11's has harper-ls alone), bun and node (the plugin install service
+  # reads a lockfile that a current bun wrote) and secretspec (25.11's is 0.3.3; the UnitLLM repo's vault:// manifests need a current one).
   unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
 
   # nixos-25.11's default pkgs.docker (28.5.2) is marked insecure (unmaintained since November 2025) and refuses to evaluate;
@@ -76,6 +81,8 @@ in {
     podman.enable = piece "rootless podman";
     docker.enable = piece "rootless Docker with Compose: a user service of the user (no rootful daemon, no docker group, no /var/run/docker.sock), and the Docker context `rootless` (current) for its socket; DOCKER_HOST is not exported, so that contexts work";
     tools.enable = piece "just, lazygit and lazydocker, as packages of the user";
+    vault.enable = piece "bao (OpenBao's CLI) and secretspec, as packages of the user, for a repo on the VM that logs in to a vault with `just vault-login`: no token, config or login is set up (its OIDC redirect is port 8250 of the Mac: `just vm-vault-tunnel`)";
+    caBundle.enable = piece "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt for the user, in every zsh and in the user manager's environment: mise's prebuilt Python finds no CA bundle on NixOS and fails every HTTPS request with CERTIFICATE_VERIFY_FAILED";
     zsh.enable = piece "the Mac's aliases, options, keybindings and zsh plugins (nixpkgs) in the interactive zsh of the user, with fzf, and one cached compinit";
     jumphost.enable = piece "the jumphost's Docker daemon as the Docker context `jumphost` (ssh://jumphost_server) for the user: an ssh key made on the VM (restricted on the jumphost to `docker system dial-stdio` by `just vm-jumphost-authorize`), a strict ssh entry with a pinned host key, and lazydocker through a local bridge";
     browser = {
@@ -165,6 +172,12 @@ in {
             tern.enable = cfg.tern.enable;
             gh.enable = cfg.gh.enable;
             tools.enable = cfg.tools.enable;
+            vault = {
+              inherit (cfg.vault) enable;
+              # bao from nixos-25.11 (openbao 2.5.5: its bin holds `bao` and no `vault` alias); secretspec from nixpkgs-unstable (0.21.1).
+              packages = [pkgs.openbao unstable.secretspec];
+            };
+            caBundle.enable = cfg.caBundle.enable;
             docker = {
               inherit (cfg.docker) enable;
               package = dockerPackage;
