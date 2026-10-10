@@ -34,17 +34,17 @@ statusLine:
       showUnstaged: true
       showUntracked: true
 modelRoles:
-  slow: cursor-sdk/grok-4.7@500k@slow:xhigh
-  plan: cursor-sdk/grok-4.7@500k@slow:xhigh
-  vision: cursor/grok-4.7-medium:medium
-  smol: cursor-sdk/grok-4.7@500k@slow:low
-  tiny: cursor-sdk/composer-2.5@slow
-  commit: cursor-sdk/composer-2.5@slow
-  advisor: cursor-sdk/grok-4.7@500k@slow:medium
-  task: cursor-sdk/grok-4.7@500k@slow:xhigh
+  slow: anthropic/claude-sonnet-5-5:max
+  plan: anthropic/claude-sonnet-5-5:xhigh
+  vision: xai-oauth/grok-4.7:medium
+  smol: anthropic/claude-sonnet-5-5:low
+  tiny: anthropic/claude-haiku-5-5:medium
+  commit: anthropic/claude-haiku-5-5:medium
+  advisor: anthropic/claude-sonnet-5-5:medium
+  task: anthropic/claude-sonnet-5-5:xhigh
   web: xai/grok-4.5
   image: xai/grok-imagine-image
-  default: opencode-go/deepseek-v4.1-flash:max
+  default: anthropic/claude-sonnet-5-5:xhigh
 task:
   agentModelOverrides:
     sdd-implementer: cursor-sdk/grok-4.7@500k@slow:high

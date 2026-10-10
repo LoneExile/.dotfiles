@@ -493,6 +493,123 @@ providers:
         contextWindow: 1000000
         maxTokens: 128000
         cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+  # --- anthropic-api — pay-as-you-go Anthropic Console key (platform.claude.com),
+  #     opt-in alongside the built-in `anthropic` provider (OAuth logins).
+  #     DISTINCT provider + DISTINCT env var (ANTHROPIC_PAYG_KEY, not
+  #     ANTHROPIC_API_KEY): the built-in `anthropic` provider falls back to
+  #     ANTHROPIC_API_KEY after OAuth, which would silently route default
+  #     traffic onto metered billing if both OAuth logins ever fail.
+  #     Select with e.g. anthropic-api/claude-sonnet-5-5. Costs/limits mirror
+  #     the built-in `anthropic` runtime catalog (list price, per 1M tokens);
+  #     haiku-5-5's >100k long-context tier has no field in this schema.
+  anthropic-api:
+    baseUrl: https://api.anthropic.com
+    apiKey: ANTHROPIC_PAYG_KEY
+    api: anthropic-messages
+    auth: apiKey
+    models:
+      - id: claude-haiku-5-5
+        name: Claude Haiku 5.5 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 100000
+        maxTokens: 128000
+        cost: { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 }
+      - id: claude-sonnet-5-5
+        name: Claude Sonnet 5.5 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 }
+      - id: claude-opus-5-5
+        name: Claude Opus 5.5 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 }
+      - id: claude-fable-5-1
+        name: Claude Fable 5.1 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5 }
+      - id: claude-opus-5
+        name: Claude Opus 5 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 }
+      - id: claude-sonnet-5
+        name: Claude Sonnet 5 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 }
+      - id: claude-fable-5
+        name: Claude Fable 5 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 }
+      - id: claude-opus-4-8
+        name: Claude Opus 4.8 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 }
+      - id: claude-opus-4-7
+        name: Claude Opus 4.7 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, xhigh, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 }
+      - id: claude-sonnet-4-6
+        name: Claude Sonnet 4.6 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }
+      - id: claude-opus-4-6
+        name: Claude Opus 4.6 (API key)
+        reasoning: true
+        thinking: { mode: anthropic-adaptive, efforts: [low, medium, high, max] }
+        input: [text, image]
+        contextWindow: 1000000
+        maxTokens: 128000
+        cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 }
+      - id: claude-opus-4-5-20251101
+        name: Claude Opus 4.5 (API key)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 }
+      - id: claude-haiku-4-5-20251001
+        name: Claude Haiku 4.5 (API key)
+        reasoning: true
+        input: [text, image]
+        contextWindow: 200000
+        maxTokens: 64000
+        cost: { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 }
   xai-refresher:
     baseUrl: https://api.x.ai/v1
     apiKey: REFRESHER_XAI_KEY
