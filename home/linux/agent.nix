@@ -124,7 +124,7 @@ in {
         description = "The mise package.";
       };
     };
-    tern.enable = lib.mkEnableOption "the Tern remote service settings";
+    tern.enable = lib.mkEnableOption "the Tern remote service settings, and omp's opt-in to Tern's paste events in every zsh of the user (omp-image-paste.zsh)";
     gh.enable = lib.mkEnableOption "gh as git's credential helper for github.com (the user logs in with `gh auth login`)";
     tools.enable = lib.mkEnableOption "just, lazygit and lazydocker as packages of the user";
     vault = {
@@ -261,6 +261,12 @@ in {
         ExecStart=
         ExecStart=%h/.local/share/tern/build/tern remote serve --user --state-dir %h/.config/tern --relay none --pkarr none --no-iroh
       '';
+
+      # omp never turns on the paste-events mode of Tern's clipboard protocol (CSI ? 5522 h), so Tern cannot hand it a pasted image: omp
+      # answers "Clipboard is empty", or "Image not found" for the Mac path of a file that Vorssaint copies. This function turns the mode
+      # on while omp runs in a Tern pane and off after it (omp-image-paste.zsh has the rules and the reason). .zshenv, like the snippets
+      # below: every zsh reads it, the `zsh -l` of a Tern pane (omp is a child of it) and a `zsh -c omp` alike.
+      programs.zsh.envExtra = builtins.readFile ./omp-image-paste.zsh;
     })
 
     (lib.mkIf cfg.gh.enable {

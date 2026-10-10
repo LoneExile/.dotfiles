@@ -185,6 +185,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     browserOff = { dotfiles.agent.browser.enable = false; };
     vaultOff = { dotfiles.agent.vault.enable = false; };
     caBundleOff = { dotfiles.agent.caBundle.enable = false; };
+    ternOff = { dotfiles.agent.tern.enable = false; };
     ompOff = { dotfiles.agent = { omp.enable = false; sync = { plugins = false; skills = false; hindsight = false; }; }; };
   in {
     guest = summary c.proxmox-guest.config;
@@ -199,6 +200,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     vaultOff = summary (c.proxmox-agent.extendModules { modules = [ vaultOff ]; }).config;
     caBundleOff = summary (c.proxmox-agent.extendModules { modules = [ caBundleOff ]; }).config;
     ompOff = summary (c.proxmox-agent.extendModules { modules = [ ompOff ]; }).config;
+    ternOff = summary (c.proxmox-agent.extendModules { modules = [ ternOff ]; }).config;
   }
 ') || {
   echo "roles-check: nix eval failed" >&2
@@ -283,6 +285,10 @@ check "agent: bao is the openbao of the role (nixos-25.11, 2.x) whose program is
 check "agent with the vault option off: neither bao nor secretspec, while the other tools stay" '.vaultOff.userSync | ([.vault[]] | any | not) and ([.tools[]] | all)'
 check "agent: SSL_CERT_FILE is the system bundle in the user manager (every user service) and is set by a line of ~/.zshenv that keeps a value that is already set, not by the once-per-tree session file of Home Manager" '.agent.userSync | (.sslUserManager == "/etc/ssl/certs/ca-certificates.crt") and (.sslHmSession == null) and (.zshenv | test("(^|\n)export SSL_CERT_FILE=\"\\$\\{SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt\\}\"(\n|$)"))'
 check "agent with the CA bundle option off: no SSL_CERT_FILE in the user manager or in ~/.zshenv (the Hindsight snippet stays)" '.caBundleOff.userSync | (.sslUserManager == null) and (.zshenv | (contains("SSL_CERT_FILE") | not) and contains("hindsight.env"))'
+
+# The omp opt-in to Tern's paste events (home/linux/omp-image-paste.zsh, tested by home/linux/omp-image-paste_test.sh): one function of ~/.zshenv, with the Tern piece.
+check "agent: ~/.zshenv holds the omp function once, with both ends of the paste-events mode (on before omp, off from an EXIT trap), the terminal and Tern guards, and omp's own status" '.agent.userSync.zshenv | ([scan("(^|\n)omp\\(\\) \\{")] | length) == 1 and contains("-t 0 && -t 1 && $TERM_PROGRAM == tern") and contains("printf \u0027\\e[?5522h\u0027") and contains("trap \u0027printf \"\\e[?5522l\"\u0027 EXIT") and contains("trap : INT") and contains("setopt local_traps") and contains("return $rc") and contains("command omp \"$@\"") and contains("hindsight.env")'
+check "agent with the Tern option off: no omp function and no 5522 in ~/.zshenv, the UDP port closed, and the other snippets stay" '.ternOff | (.udp == []) and (.userSync.zshenv | (contains("5522") | not) and (test("(^|\n)omp\\(\\)") | not) and contains("hindsight.env") and contains("SSL_CERT_FILE"))'
 
 # The interactive zsh piece (the Mac's files and plugins) and the start of the rootless Docker unit by Home Manager.
 check "clean: no zsh set up (no system zsh), so /etc/zshrc and the rest are the clean guest's" '.guest.zshSystem | not'
@@ -375,6 +381,9 @@ zrun() { # zrun HOME PRE SCRIPT: a clean zsh runs PRE, then the snippet, then SC
 $snippet
 $3" 2>&1
 }
+# The file of the omp opt-in reaches ~/.zshenv byte for byte (its test and these checks speak of the same text).
+[[ $snippet == *"$(cat "$repo/home/linux/omp-image-paste.zsh")"* ]]
+icheck "agent: ~/.zshenv holds home/linux/omp-image-paste.zsh byte for byte" $?
 if command -v zsh >/dev/null 2>&1; then
   zcheck() { # zcheck LABEL WANT GOT
     if [ "$2" = "$3" ]; then printf '  ok   %s\n' "$1"; else printf '  FAIL %s (got: %s)\n' "$1" "$3"; fail=1; fi
@@ -389,6 +398,11 @@ sh -c 'echo \$SSL_CERT_FILE'" 2>&1)"
   zcheck "zsh snippet: allexport stays off afterwards" off "$(zrun "$work/with" true '[[ -o allexport ]] && echo on || echo off')"
   zcheck "zsh snippet: a shell that had allexport on keeps it on" on "$(zrun "$work/with" 'setopt allexport' '[[ -o allexport ]] && echo on || echo off')"
   zcheck "zsh snippet: the idle timeout of the browser CLI reaches a child process of the shell, and no other variable of the browser is set (no executable path, no flags, no display)" "900000:" "$(zrun "$work/without" true 'sh -c "echo \$CHROME_DEVTOOLS_AXI_IDLE_TIMEOUT_MS:\${CHROME_DEVTOOLS_AXI_CHROME_ARGS-}\${CHROME_DEVTOOLS_AXI_MCP_PATH-}\${CHROME_DEVTOOLS_AXI_CHANNEL-}\${DISPLAY-}"')"
+  mkdir -p "$work/fakebin"
+  printf '#!/bin/sh\nprintf "FAKE-OMP"; for a in "$@"; do printf " %%s" "$a"; done; printf "\\n"\n' >"$work/fakebin/omp"
+  chmod +x "$work/fakebin/omp"
+  zcheck "zsh snippet: omp is a function in every shell after the snippet" "omp: function" "$(zrun "$work/without" true 'whence -w omp')"
+  zcheck "zsh snippet: in a Tern pane without a terminal (a script, a pipe) the function runs the real omp with the same arguments and writes no escape byte" "FAKE-OMP a b c" "$(zrun "$work/without" "PATH=$work/fakebin:\$PATH; export TERM_PROGRAM=tern" 'omp a b c </dev/null | cat')"
 else
   echo "  skip zsh snippet checks: zsh is not installed"
 fi

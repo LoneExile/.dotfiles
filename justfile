@@ -205,6 +205,7 @@ test-infra:
   bash home/linux/start-user-unit_test.sh
   bash home/linux/seed-user-binary_test.sh
   bash home/linux/zshrc_test.sh
+  bash home/linux/omp-image-paste_test.sh
   bash home/linux/ssh-key_test.sh
   bash home/linux/docker-contexts_test.sh
   bash home/linux/lazydocker-ssh_test.sh

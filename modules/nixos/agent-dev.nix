@@ -80,7 +80,7 @@ in {
 
     omp.enable = piece "omp, pinned by hash as the seed and the fallback on the system PATH, with a user-owned copy in ~/.local/bin (made once, never replaced) that `omp update` can replace, and its config files copied into ~/.omp/agent as writable files";
     mise.enable = piece "mise with the global tools (node, python, uv, go, rust, bun, pnpm)";
-    tern.enable = piece "the Tern remote service: UDP 8376 open, served to the LAN only (no relay, no iroh)";
+    tern.enable = piece "the Tern remote service: UDP 8376 open, served to the LAN only (no relay, no iroh); and, in the user's zsh, omp's opt-in to Tern's paste events (a pasted image reaches an omp that runs on the VM)";
     gh.enable = piece "the GitHub CLI, with git's credential helper for github.com (the user logs in by hand with `gh auth login`)";
     mason.enable = piece "the Mason language servers of home/omp/mason-lsp.txt for omp's LSP tool, installed by a user service with a minimal Neovim (mason.nvim only; no Neovim config, no other plugin), and shellcheck for bash-language-server";
     podman.enable = piece "rootless podman";
