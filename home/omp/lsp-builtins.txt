@@ -1,4 +1,4 @@
-# omp 18.8.6: command of every built-in LSP server, from the binary (home/omp/lsp-builtins-extract.sh)
+# omp 18.8.7: command of every built-in LSP server, from the binary (home/omp/lsp-builtins-extract.sh)
 astro-ls
 basedpyright-langserver
 bash-language-server
