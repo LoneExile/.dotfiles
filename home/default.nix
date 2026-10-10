@@ -132,6 +132,19 @@ in {
       # silently stops tracking (seen 2026-10-06 with Tern 0.5.1).
       # home.activation.ternSettings installs a real writable copy instead;
       # `just tern-capture` pulls preferences-UI changes back into the repo.
+      # Tern plugins, unlike settings.json, are read-only store paths: a
+      # plugin writes to its own data folder, never to its package folder, and
+      # Tern loads a package from a symlink to a directory. remote-open
+      # (github.com/LoneExile/tern-remote-open) is pinned to a commit. Bump it
+      # with `nix flake prefetch github:LoneExile/tern-remote-open/<rev>`:
+      # new rev here, the printed hash here, then `just home`. Do not also
+      # `tern plugin link` it: two packages with one id are a duplicate-id error.
+      "Library/Application Support/Tern/plugins/remote-open".source = pkgs.fetchFromGitHub {
+        owner = "LoneExile";
+        repo = "tern-remote-open";
+        rev = "8adf5235f8f305864f75e4ba7ace3fd64488318e";
+        hash = "sha256-MKXE4yojWpfsFD+9sESZO8Jks7oT7Jg3IPx0QdxjX6Y=";
+      };
       # keymap is tmux with prefix ctrl+a, plus Herdr's pane/tab chords
       # (home/herdr/config.toml): hjkl focus, | / - splits, 1–9 select tabs.
       "Library/Keyboard\ Layouts/English.bundle" = {

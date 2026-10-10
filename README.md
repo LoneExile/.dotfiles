@@ -507,6 +507,14 @@ herdr has no screen detection for omp: omp's working/idle/blocked state comes on
 
 OmniWM opens its command palette on ⌃⌥Space. macOS ships the same chord as "Select next source in Input menu", so both fire and OmniWM's Health page warns. `home.activation.omniwmPaletteChord` turns the macOS shortcut off (symbolic hotkey 61) with `defaults write -dict-add`, which leaves every other system shortcut as it is, then applies it with `activateSettings -u` so no logout is needed.
 
+## Tern plugin: remote-open
+
+[remote-open](https://github.com/LoneExile/tern-remote-open) makes links in a pane of a remote host work on the Mac: a `file://` link to an html, svg, pdf or image file (copied with `scp`, shown in Tern's browser block), a `localhost` link and an OAuth sign-in URL whose `redirect_uri` is on localhost (both start an `ssh -L` forward; the OAuth one closes itself after ten minutes). ⌥-click leaves a link to Tern. It needs `ssh` to the VM without a prompt and the VM's key in `known_hosts`.
+
+The pin lives in `home/default.nix`: `home.file."Library/Application Support/Tern/plugins/remote-open"`, a `pkgs.fetchFromGitHub` store path (Darwin only), not a link to a checkout. To bump it, set `rev` to the new commit and `hash` to the one that `nix flake prefetch github:LoneExile/tern-remote-open/<rev>` prints, then `just home`. Do not also run `tern plugin link` on it: two packages with the same id are a duplicate-id error. `tern plugin list` must show `remote-open … ready`.
+
+Pasting an image into a remote pane is not a plugin's job: that fix is the version of Tern on the VM (`tern remote update`), not this plugin.
+
 ## Notes
 
 - `docs/SETUP.md` is a stub. This README is the setup path.
