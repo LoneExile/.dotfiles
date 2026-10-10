@@ -185,7 +185,7 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts, the Docker start step, the Docker contexts, the ssh key and lazydocker bridge of the jumphost piece, the jumphost authorization, the vault tunnel, the interactive zsh of the agent role and its writable config copies (no network, no vault)
+# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts, the Docker start step, the Docker contexts, the ssh key and lazydocker bridge of the jumphost piece, the jumphost authorization, the vault tunnel, the interactive zsh of the agent role, its writable config copies and the seed of the user's own omp (no network, no vault)
 test-infra:
   @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles, VM sync, plugin and Mason scripts, vault tunnel and writable config copies..."
   bash infra/leak-check_test.sh
@@ -203,6 +203,7 @@ test-infra:
   bash home/omp/mason-capture_test.sh
   bash home/linux/mason-lsp-install_test.sh
   bash home/linux/start-user-unit_test.sh
+  bash home/linux/seed-user-binary_test.sh
   bash home/linux/zshrc_test.sh
   bash home/linux/ssh-key_test.sh
   bash home/linux/docker-contexts_test.sh

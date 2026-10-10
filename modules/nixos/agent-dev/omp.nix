@@ -5,9 +5,12 @@
 # patchelf and autoPatchelfHook (all off below). The executable's interpreter is
 # /lib64/ld-linux-x86-64.so.2, which `programs.nix-ld` provides on the VM (see ../agent-dev.nix).
 #
-# `omp update` cannot work here: it replaces its own binary, and the Nix store is read-only. To
-# bump the version, change `version` and `hash` together, then `just vm-deploy <name>`. The
-# command below prints the new hash; compare it with the checksum of the release page:
+# This pin is the seed and the fallback, not the version the user runs day to day. `omp update` replaces its own file and refuses to
+# run from the Nix store (read-only), so Home Manager copies this binary once to ~/.local/bin/omp, a regular file that is the user's
+# and comes first on PATH (home/linux/seed-user-binary.sh), and `omp update` on the VM updates that copy. The copy is never replaced
+# by a deploy or a reboot, so bumping the pin only changes what a new install (or a VM whose copy was deleted) gets; this store
+# package stays on the system PATH as the fallback. To bump the pin, change `version` and `hash` together, then `just vm-deploy <name>`.
+# The command below prints the new hash; compare it with the checksum of the release page:
 #   nix store prefetch-file --json https://github.com/can1357/oh-my-pi/releases/download/v<version>/omp-linux-x64
 {
   lib,

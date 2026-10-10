@@ -108,7 +108,13 @@ in {
   imports = [./zsh.nix];
 
   options.dotfiles.agent = {
-    omp.enable = lib.mkEnableOption "omp's writable config files in ~/.omp/agent";
+    omp = {
+      enable = lib.mkEnableOption "omp's writable config files in ~/.omp/agent, and a user-owned copy of the omp binary in ~/.local/bin that `omp update` can replace";
+      package = lib.mkOption {
+        type = lib.types.package;
+        description = "The omp package (the one pin, modules/nixos/agent-dev/omp.nix, which the NixOS module also puts on the system PATH): the seed of ~/.local/bin/omp, copied when that file is missing or a link.";
+      };
+    };
     mise = {
       enable = lib.mkEnableOption "mise with the global tools";
       package = lib.mkOption {
@@ -229,6 +235,17 @@ in {
         })
         ompFiles
       ));
+
+      # omp updates itself (`omp update`), and refuses to when it runs from the Nix store. So the pinned store binary is the seed and
+      # the fallback, and the user's omp is a regular copy of it in ~/.local/bin: ahead of the Nix profile directories on every
+      # zsh's PATH (home.sessionPath above), owned by the user, in a directory that omp can write to (it renames a new file over its
+      # own). It is copied only when the file is missing or a link, and never replaced after that, so a deploy or a reboot never
+      # downgrades an updated omp, and a newer pin does not reach a VM that has its own copy (seed-user-binary.sh has the rules, and
+      # the README how to go back to the pin). The store package stays on the system PATH as the fallback if the copy is deleted.
+      home.activation.ompBinary = lib.hm.dag.entryAfter ["writeBoundary"] ''
+        ${builtins.readFile ./seed-user-binary.sh}
+        seed_user_binary ${cfg.omp.package}/bin/omp "$HOME/.local/bin/omp"
+      '';
     })
 
     (lib.mkIf cfg.tern.enable {

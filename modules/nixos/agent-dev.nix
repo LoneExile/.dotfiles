@@ -8,7 +8,7 @@
 #     survive logout); it logs in with the keys that root has (a root-owned copy, see below);
 #   - Home Manager for that user (home/linux/agent.nix): zsh, starship, git, direnv, mise;
 #   - nix-ld, so glibc programs that were not built for NixOS run (mise's runtimes, omp, Tern);
-#   - omp, pinned by hash (agent-dev/omp.nix), with its config files copied in writable;
+#   - omp, pinned by hash (agent-dev/omp.nix) as the seed and fallback: a user-owned copy in ~/.local/bin that `omp update` replaces, and its config files copied in writable;
 #   - the gh CLI with git's credential helper for github.com (the user logs in by hand: `gh auth login`),
 #     rootless podman, zram swap;
 #   - Tern's remote service reachable on the LAN (UDP 8376), with its relay and iroh off.
@@ -61,6 +61,11 @@ inputs: {
   # nixos-25.11's default pkgs.docker (28.5.2) is marked insecure (unmaintained since November 2025) and refuses to evaluate;
   # docker_29 is in the same nixpkgs. The one package of the rootless daemon and of the CLI that Home Manager runs.
   dockerPackage = pkgs.docker_29;
+
+  # The one pin of omp (agent-dev/omp.nix: version and hash). The system PATH gets it as the fallback, and Home Manager copies it to
+  # ~/.local/bin/omp as the seed of the user's own copy, which `omp update` can replace (home/linux/agent.nix, home/linux/seed-user-binary.sh).
+  # Both read this one value, so there is no second pin.
+  ompPackage = pkgs.callPackage ./agent-dev/omp.nix {};
 in {
   imports = [inputs.home-manager-nixos.nixosModules.home-manager];
 
@@ -73,7 +78,7 @@ in {
       description = "The login user. It is not in wheel and has no sudo.";
     };
 
-    omp.enable = piece "omp, pinned, with its config files copied into ~/.omp/agent as writable files";
+    omp.enable = piece "omp, pinned by hash as the seed and the fallback on the system PATH, with a user-owned copy in ~/.local/bin (made once, never replaced) that `omp update` can replace, and its config files copied into ~/.omp/agent as writable files";
     mise.enable = piece "mise with the global tools (node, python, uv, go, rust, bun, pnpm)";
     tern.enable = piece "the Tern remote service: UDP 8376 open, served to the LAN only (no relay, no iroh)";
     gh.enable = piece "the GitHub CLI, with git's credential helper for github.com (the user logs in by hand with `gh auth login`)";
@@ -160,7 +165,10 @@ in {
         users.${cfg.user} = {
           imports = [../../home/linux/agent.nix];
           dotfiles.agent = {
-            omp.enable = cfg.omp.enable;
+            omp = {
+              inherit (cfg.omp) enable;
+              package = ompPackage;
+            };
             mise = {
               inherit (cfg.mise) enable;
               # nixos-25.11's mise (2025.11.7) takes the free-threaded CPython build of
@@ -223,7 +231,7 @@ in {
     }
 
     (lib.mkIf cfg.omp.enable {
-      environment.systemPackages = [(pkgs.callPackage ./agent-dev/omp.nix {})];
+      environment.systemPackages = [ompPackage];
     })
 
     (lib.mkIf cfg.gh.enable {

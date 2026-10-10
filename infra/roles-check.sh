@@ -23,6 +23,8 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
       podman = cfg.virtualisation.podman.enable;
       zram = cfg.zramSwap.enable;
       omp = builtins.any (p: (p.pname or "") == "omp") cfg.environment.systemPackages;
+      # the store paths of the omp packages on the system PATH: exactly one in the agent (the one pin, which is also what Home Manager copies to ~/.local/bin/omp), none in the clean guest
+      ompStore = map (p: p.outPath) (builtins.filter (p: (p.pname or "") == "omp") cfg.environment.systemPackages);
       homeManager = builtins.hasAttr "home-manager" cfg && cfg.home-manager.users != { };
       rootLogin = cfg.services.openssh.settings.PermitRootLogin;
       passwordAuth = cfg.services.openssh.settings.PasswordAuthentication;
@@ -114,6 +116,9 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
         then let u = cfg.home-manager.users.lex; in {
           service = u.systemd.user.services ? omp-plugins-install;
           activation = u.home.activation ? ompPlugins;
+          # the copy of omp that the user owns (~/.local/bin/omp): the activation step that seeds it (its order and its whole script), and the entries that Home Manager puts on the session PATH
+          ompSeed = if u.home.activation ? ompBinary then { after = u.home.activation.ompBinary.after; data = u.home.activation.ompBinary.data; } else null;
+          sessionPath = u.home.sessionPath;
           helper = u.programs.git.settings.credential."https://github.com".helper or null;
           before = u.home.activation.ompPlugins.before or null;
           execStart = u.systemd.user.services.omp-plugins-install.Service.ExecStart or null;
@@ -180,6 +185,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     browserOff = { dotfiles.agent.browser.enable = false; };
     vaultOff = { dotfiles.agent.vault.enable = false; };
     caBundleOff = { dotfiles.agent.caBundle.enable = false; };
+    ompOff = { dotfiles.agent = { omp.enable = false; sync = { plugins = false; skills = false; hindsight = false; }; }; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
@@ -192,6 +198,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     browserOff = summary (c.proxmox-agent.extendModules { modules = [ browserOff ]; }).config;
     vaultOff = summary (c.proxmox-agent.extendModules { modules = [ vaultOff ]; }).config;
     caBundleOff = summary (c.proxmox-agent.extendModules { modules = [ caBundleOff ]; }).config;
+    ompOff = summary (c.proxmox-agent.extendModules { modules = [ ompOff ]; }).config;
   }
 ') || {
   echo "roles-check: nix eval failed" >&2
@@ -231,6 +238,16 @@ check "agent: the manifests are placed before the user units reload, and the uni
 check "agent: the plugin install unit starts with the user manager at boot and is retried on failure" '.agent.userSync.wantedBy == ["default.target"] and .agent.userSync.restart == "on-failure"'
 check "agent: zsh reads the hindsight file for every shell, and never ~/.omp/.env" '.agent.userSync.zshenv | (contains("config/dotfiles/hindsight.env") and (contains(".omp/.env") | not) and contains("set -a") and contains("set +a"))'
 check "agent with every sync option off: no harper, no service, no activation, no hindsight in zsh; gh stays the credential helper" '.agentOff | (.syncFile == {"plugins": false, "skills": false, "hindsight": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$")) and (.userSync.zshenv | contains("hindsight") | not)'
+
+# The user's own omp. omp updates itself (`omp update`) and refuses to run from the Nix store, so the pinned store binary is only the seed: Home Manager copies it once to
+# ~/.local/bin/omp (a regular file of the user's, ahead of the Nix profile directories on PATH), and a deploy never replaces that copy. The store package stays as the fallback.
+helper=$repo/home/linux/seed-user-binary.sh
+check "clean: no omp seeding (no omp package, no Home Manager user, so no user copy and no activation step)" '.guest | (.omp | not) and (.ompStore == []) and (.userSync == null)'
+check "agent: the system PATH keeps exactly one omp package (the pin, the fallback if the user deletes the copy)" '.agent.omp and (.agent.ompStore | length == 1)'
+check "agent: Home Manager seeds ~/.local/bin/omp with seed_user_binary, from the store package of the system PATH (the one pin: no second hash), after writeBoundary" '.agent as $a | $a.userSync.ompSeed as $s | ($a.ompStore | length == 1) and ($s.after == ["writeBoundary"]) and ($s.data | contains("\nseed_user_binary " + $a.ompStore[0] + "/bin/omp \"$HOME/.local/bin/omp\"\n"))'
+check "agent: the helper that runs on the VM is home/linux/seed-user-binary.sh byte for byte (the file that seed-user-binary_test.sh tests: it never replaces a regular file, and only a missing path or a link gets the copy)" '.agent.userSync.ompSeed.data | contains($helper)' --rawfile helper "$helper"
+check "agent: ~/.local/bin is on the session PATH, and no root-owned rule (tmpfiles) names it: the copy is made by the user's own Home Manager activation" '(.agent.userSync.sessionPath | index("$HOME/.local/bin") != null) and ([.agent.confine.tmpfilesRules[] | select(contains(".local/bin"))] == [])'
+check "agent with the omp option off: no seeding, no omp on the system PATH, and the other pieces stay" '.ompOff | (.omp | not) and (.ompStore == []) and (.userSync.ompSeed == null) and (.userSync.mason != null) and .dockerRootless'
 
 # The Mason piece. The list is the committed file; the unit must carry its hash and every name of it, in order.
 list=$repo/home/omp/mason-lsp.txt
