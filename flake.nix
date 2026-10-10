@@ -33,8 +33,14 @@
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
 
     # Homebrew taps (non-flake inputs)
+    # homebrew-core is pinned to 2026-10-08 09:34 UTC (the last rev before
+    # formulae adopted `resource "...", :test do`). That DSL needs brew >= 7.0.9
+    # and nix-homebrew still pins brew 7.0.4, so newer revs fail every formula
+    # load with "undefined method 'new' for an instance of Symbol" (175 formulae
+    # at 2026-10-10, incl. dav1d/zlib). Drop the pin once nix-homebrew pins
+    # brew >= 7.0.9 (open PR zhaofengli-wip/nix-homebrew#191 only reaches 7.0.8).
     homebrew-core = {
-      url = "github:homebrew/homebrew-core";
+      url = "github:homebrew/homebrew-core/3580efd52d92c2e3c3da5b9c79553f6e88002426";
       flake = false;
     };
     homebrew-cask = {
