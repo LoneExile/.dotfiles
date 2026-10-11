@@ -145,6 +145,11 @@ in {
         rev = "4905c61ca81fadb95c715967d0ccc6361ddf4701";
         hash = "sha256-GC44al1peDNNZzyWz7IBceKuirzR2TPVVxS6zYPQosY=";
       };
+      # No Traffic Lights (./tern/plugins/no-traffic-lights): a style sheet that
+      # hides the window buttons Tern draws when settings.json has
+      # "system_traffic_lights": false. macOS's own buttons are not in the page,
+      # so the setting and the plugin only work together.
+      "Library/Application Support/Tern/plugins/no-traffic-lights".source = ./tern/plugins/no-traffic-lights;
       # keymap is tmux with prefix ctrl+a, plus Herdr's pane/tab chords
       # (home/herdr/config.toml): hjkl focus, | / - splits, 1–9 select tabs.
       "Library/Keyboard\ Layouts/English.bundle" = {

@@ -48,7 +48,7 @@
   "tabs": "Vertical",
   "tabs_autohide": true,
   "system_title_bar": false,
-  "system_traffic_lights": true,
+  "system_traffic_lights": false,
   "pane_headers": "Never",
   "status_bar": false,
   "material": "Clear",

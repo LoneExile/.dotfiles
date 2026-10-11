@@ -1,0 +1,8 @@
+schema = 1
+id = "no-traffic-lights"
+name = "No Traffic Lights"
+version = "0.1.0"
+description = "Hides the window's close, minimize and full screen buttons (needs System traffic lights off)."
+icon = "eye-off"
+window = "window.luau"
+styles = ["no-traffic-lights.css"]

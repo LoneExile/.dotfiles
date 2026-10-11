@@ -31,6 +31,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
 - [Tern plugin: remote-open](#tern-plugin-remote-open)
   - [Pin and bump](#pin-and-bump)
   - [Image paste is not this plugin's job](#image-paste-is-not-this-plugins-job)
+- [Tern plugin: no-traffic-lights](#tern-plugin-no-traffic-lights)
 - [Proxmox VMs](#proxmox-vms)
   - [What lives where](#what-lives-where)
   - [Repo, vault and state](#repo-vault-and-state)
@@ -312,6 +313,17 @@ Do not also run `tern plugin link` on it: two packages with the same id are a du
 ### Image paste is not this plugin's job
 
 Pasting an image into a remote pane depends on the version of Tern on the VM (`tern remote update`) and on omp's opt-in to paste events (see [Image paste into omp on the VM](#image-paste-into-omp-on-the-vm)), not on this plugin.
+
+## Tern plugin: no-traffic-lights
+
+Removes the window's close, minimize and full screen buttons. Tern has no setting for that, so it takes two pieces:
+
+- `home/tern/settings.json` has `"system_traffic_lights": false` (Settings › Appearance › System traffic lights). Tern then draws its own buttons in the page (`.tl-ctl`) in place of macOS's, which no style sheet can reach.
+- `home/tern/plugins/no-traffic-lights` is a style sheet that hides `.tl-ctl` and gives the 90px it reserves back to the tab bar. Its `window.luau` is empty: Tern's manifest needs an entry. Home Manager links it into Tern's plugins folder as a store path; `tern plugin list` must show `no-traffic-lights … ready`.
+
+Either piece alone leaves the buttons. Without them, the menus still have File › Close, Window › Minimize and Zoom, and View › Enter Full Screen (macOS's menu roles, with their usual shortcuts unless a Tern keybind takes the chord). Turn `system_traffic_lights` back on, or remove the plugin, to get the buttons back.
+
+A running Tern keeps its settings in memory: after `just home`, run Reload settings (⌃A ⇧R, or the command palette) or restart Tern.
 
 ## Proxmox VMs
 

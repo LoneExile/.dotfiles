@@ -1,0 +1,13 @@
+/* With Settings › Appearance › System traffic lights off (`system_traffic_lights: false`),
+   Tern draws its own close, minimize and full screen buttons as `.tl-ctl` (view/csd.rs) and
+   marks the page `html.csd-tl`. macOS's own buttons are not part of the page, so a sheet can
+   hide only Tern's: that setting must be off.
+
+   Hide them, and give back the room every layout keeps for them (`--tl-inset`, 90px). Same
+   specificity as Tern's own rules; plugin sheets come after Tern's, so these win. */
+html.csd-tl .tl-ctl {
+	display: none;
+}
+html.csd-tl body {
+	--tl-inset: 0px;
+}

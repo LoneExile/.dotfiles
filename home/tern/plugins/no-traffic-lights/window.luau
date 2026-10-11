@@ -1,0 +1,3 @@
+--!strict
+-- Intentionally empty: the plugin is its style sheet (no-traffic-lights.css).
+-- Tern's manifest needs a host or window entry, so this is the window one.
