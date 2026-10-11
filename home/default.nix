@@ -251,6 +251,7 @@ in {
       run mkdir -p "$ternDir"
       run cp -f "$ternRepo" "$ternLive"
       run chmod u+w "$ternLive"
+      echo "tern settings: installed. A running Tern keeps its old settings in memory: run Reload settings (command palette) or restart Tern before opening Preferences, or its next save writes them back over this file"
     fi
   '';
 

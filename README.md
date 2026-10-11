@@ -27,6 +27,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Install and plugin](#install-and-plugin)
   - [omp agent state](#omp-agent-state)
 - [OmniWM](#omniwm)
+- [Tern keymap](#tern-keymap)
 - [Tern plugin: remote-open](#tern-plugin-remote-open)
   - [Pin and bump](#pin-and-bump)
   - [Image paste is not this plugin's job](#image-paste-is-not-this-plugins-job)
@@ -276,6 +277,18 @@ SOPS is leftover, not live: no `secrets/secrets.yaml`, no `sops.secrets.*` in an
 - OmniWM opens its command palette on ⌃⌥Space. macOS ships the same chord as "Select next source in Input menu", so both fire and OmniWM's Health page warns.
 - `home.activation.omniwmPaletteChord` turns the macOS shortcut off (symbolic hotkey 61) with `defaults write -dict-add`, which leaves every other system shortcut as it is.
 - It then applies the change with `activateSettings -u`, so no logout is needed.
+
+## Tern keymap
+
+Tern runs its tmux preset with prefix ⌃A (`keymap` and `keymap_prefix` in `home/tern/settings.json`), so that its chords match herdr's (`home/herdr/config.toml`). The `keybinds` object holds only what differs from the preset.
+
+- herdr chords with a Tern command: `h` `j` `k` `l` (`focus_pane:*`), `|` (`split_right`), `-` (`split_down`), `1`–`9` (`goto_tab:N`), `shift+x` (`close_tab`), `shift+n` (`new_session`), `shift+w` (`rename_session`), `shift+d` (`close_session`), `shift+s` (`preferences`), `shift+r` (`reload_config`), `w` (`switch_session`), `e` (`open_scrollback`), `b` (`toggle_sidebar`), `tab` and `shift+tab` (`next_pane`, `previous_pane`), `q` (`quit`: herdr's detach, and Tern's panes live on in its daemon), `?` (`help`).
+- Chords that already match in the preset: `c`, `n`, `p`, `,`, `x`, `z`, `s`.
+- herdr chords with no Tern command, left as the preset has them: `o` (herdr-plus projects; Tern's `next_pane`), `y`, the annotate chords (`a`, `shift+a`, `m`, `d`, `shift+o`), `shift+g` (new worktree), `shift+p` (rename pane), `r` (resize mode).
+- The preset's digits are zero-based (⌃A 1 is the second tab), so the nine `goto_tab:N` entries stay: herdr's `1`–`9` are tabs 1–9. `0` is unbound.
+- A normal Preferences save keeps `keybinds`. The Keyboard page's "Restore all defaults" deletes the whole map (Tern 0.7.2). `just home` puts it back: the live file differs from the repo copy, so it is kept as `settings.json.dotfiles-backup` and the repo copy is installed. `just tern-capture` pulls Preferences changes into the repo the other way.
+- Tern does not reload `settings.json` when it changes on disk (measured on 0.7.2). After `just home`, run Reload settings in the command palette (or restart Tern). Until then the running Tern holds the old keybinds, and its next Preferences save writes them back over the file.
+- Free in both keymaps, if you want Tern's desktop pet on a chord: `"ctrl+a>shift+c": "clawdi"`.
 
 ## Tern plugin: remote-open
 
