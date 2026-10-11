@@ -142,8 +142,8 @@ in {
       "Library/Application Support/Tern/plugins/remote-open".source = pkgs.fetchFromGitHub {
         owner = "LoneExile";
         repo = "tern-remote-open";
-        rev = "8adf5235f8f305864f75e4ba7ace3fd64488318e";
-        hash = "sha256-MKXE4yojWpfsFD+9sESZO8Jks7oT7Jg3IPx0QdxjX6Y=";
+        rev = "4905c61ca81fadb95c715967d0ccc6361ddf4701";
+        hash = "sha256-GC44al1peDNNZzyWz7IBceKuirzR2TPVVxS6zYPQosY=";
       };
       # keymap is tmux with prefix ctrl+a, plus Herdr's pane/tab chords
       # (home/herdr/config.toml): hjkl focus, | / - splits, 1–9 select tabs.

@@ -295,6 +295,7 @@ Tern runs its tmux preset with prefix ⌃A (`keymap` and `keymap_prefix` in `hom
 [remote-open](https://github.com/LoneExile/tern-remote-open) makes links in a pane of a remote host work on the Mac:
 
 - a `file://` link to an html, svg, pdf or image file (copied with `scp`, shown in Tern's browser block);
+- an image (`png jpg jpeg gif webp`), as a `file://` link or a plain path: shown in a small viewer whose **Copy image** puts it on the Mac's clipboard and **Save to Downloads** copies it into `~/Downloads` (since 0.2.0);
 - a `localhost` link;
 - an OAuth sign-in URL whose `redirect_uri` is on localhost (this and the `localhost` link start an `ssh -L` forward; the OAuth one closes itself after ten minutes).
 
