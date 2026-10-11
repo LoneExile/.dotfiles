@@ -333,7 +333,6 @@
     "ctrl+a>shift+w": "rename_session",
     "ctrl+a>shift+x": "close_tab",
     "ctrl+a>tab": "next_pane",
-    "ctrl+a>w": "switch_session",
     "ctrl+a>|": "split_right"
   },
   "keymap": "tmux",
