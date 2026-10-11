@@ -1,36 +1,47 @@
 #!/usr/bin/env bash
-# Let the agent VM's own jumphost key reach the jumphost's Docker API, and nothing else. The justfile recipe `vm-jumphost-authorize` calls it.
-# Arguments: <name> <repo-root>. Runs on the Mac.
-#   1. The VM (role agent, jumphost piece deployed) made ~/.ssh/id_ed25519_jumphost on itself (home/linux/ssh-key.sh). Only its PUBLIC half is
-#      read here, over ssh, with the host key already pinned (as vm-sync does). The private key never leaves the VM.
+# Let one of the agent VM's own jumphost keys onto the jumphost. The justfile recipe `vm-jumphost-authorize` calls it.
+# Arguments: <name> <repo-root> [docker|shell] (default docker). Runs on the Mac.
+#   docker  the key ~/.ssh/id_ed25519_jumphost (the VM's ssh entry jumphost_docker, the Docker context `jumphost`), authorized as
+#           `restrict,command="docker system dial-stdio" ssh-ed25519 <key> <name> docker-jumphost`: `restrict` takes away the shell, the
+#           pty, every forwarding and the agent; the forced command leaves only the Docker API of that host, as the user of the account.
+#   shell   the key ~/.ssh/id_ed25519_jumphost_shell (the VM's ssh entry jumphost_server), authorized as `ssh-ed25519 <key> <name>
+#           shell-jumphost`: a plain login of that account, as the Mac's own key has (shell, pty, forwarding).
+#   1. The VM (role agent, jumphost piece deployed) made both keys on itself (home/linux/ssh-key.sh). Only the PUBLIC half of the one
+#      asked for is read here, over ssh, with the host key already pinned (as vm-sync does). The private keys never leave the VM.
 #   2. The public key must be one ssh-ed25519 line of the right length; anything else is refused here, before the jumphost is contacted.
-#      Its comment is not taken from the VM: it is built here from the VM name (`<name> docker-jumphost`), so a VM cannot pick the text
-#      that names its line (the revocation key). The file is read bounded (a regular file, at most 2048 bytes).
-#   3. The line `restrict,command="docker system dial-stdio" ssh-ed25519 <key> <comment>` is appended to the jumphost's authorized_keys
-#      over the Mac's own access (the Mac's ssh config entry Host jumphost_server), once, after a timestamped backup, atomically, and without
-#      touching any other line (infra/vm-jumphost-authorize-remote.sh). `restrict` takes away the shell, the pty, every forwarding and the
-#      agent; the forced command leaves only the Docker API of that host, as the user of the account.
+#      Its comment is not taken from the VM: it is built here from the VM name and the kind (`<name> docker-jumphost`, `<name>
+#      shell-jumphost`), so a VM cannot pick the text that names its line (the revocation key). The file is read bounded (a regular
+#      file, at most 2048 bytes).
+#   3. The line is appended to the jumphost's authorized_keys over the Mac's own access (the Mac's ssh config entry Host jumphost_server),
+#      once, after a timestamped backup, atomically, and without touching any other line (infra/vm-jumphost-authorize-remote.sh).
 # Revoke: README, "Jumphost".
 set -euo pipefail
 
-if [ $# -ne 2 ]; then
-  echo "usage: vm-jumphost-authorize.sh <name> <repo-root>" >&2
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+  echo "usage: vm-jumphost-authorize.sh <name> <repo-root> [docker|shell]" >&2
   exit 2
 fi
 name=$1
 repo=$2
+kind=${3-docker}
 
 jh_die() {
   printf 'vm-jumphost-authorize: %s\n' "$1" >&2
   exit 1
 }
 [[ $name =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$ ]] || jh_die "not a valid VM name (letters, digits, dots, dashes and underscores)"
+case $kind in
+  docker) keyname=id_ed25519_jumphost ;;
+  shell) keyname=id_ed25519_jumphost_shell ;;
+  *) jh_die "the kind must be docker or shell, not: $kind" ;;
+esac
 
 # shellcheck source=vm-sync-lib.sh
 . "$repo/infra/vm-sync-lib.sh"
 
 jh_host=${JUMPHOST_SSH_HOST:-jumphost_server}
-pubfile='~/.ssh/id_ed25519_jumphost.pub'
+# shellcheck disable=SC2088 # the tilde is the VM's: it is expanded by the VM's shell, not here
+pubfile="~/.ssh/$keyname.pub"
 
 ip=$(under_secretspec "$repo" "$name" vm-ip.sh)
 config=$(under_secretspec "$repo" "$name" vm-config.sh)
@@ -55,11 +66,20 @@ read -r ktype kblob vmcomment <<<"$oneline"
 hex=$(printf '%s' "$kblob" | base64 -d 2>/dev/null | od -An -v -tx1 | tr -d ' \n')
 # 00000b "ssh-ed25519" 000020 + 32 bytes
 [[ $hex =~ ^0000000b7373682d6564323535313900000020[0-9a-f]{64}$ ]] || jh_die "the key of $name is malformed (not an ed25519 public key blob): refusing"
-kcomment="$name docker-jumphost" # the comment that the VM wrote (vmcomment) is not used
+kcomment="$name $kind-jumphost" # the comment that the VM wrote (vmcomment) is not used
 
-line="restrict,command=\"docker system dial-stdio\" ssh-ed25519 $kblob $kcomment"
+case $kind in
+  docker)
+    line="restrict,command=\"docker system dial-stdio\" ssh-ed25519 $kblob $kcomment"
+    grant="restricted to docker system dial-stdio"
+    ;;
+  shell)
+    line="ssh-ed25519 $kblob $kcomment"
+    grant="a login shell"
+    ;;
+esac
 fp=$(printf '%s\n' "ssh-ed25519 $kblob" | ssh-keygen -l -f - 2>/dev/null | awk '{print $2}') || fp=
-echo "vm-jumphost-authorize: key of $name${fp:+ ($fp)} -> $jh_host, restricted to docker system dial-stdio"
+echo "vm-jumphost-authorize: $kind key of $name${fp:+ ($fp)} -> $jh_host, $grant"
 
 b64script=$(base64 <"$repo/infra/vm-jumphost-authorize-remote.sh" | tr -d '\n') || jh_die "cannot read infra/vm-jumphost-authorize-remote.sh"
 b64line=$(printf '%s' "$line" | base64 | tr -d '\n')

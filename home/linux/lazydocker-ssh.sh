@@ -3,7 +3,7 @@
 # piece is on; the @...@ names are filled in by Nix).
 #
 # lazydocker (0.24.2 and master) reaches an ssh:// host by `ssh -L <local socket>:/var/run/docker.sock <host> -N`. That needs socket
-# forwarding, and the key that the VM uses for the jumphost is restricted to `docker system dial-stdio` (restrict: no forwarding, no
+# forwarding, and the key of the VM's Docker context (ssh entry jumphost_docker) is restricted to `docker system dial-stdio` (restrict: no forwarding, no
 # shell, no pty), so that way is closed on purpose. The docker CLI itself talks to an ssh:// host through `ssh <host> docker system
 # dial-stdio`, which that key allows. So, for an ssh:// context, this wrapper runs a local unix-socket bridge for the life of lazydocker:
 # socat listens on a socket in the runtime directory and runs the same ssh command for each connection, and lazydocker is started with

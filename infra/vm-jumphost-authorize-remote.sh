@@ -3,9 +3,12 @@
 #
 #   vm-jumphost-authorize-remote.sh <base64 of one authorized_keys line>
 #
+# The line is one of the two forms that the Mac builds, and nothing else is ever written here:
+#   restrict,command="docker system dial-stdio" ssh-ed25519 <key> <name> docker-jumphost   (the Docker key)
+#   ssh-ed25519 <key> <name> shell-jumphost                                                 (the shell key, a plain login)
 # It appends that line to ~/.ssh/authorized_keys, once, and touches nothing else:
 #   - the key (its ssh-ed25519 blob) is already there with exactly these options (the comment may differ): "already authorized", nothing changes;
-#   - the key is there with other options (it could be unrestricted): refused, exit 1, nothing changes;
+#   - the key is there with other options (restricted where a shell is asked for, or the other way round): refused, exit 1, nothing changes;
 #   - otherwise: a timestamped backup of the file (mode 600, `cp -p`), then a new file is written beside it (the old content, a final
 #     newline if it lacked one, the new line), checked (the old file is the beginning of the new one, one line longer), set to mode 600
 #     and moved over the old one with rename, which is atomic. A missing file is made the same way, without a backup.
@@ -21,12 +24,22 @@ blob=$(printf '%s\n' "$line" | awk '{ for (i = 1; i < NF; i++) if ($i == "ssh-ed
   exit 2
 }
 
-# the line must be the restricted form of this key (the Mac builds it so; a line of any other shape is never written here)
-prefix="restrict,command=\"docker system dial-stdio\" ssh-ed25519 $blob"
+# one line only: a second line would be a second key that no check here has seen
 case $line in
-  "$prefix "*) ;;
+  *$'\n'* | *$'\r'*)
+    echo "authorize: the line holds a line break: refusing" >&2
+    exit 2
+    ;;
+esac
+
+# the line must be one of the two forms of this key (the Mac builds them so; a line of any other shape is never written here)
+restricted="restrict,command=\"docker system dial-stdio\" ssh-ed25519 $blob"
+plain="ssh-ed25519 $blob"
+case $line in
+  "$restricted "*" docker-jumphost") prefix=$restricted ;;
+  "$plain "*" shell-jumphost") prefix=$plain ;;
   *)
-    echo "authorize: the line is not the restricted form of this key: refusing" >&2
+    echo "authorize: the line is neither the restricted form of this key nor its shell form: refusing" >&2
     exit 2
     ;;
 esac
@@ -54,7 +67,7 @@ if [ -f "$ak" ]; then
         exit 0
         ;;
     esac
-    echo "authorize: this key is already in authorized_keys (line $at) with other options than the restricted ones: left as it is, nothing changed" >&2
+    echo "authorize: this key is already in authorized_keys (line $at) with other options than the ones asked for: left as it is, nothing changed" >&2
     exit 1
   fi
   stamp=$(date -u +%Y%m%dT%H%M%SZ)

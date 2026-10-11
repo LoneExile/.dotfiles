@@ -249,11 +249,11 @@ vm-deploy name:
   set -euo pipefail
   bash "{{infra_dir}}/vm-deploy.sh" {{quote(name)}} "{{justfile_directory()}}"
 
-# Authorize the agent VM's own jumphost key (made on the VM, public half only) on the jumphost, restricted to `docker system dial-stdio`: backup first, once, no other line touched (the jumphost option of the agent role must be deployed)
-vm-jumphost-authorize name:
+# Authorize one of the agent VM's own jumphost keys (made on the VM, public half only) on the jumphost: kind docker (default) restricts it to `docker system dial-stdio` (the Docker context), kind shell is a plain login (`ssh jumphost_server` on the VM); backup first, once, no other line touched (the jumphost option of the agent role must be deployed)
+vm-jumphost-authorize name kind="docker":
   #!/usr/bin/env bash
   set -euo pipefail
-  bash "{{infra_dir}}/vm-jumphost-authorize.sh" {{quote(name)}} "{{justfile_directory()}}"
+  bash "{{infra_dir}}/vm-jumphost-authorize.sh" {{quote(name)}} "{{justfile_directory()}}" {{quote(kind)}}
 
 # Sync the Hindsight URL and key (this VM's entry in the vault map VM_HINDSIGHT) and the Mac's skills library to the agent user of a VM (role agent); vm-deploy runs it after an agent deploy
 vm-sync name:

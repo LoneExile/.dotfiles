@@ -157,12 +157,10 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           sshEnabled = u.programs.ssh.enable or false;
           sshDefaultConfig = u.programs.ssh.enableDefaultConfig or null;
           sshBlocks = builtins.attrNames (u.programs.ssh.matchBlocks or { });
-          sshJumphost =
-            if (u.programs.ssh.matchBlocks or { }) ? jumphost_server
-            then let e = u.programs.ssh.matchBlocks.jumphost_server; b = e.data or e; in {
-              inherit (b) hostname user identityFile identitiesOnly userKnownHostsFile extraOptions;
-            }
-            else null;
+          # every ssh entry of the user, by its Host name (the DAG entries of Home Manager hold the block in .data)
+          sshEntries = builtins.mapAttrs (_: e: let b = e.data or e; in {
+            inherit (b) hostname user identityFile identitiesOnly userKnownHostsFile extraOptions;
+          }) (u.programs.ssh.matchBlocks or { });
           knownHosts = if u.home.file ? ".ssh/known_hosts.d/jumphost_server" then u.home.file.".ssh/known_hosts.d/jumphost_server".text else null;
           lazydockerWrapped = builtins.any (p: (p.pname or "") == "lazydocker" && (p.wrapped or false)) u.home.packages;
           dockerStart = if u.home.activation ? dockerRootlessStart then { after = u.home.activation.dockerRootlessStart.after; data = u.home.activation.dockerRootlessStart.data; } else null;
@@ -303,21 +301,22 @@ check "agent with the zsh option off: ~/.zshrc names none of the Mac's files or 
 check "agent: Home Manager starts the rootless Docker unit after reloadSystemd (a NixOS switch loads a new user unit but does not start it), with the systemctl of the store" '.agent.userSync.dockerStart | (.after == ["reloadSystemd"]) and (.data | (contains("start_user_unit()")) and test("\nstart_user_unit /nix/store/[a-z0-9]{32}-systemd-[0-9.]+/bin/systemctl docker\\.service\n"))'
 check "agent with the Docker option off: no such start step" '.dockerOff.userSync.dockerStart == null'
 
-# Docker contexts (no DOCKER_HOST): `rootless` is the local socket and the current context, `jumphost` is ssh://<alias>, made once by an activation step.
+# Docker contexts (no DOCKER_HOST): `rootless` is the local socket and the current context, `jumphost` is ssh://jumphost_docker, made once by an activation step.
 check "agent: the context rootless (the user's runtime socket) is made current, with the docker CLI of the daemon's package, after writeBoundary" '.agent.userSync.dockerContexts | (.after == ["writeBoundary"]) and (.data | (contains("ensure_docker_context()")) and test("\nensure_docker_context /nix/store/[a-z0-9]{32}-docker-29\\.[0-9.]+/bin/docker rootless \"unix:///run/user/\\$\\(id -u\\)/docker\\.sock\" current\n"))'
-check "agent: the context jumphost is ssh://jumphost_server (the alias of home/ssh/jumphost.nix), not made current" '.agent.userSync.dockerContexts.data | test("\nensure_docker_context /nix/store/[a-z0-9]{32}-docker-29\\.[0-9.]+/bin/docker jumphost ssh://jumphost_server\n")' --argjson jh "$jh"
+check "agent: the context jumphost is ssh://jumphost_docker (the ssh entry of the restricted Docker key), not made current" '.agent.userSync.dockerContexts.data | test("\nensure_docker_context /nix/store/[a-z0-9]{32}-docker-29\\.[0-9.]+/bin/docker jumphost ssh://jumphost_docker\n")'
 check "agent with the Docker option off: no Docker contexts" '.dockerOff.userSync.dockerContexts == null'
 check "agent with the jumphost option off: the context rootless stays, the context jumphost goes" '.jumphostOff.userSync.dockerContexts.data | (contains(" rootless ")) and (contains("jumphost") | not)'
 check "agent: the jumphost needs Docker (an assertion refuses the jumphost without it), and no assertion fails otherwise" '(.agent.failedAssertions == []) and (.dockerOff.failedAssertions | length == 1) and (.dockerOff.failedAssertions[0] | contains("jumphost"))'
 
-# The jumphost piece: one ssh entry from the shared values, the VM's own key, a pinned host key, nothing of the Mac's `Host *` block.
-check "agent: the ssh entry of the jumphost has the shared HostName and User, only the key made on the VM (IdentitiesOnly), strict host key checking against one pinned file and no global known_hosts" '.agent.userSync.sshJumphost as $j | $j.hostname == $jh.hostname and $j.user == $jh.user and ($j.identityFile == ["~/.ssh/id_ed25519_jumphost"]) and $j.identitiesOnly and ($j.userKnownHostsFile == "~/.ssh/known_hosts.d/jumphost_server") and ($j.extraOptions.StrictHostKeyChecking == "yes") and ($j.extraOptions.GlobalKnownHostsFile == "/dev/null")' --argjson jh "$jh"
-check "agent: no other ssh entry, no Host * defaults of the Mac (no User root, no StrictHostKeyChecking no, no UseKeychain)" '.agent.userSync | .sshEnabled and (.sshDefaultConfig == false) and (.sshBlocks == ["jumphost_server"])'
+# The jumphost piece: two ssh entries from the shared values, each with one key of the VM's own, a pinned host key, nothing of the Mac's `Host *` block.
+check "agent: the ssh entries of the jumphost (jumphost_server: the shell key, the Mac's name; jumphost_docker: the Docker key) have the shared HostName and User, only their own key made on the VM (IdentitiesOnly), strict host key checking against one pinned file and no global known_hosts" '.agent.userSync.sshEntries as $e | ($e.jumphost_server.identityFile == ["~/.ssh/id_ed25519_jumphost_shell"]) and ($e.jumphost_docker.identityFile == ["~/.ssh/id_ed25519_jumphost"]) and ([$e.jumphost_server, $e.jumphost_docker] | all(.hostname == $jh.hostname and .user == $jh.user and .identitiesOnly and (.userKnownHostsFile == "~/.ssh/known_hosts.d/jumphost_server") and (.extraOptions.StrictHostKeyChecking == "yes") and (.extraOptions.GlobalKnownHostsFile == "/dev/null")))' --argjson jh "$jh"
+check "agent: the shell entry is the Mac's name for the jumphost (home/ssh/jumphost.nix)" '.agent.userSync.sshEntries | has($jh.alias)' --argjson jh "$jh"
+check "agent: no other ssh entry, no Host * defaults of the Mac (no User root, no StrictHostKeyChecking no, no UseKeychain)" '.agent.userSync | .sshEnabled and (.sshDefaultConfig == false) and (.sshBlocks == ["jumphost_docker", "jumphost_server"])'
 check "agent: the pinned known_hosts file holds exactly the shared host key of the jumphost, under its address" '.agent.userSync.knownHosts == ($jh.hostname + " " + $jh.hostKey + "\n")' --argjson jh "$jh"
 check "agent: the shared host key is an ed25519 public key (not a private key)" '$jh.hostKey | test("^ssh-ed25519 AAAAC3NzaC1lZDI1NTE5[A-Za-z0-9+/]{48}$")' --argjson jh "$jh"
-check "agent: the VM makes its own jumphost key once (ensure_ssh_key, ed25519, never replaced) after writeBoundary and before the links of Home Manager, with the ssh-keygen of the store" '.agent.userSync.jumphostKey | (.after == ["writeBoundary"]) and (.before == ["linkGeneration"]) and (.data | (contains("ensure_ssh_key()")) and test("\nensure_ssh_key /nix/store/[a-z0-9]{32}-openssh-[^/]+/bin/ssh-keygen \"\\$HOME/\\.ssh/id_ed25519_jumphost\" docker-jumphost\n"))'
+check "agent: the VM makes its own two jumphost keys once (ensure_ssh_key, ed25519, never replaced: the Docker key and the shell key) after writeBoundary and before the links of Home Manager, with the ssh-keygen of the store" '.agent.userSync.jumphostKey | (.after == ["writeBoundary"]) and (.before == ["linkGeneration"]) and (.data | (contains("ensure_ssh_key()")) and test("\nensure_ssh_key /nix/store/[a-z0-9]{32}-openssh-[^/]+/bin/ssh-keygen \"\\$HOME/\\.ssh/id_ed25519_jumphost\" docker-jumphost\n") and test("\nensure_ssh_key /nix/store/[a-z0-9]{32}-openssh-[^/]+/bin/ssh-keygen \"\\$HOME/\\.ssh/id_ed25519_jumphost_shell\" shell-jumphost\n"))'
 check "agent: lazydocker is the wrapper for ssh:// contexts" '.agent.userSync.lazydockerWrapped'
-check "agent with the jumphost option off: no ssh entry or known_hosts file, no key, plain lazydocker; Docker, the tools and podman stay" '.jumphostOff | (.userSync | (.sshJumphost == null) and (.knownHosts == null) and (.jumphostKey == null) and (.lazydockerWrapped | not) and (.sshBlocks == []) and (.tools == {"just": true, "lazygit": true, "lazydocker": true})) and .dockerRootless and .podman'
+check "agent with the jumphost option off: no ssh entry or known_hosts file, no key, plain lazydocker; Docker, the tools and podman stay" '.jumphostOff | (.userSync | (.sshEntries == {}) and (.knownHosts == null) and (.jumphostKey == null) and (.lazydockerWrapped | not) and (.sshBlocks == []) and (.tools == {"just": true, "lazygit": true, "lazydocker": true})) and .dockerRootless and .podman'
 check "agent with the Docker option off: the jumphost piece is refused by an assertion, never half-applied" '.dockerOff.failedAssertions | length == 1'
 check "clean: no jumphost, no ssh entry, no key, no Docker context (no Home Manager user at all), and no failing assertion" '.guest | (.userSync == null) and (.failedAssertions == [])'
 

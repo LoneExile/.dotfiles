@@ -59,7 +59,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Tern](#tern)
   - [Podman and zram](#podman-and-zram)
   - [Docker: rootless only, with Compose](#docker-rootless-only-with-compose)
-  - [Jumphost: its Docker as a context](#jumphost-its-docker-as-a-context)
+  - [Jumphost: a shell, and its Docker as a context](#jumphost-a-shell-and-its-docker-as-a-context)
   - [just, lazygit and lazydocker](#just-lazygit-and-lazydocker)
   - [bao, secretspec and the tunnel for the vault login](#bao-secretspec-and-the-tunnel-for-the-vault-login)
   - [SSL_CERT_FILE](#ssl_cert_file)
@@ -397,7 +397,7 @@ LAN, VPN or WARP, whatever your network needs:
 - The jumphost: TCP 22, through the Mac's ssh entry `jumphost_server` (`vm-jumphost-authorize`).
 - The public Hindsight URL: HTTPS (`vm-sync` checks `/health` with the VM's key before it writes anything).
 
-The VM itself needs outbound HTTPS (the Nix binary cache, GitHub, npm, the Hindsight URL) and, for the Docker context, TCP 22 to the jumphost. Each Proxmox node needs outbound HTTPS to `cloud.debian.org` (see [Proxmox side](#proxmox-side)).
+The VM itself needs outbound HTTPS (the Nix binary cache, GitHub, npm, the Hindsight URL) and, for the Docker context and the shell, TCP 22 to the jumphost. Each Proxmox node needs outbound HTTPS to `cloud.debian.org` (see [Proxmox side](#proxmox-side)).
 
 ### Before every commit that touches `infra/`
 
@@ -911,52 +911,64 @@ They use a Docker context, not `DOCKER_HOST`.
 
 A deploy never restarts a daemon that is running (`start` on an active unit does nothing, and NixOS does not restart user units). After a change of the Docker or rootlesskit package the old daemon keeps running until `systemctl --user restart docker` (which stops the containers) or the next boot, while the `docker` CLI is already the new one.
 
-### Jumphost: its Docker as a context
+### Jumphost: a shell, and its Docker as a context
 
 Option `dotfiles.agent.jumphost.enable`, on when the agent is. It needs `docker.enable` (an assertion says so).
 
-It gives the user a second Docker context, `jumphost` = `ssh://jumphost_server`. So `docker --context jumphost ps`, `docker context use jumphost` and lazydocker reach the Docker daemon of the jumphost. The local rootless daemon stays the default.
+It gives the user two things on the jumphost, each through its own key:
 
-#### Host values and the VM's ssh entry
+- a login shell: `ssh jumphost_server`, the same name as on the Mac;
+- a second Docker context, `jumphost` = `ssh://jumphost_docker`. So `docker --context jumphost ps`, `docker context use jumphost` and lazydocker reach the Docker daemon of the jumphost. The local rootless daemon stays the default.
+
+#### Host values and the VM's ssh entries
 
 - The host values (its name, address, user and ed25519 host key) are in `home/ssh/jumphost.nix`. It is one file that the Mac's ssh config (`home/default.nix`) and the VM's both read, so they cannot drift (the Mac's darwin derivation is unchanged by that refactor).
-- On the VM the ssh entry is only that host: the VM's own key (`~/.ssh/id_ed25519_jumphost`), `IdentitiesOnly`, `StrictHostKeyChecking yes` against one pinned file (`~/.ssh/known_hosts.d/jumphost_server`, the jumphost's public host key) and no global known_hosts.
+- On the VM there are two ssh entries for that one host, and no other entry:
+  - `jumphost_server` (the Mac's name for it) with the shell key `~/.ssh/id_ed25519_jumphost_shell`;
+  - `jumphost_docker` with the Docker key `~/.ssh/id_ed25519_jumphost`, used by the context.
+- Each entry has only its own key (`IdentitiesOnly`), `StrictHostKeyChecking yes` against one pinned file (`~/.ssh/known_hosts.d/jumphost_server`, the jumphost's public host key) and no global known_hosts.
+- Two keys, not one: sshd picks the `authorized_keys` line by the key, so one key cannot be both the restricted Docker line and a login.
 - None of the Mac's `Host *` defaults (`User root`, `StrictHostKeyChecking no`, `UseKeychain`) and none of the Mac's other keys or hosts are there.
 
-#### The key
+#### The keys
 
-- The key is made on the VM, once, by a Home Manager step before the links (`home/linux/ssh-key.sh`): ed25519, no passphrase, mode 600, with the comment `user@host docker-jumphost` built at run time.
-- Its private half never leaves the VM and is never printed, copied, or stored in the vault or the repo. An existing key is never replaced.
+- Both keys are made on the VM, once, by a Home Manager step before the links (`home/linux/ssh-key.sh`): ed25519, no passphrase, mode 600, with the comments `user@host docker-jumphost` and `user@host shell-jumphost` built at run time.
+- Their private halves never leave the VM and are never printed, copied, or stored in the vault or the repo. An existing key is never replaced.
 
-#### Authorizing the key
+#### Authorizing the keys
 
-One step on the Mac: `just vm-jumphost-authorize <vm>` (`infra/vm-jumphost-authorize.sh`).
+One step on the Mac per key: `just vm-jumphost-authorize <vm>` for the Docker key, `just vm-jumphost-authorize <vm> shell` for the shell key (`infra/vm-jumphost-authorize.sh`). A VM gets a shell only when you run the second.
 
 - It reads only the public half over ssh (a regular file, at most 2 KiB; the VM's host key must be pinned, like `vm-sync`).
-- It appends it to the jumphost's `~/.ssh/authorized_keys` as `restrict,command="docker system dial-stdio" ssh-ed25519 <key> <comment>`.
-- It makes a backup first (`authorized_keys.bak-<timestamp>`, mode 600), writes atomically, and works once: a second run changes nothing and makes no second backup. It touches no other line.
-- It refuses a VM name with odd characters, a key that is not ed25519, a link in place of `authorized_keys`, and a key that is already there with other options. A different comment does not count: such a line is already authorized and is left as it is.
+- It appends it to the jumphost's `~/.ssh/authorized_keys`:
+  - the Docker key as `restrict,command="docker system dial-stdio" ssh-ed25519 <key> <vm> docker-jumphost`;
+  - the shell key as `ssh-ed25519 <key> <vm> shell-jumphost`, with no options, like the Mac's own key.
+- The script on the jumphost writes those two forms and nothing else: any other line, a line with a line break, or a comment that does not end in the right purpose is refused.
+- It makes a backup first (`authorized_keys.bak-<timestamp>`), writes atomically, and works once: a second run changes nothing and makes no second backup. It touches no other line.
+- It refuses a VM name with odd characters, a kind other than `docker` or `shell`, a key that is not ed25519, a link in place of `authorized_keys`, and a key that is already there with other options (so a shell key that is already a restricted line stays restricted). A different comment does not count: such a line is already authorized and is left as it is.
 
-That key can only run the Docker API stream: no shell, no pty, no port forwarding, no sudo (`restrict`). The jumphost's `docker` group is root-equivalent there, so **what the user gets on the jumphost is its Docker API**. That is why the line is restricted and why the option is a piece.
+The Docker key can only run the Docker API stream: no shell, no pty, no port forwarding, no sudo (`restrict`). The shell key has all of that, as the jumphost's account. The jumphost's `docker` group is root-equivalent there, so either key gives the user that much power on the jumphost; the shell key also gives forwarding through it.
 
-#### Revoking the key
+#### Revoking a key
 
-- Delete every line of the jumphost's `authorized_keys` that carries the VM's comment `<vm> docker-jumphost`. The Mac builds that comment from the VM's name and never takes the comment that the VM wrote, so a VM cannot choose the text that names its line.
-- There can be more than one line. A reinstalled VM makes a new key, and the script appends it next to the old one and never removes a line, so every old key stays valid until its line is gone. The comment is the same on all of them, so tell them apart by fingerprint, with the steps under [Reinstall](#reinstall).
-- The key file on the VM can go too.
+- The shell: delete every line of the jumphost's `authorized_keys` that carries the comment `<vm> shell-jumphost`. The context keeps working.
+- Docker: delete every line that carries `<vm> docker-jumphost`.
+- The Mac builds those comments from the VM's name and never takes the comment that the VM wrote, so a VM cannot choose the text that names its line.
+- There can be more than one line per comment. A reinstalled VM makes new keys, and the script appends them next to the old ones and never removes a line, so every old key stays valid until its line is gone. Tell them apart by fingerprint, with the steps under [Reinstall](#reinstall).
+- The key files on the VM can go too.
 
 #### lazydocker and the jumphost context
 
 lazydocker 0.24 reaches an `ssh://` context with `ssh -L` socket forwarding, which `restrict` forbids. So in the agent role `lazydocker` is a small wrapper (`home/linux/lazydocker-ssh.sh`):
 
-- for an `ssh://` context it starts a local bridge (`socat` listening on a mode-600 socket in `$XDG_RUNTIME_DIR`, each connection running `ssh jumphost_server docker system dial-stdio`), points lazydocker at it with `DOCKER_HOST`, and removes the bridge when lazydocker exits;
+- for an `ssh://` context it starts a local bridge (`socat` listening on a mode-600 socket in `$XDG_RUNTIME_DIR`, each connection running `ssh jumphost_docker docker system dial-stdio`), points lazydocker at it with `DOCKER_HOST`, and removes the bridge when lazydocker exits;
 - for any other context, or when `DOCKER_HOST` is already set, it runs lazydocker unchanged.
 
 #### Turning the jumphost piece off
 
-- `dotfiles.agent.jumphost.enable = false` removes the ssh entry, the pinned file, the key step, the context step and the wrapper.
-- The key file and the contexts already made stay in the home (like the rest of `/home/lex`), and the authorized line stays on the jumphost until you remove it.
-- The agent-to-clean flip leaves the key and the contexts in the home and never touches the jumphost.
+- `dotfiles.agent.jumphost.enable = false` removes both ssh entries, the pinned file, the key step, the context step and the wrapper.
+- The key files and the contexts already made stay in the home (like the rest of `/home/lex`), and the authorized lines stay on the jumphost until you remove them.
+- The agent-to-clean flip leaves the keys and the contexts in the home and never touches the jumphost.
 
 ### just, lazygit and lazydocker
 
@@ -1551,9 +1563,9 @@ Run `ssh root@<ipv4> true`. The VM's console has no login, so what you check is 
 
 #### Jumphost: remove the old key's line
 
-- `just vm-jumphost-authorize <name>` appends the new key's line next to the old one (both carry the comment `<name> docker-jumphost`) and never removes a line. So the old key stays valid until you delete its line.
+- `just vm-jumphost-authorize <name>` (and `… <name> shell`) appends the new key's line next to the old one (both carry the comment `<name> docker-jumphost`, or `<name> shell-jumphost`) and never removes a line. So the old key stays valid until you delete its line. Do it for each key that the old VM had authorized.
 - The authorize script prints the new key's fingerprint.
-- List the fingerprints on the jumphost, then delete the old line by its fingerprint with the script below. Without the old VM, the old key is the other line with the comment `<name> docker-jumphost`.
+- List the fingerprints on the jumphost, then delete the old line by its fingerprint with the script below. Without the old VM, the old key is the other line with the same comment.
 - The removal script backs the file up first (`authorized_keys.bak-<timestamp>`), deletes exactly one line, and stops without a change when the fingerprint matches no line or several. Never give it the new fingerprint.
 
 ```bash

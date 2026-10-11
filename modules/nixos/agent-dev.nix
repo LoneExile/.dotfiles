@@ -24,8 +24,9 @@
 #   - rootless Docker with Compose (option `dotfiles.agent.docker.enable`): the daemon is a user service of lex, there is no
 #     rootful daemon, no docker group and no /var/run/docker.sock (that group would be root on the machine); the docker
 #     context `rootless` points at its socket (DOCKER_HOST is not exported: it would override contexts). Rootless podman stays beside it.
-#   - the jumphost (option `dotfiles.agent.jumphost.enable`): the Docker context `jumphost` = ssh://jumphost_server for lex, with an ssh key made on the VM
-#     that `just vm-jumphost-authorize` restricts, on the jumphost, to `docker system dial-stdio`; lazydocker reaches it through a local bridge.
+#   - the jumphost (option `dotfiles.agent.jumphost.enable`): two ssh keys made on the VM for lex, each authorized on the jumphost by `just vm-jumphost-authorize`:
+#     the Docker key (ssh entry jumphost_docker, restricted to `docker system dial-stdio`) behind the Docker context `jumphost`, which lazydocker reaches
+#     through a local bridge, and the shell key (ssh entry jumphost_server, the Mac's name) for a login shell.
 #   - just, lazygit and lazydocker as packages of lex (option `dotfiles.agent.tools.enable`).
 #   - bao (OpenBao's CLI) and secretspec as packages of lex (option `dotfiles.agent.vault.enable`): for a vault that a repo on the VM (the UnitLLM repo) logs in to with
 #     `just vault-login`. Only the two programs: no token, no config, no login, no other infra tool. The browser step of that login runs on the Mac, through
@@ -89,7 +90,7 @@ in {
     vault.enable = piece "bao (OpenBao's CLI) and secretspec, as packages of the user, for a repo on the VM that logs in to a vault with `just vault-login`: no token, config or login is set up (its OIDC redirect is port 8250 of the Mac: `just vm-vault-tunnel`)";
     caBundle.enable = piece "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt for the user, in every zsh and in the user manager's environment: mise's prebuilt Python finds no CA bundle on NixOS and fails every HTTPS request with CERTIFICATE_VERIFY_FAILED";
     zsh.enable = piece "the Mac's aliases, options, keybindings and zsh plugins (nixpkgs) in the interactive zsh of the user, with fzf, and one cached compinit";
-    jumphost.enable = piece "the jumphost's Docker daemon as the Docker context `jumphost` (ssh://jumphost_server) for the user: an ssh key made on the VM (restricted on the jumphost to `docker system dial-stdio` by `just vm-jumphost-authorize`), a strict ssh entry with a pinned host key, and lazydocker through a local bridge";
+    jumphost.enable = piece "the jumphost for the user: its Docker daemon as the Docker context `jumphost` (ssh://jumphost_docker, a key made on the VM that `just vm-jumphost-authorize <vm>` restricts on the jumphost to `docker system dial-stdio`), a login shell as `ssh jumphost_server` (a second key made on the VM, authorized by `just vm-jumphost-authorize <vm> shell`), strict ssh entries with a pinned host key, and lazydocker through a local bridge";
     browser = {
       enable = piece "headless Chromium for the chrome-devtools-axi CLI and omp's chrome-devtools MCP server: a link at /opt/google/chrome/chrome (where chrome-devtools-mcp looks for Chrome) to chromium of nixpkgs, started by those tools on demand (no service, no debug port) with its sandbox on, and the idle timeout of the CLI in the user's zsh environment";
       package = lib.mkOption {

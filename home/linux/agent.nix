@@ -80,7 +80,12 @@
 
   # The jumphost's host values, one source with the Mac (home/default.nix): home/ssh/jumphost.nix.
   jumphost = import ../ssh/jumphost.nix;
-  jumphostKeyFile = "~/.ssh/id_ed25519_jumphost";
+  # Two keys, both made on this VM, each with its own ssh entry: the shell key for <alias> (the Mac's name, so `ssh jumphost_server`
+  # is a login shell on both machines) and the Docker key for jumphostDockerAlias, the entry of the Docker context, whose line on the
+  # jumphost is restricted to `docker system dial-stdio`.
+  jumphostShellKeyFile = "~/.ssh/id_ed25519_jumphost_shell";
+  jumphostDockerKeyFile = "~/.ssh/id_ed25519_jumphost";
+  jumphostDockerAlias = "jumphost_docker";
 
   # lazydocker for an ssh:// Docker context: the wrapper of home/linux/lazydocker-ssh.sh in front of the real binary (see its header
   # for why lazydocker cannot use the ssh:// context itself with the restricted key).
@@ -328,25 +333,24 @@ in {
 
       # The local daemon is the Docker context `rootless`, current when Home Manager creates it: DOCKER_HOST is not exported, because
       # while it is set `docker context use`, DOCKER_CONTEXT and lazydocker's context lookup are ignored (measured). A context that
-      # the user switched to stays current (docker-contexts.sh). With the jumphost piece, the context `jumphost` is ssh://<alias>.
+      # the user switched to stays current (docker-contexts.sh). With the jumphost piece, the context `jumphost` is ssh://<docker alias>.
       home.activation.dockerContexts = lib.hm.dag.entryAfter ["writeBoundary"] ''
         ${builtins.readFile ./docker-contexts.sh}
         ensure_docker_context ${cfg.docker.package}/bin/docker rootless "unix:///run/user/$(id -u)/docker.sock" current
-        ${lib.optionalString cfg.jumphost.enable "ensure_docker_context ${cfg.docker.package}/bin/docker jumphost ssh://${jumphost.alias}"}
+        ${lib.optionalString cfg.jumphost.enable "ensure_docker_context ${cfg.docker.package}/bin/docker jumphost ssh://${jumphostDockerAlias}"}
       '';
     })
 
     (lib.mkIf cfg.jumphost.enable {
-      # ssh for the jumphost, and nothing else: one entry (HostName and User from home/ssh/jumphost.nix, shared with the Mac, whose
-      # `Host *` block, User root, StrictHostKeyChecking no and UseKeychain are not here), the key that is made on this VM (below),
-      # only that key (IdentitiesOnly), strict host key checking against one pinned ed25519 key and no other known_hosts file.
-      # The pinned key is the jumphost's PUBLIC host key, which is fine in the repo.
-      programs.ssh = {
-        enable = true;
-        enableDefaultConfig = false;
-        matchBlocks.${jumphost.alias} = {
+      # ssh for the jumphost, and nothing else: two entries for the one host (HostName and User from home/ssh/jumphost.nix, shared
+      # with the Mac, whose `Host *` block, User root, StrictHostKeyChecking no and UseKeychain are not here), each with one key made
+      # on this VM (below) and only that key (IdentitiesOnly), strict host key checking against one pinned ed25519 key and no other
+      # known_hosts file. <alias> is the login shell; jumphostDockerAlias is the Docker stream, which sshd picks by the key: the same
+      # key cannot have both lines on the jumphost. The pinned key is the jumphost's PUBLIC host key, which is fine in the repo.
+      programs.ssh = let
+        entry = key: {
           inherit (jumphost) hostname user;
-          identityFile = [jumphostKeyFile];
+          identityFile = [key];
           identitiesOnly = true;
           userKnownHostsFile = "~/.ssh/known_hosts.d/${jumphost.alias}";
           extraOptions = {
@@ -354,15 +358,24 @@ in {
             GlobalKnownHostsFile = "/dev/null";
           };
         };
+      in {
+        enable = true;
+        enableDefaultConfig = false;
+        matchBlocks = {
+          ${jumphost.alias} = entry jumphostShellKeyFile;
+          ${jumphostDockerAlias} = entry jumphostDockerKeyFile;
+        };
       };
       home.file.".ssh/known_hosts.d/${jumphost.alias}".text = "${jumphost.hostname} ${jumphost.hostKey}\n";
 
-      # The user's own key for it, made here, once, and never replaced: its private half never leaves the VM (ssh-key.sh). Before
-      # the links of Home Manager, so that a missing ~/.ssh is made with mode 700. `just vm-jumphost-authorize <vm>` (on the Mac) reads
-      # the public half and restricts it on the jumphost to `docker system dial-stdio`. The context `jumphost` is made by dockerContexts.
+      # The user's own keys for it, made here, once, and never replaced: their private halves never leave the VM (ssh-key.sh). Before
+      # the links of Home Manager, so that a missing ~/.ssh is made with mode 700. `just vm-jumphost-authorize <vm> [docker|shell]` (on
+      # the Mac) reads a public half and authorizes it on the jumphost: the Docker key restricted to `docker system dial-stdio`, the
+      # shell key as a plain login. The context `jumphost` is made by dockerContexts.
       home.activation.jumphostKey = lib.hm.dag.entryBetween ["linkGeneration"] ["writeBoundary"] ''
         ${builtins.readFile ./ssh-key.sh}
         ensure_ssh_key ${pkgs.openssh}/bin/ssh-keygen "$HOME/.ssh/id_ed25519_jumphost" docker-jumphost
+        ensure_ssh_key ${pkgs.openssh}/bin/ssh-keygen "$HOME/.ssh/id_ed25519_jumphost_shell" shell-jumphost
       '';
     })
 

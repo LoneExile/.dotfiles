@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Tests for infra/vm-jumphost-authorize.sh and infra/vm-jumphost-authorize-remote.sh: the Mac fetches the PUBLIC key that the agent VM made
-# for the jumphost and appends it, restricted to `docker system dial-stdio`, to the jumphost's authorized_keys: backup first, atomic,
-# once, and never touching another line. The `ssh` shim stands for both machines: the VM is a fixture file, the jumphost a directory (the
-# remote command runs here as its "user", HOME set to that directory). Fixture keys made here, RFC 5737 addresses, invented names.
+# Tests for infra/vm-jumphost-authorize.sh and infra/vm-jumphost-authorize-remote.sh: the Mac fetches a PUBLIC key that the agent VM made
+# for the jumphost and appends it to the jumphost's authorized_keys, the Docker key restricted to `docker system dial-stdio`, the shell
+# key as a plain login: backup first, atomic, once, and never touching another line. The `ssh` shim stands for both machines: the VM is
+# a fixture file, the jumphost a directory (the remote command runs here as its "user", HOME set to that directory). Fixture keys made
+# here, RFC 5737 addresses, invented names.
 set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 # shellcheck source=../home/secretspec/testlib.sh
@@ -17,14 +18,17 @@ REAL_KEYGEN=$(command -v ssh-keygen)
 SCRIPT=$ROOT/infra/vm-jumphost-authorize.sh
 VMS='{"testvm-alpha":{"node":"n1","vmid":901,"role":"agent"},"testvm-clean":{"node":"n1","vmid":902}}'
 
-# world [VM-PUB-FILE-CONTENT]: shims in $T/bin, a jumphost home in $T/jh with one authorized key, a VM public key.
+# world [VM-PUB-FILE-CONTENT]: shims in $T/bin, a jumphost home in $T/jh with one authorized key, the VM's two public keys.
 world() {
   mkdir -p "$T/bin" "$T/store" "$T/jh/.ssh" "$T/vmhome/.ssh"
   printf '%s' "$VMS" >"$T/store/TF_VAR_vms"
   "$REAL_KEYGEN" -q -t ed25519 -N '' -C 'lex@testvm docker-jumphost' -f "$T/vmkey"
+  "$REAL_KEYGEN" -q -t ed25519 -N '' -C 'lex@testvm shell-jumphost' -f "$T/vmshellkey"
   "$REAL_KEYGEN" -q -t ed25519 -N '' -C unit-cloud -f "$T/oldkey"
   cp "$T/vmkey.pub" "$T/vm.pub"
+  cp "$T/vmshellkey.pub" "$T/vmshell.pub"
   ln -s "$T/vm.pub" "$T/vmhome/.ssh/id_ed25519_jumphost.pub"
+  ln -s "$T/vmshell.pub" "$T/vmhome/.ssh/id_ed25519_jumphost_shell.pub"
   # the one key that the jumphost has today, no trailing newline question: written as it is on a real host (newline-terminated)
   cp "$T/oldkey.pub" "$T/jh/.ssh/authorized_keys"
   chmod 600 "$T/jh/.ssh/authorized_keys"
@@ -59,7 +63,7 @@ case "$host" in
           changed) echo "WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!" >&2; exit 255 ;;
         esac
         exit 0 ;;
-      *id_ed25519_jumphost.pub*) cd "$STUB_VM_HOME" && HOME="$STUB_VM_HOME" exec bash -c "$*" ;;
+      *id_ed25519_jumphost.pub* | *id_ed25519_jumphost_shell.pub*) cd "$STUB_VM_HOME" && HOME="$STUB_VM_HOME" exec bash -c "$*" ;;
       *) exit 0 ;;
     esac ;;
   jumphost_server) cd "$STUB_JH_HOME" && HOME="$STUB_JH_HOME" exec bash -c "$*" ;;
@@ -70,7 +74,8 @@ EOF
   : >"$T/sshlog"
   export STUB_DIR="$T/store" STUB_SSHLOG="$T/sshlog" STUB_VM_HOME="$T/vmhome" STUB_JH_HOME="$T/jh" PATH="$T/bin:$PATH"
 }
-run() { bash "$SCRIPT" "${1:-testvm-alpha}" "$ROOT" >"$T/out" 2>"$T/err"; echo $?; }
+# run [NAME] [KIND]: the script as the recipe calls it (no KIND: as `just vm-jumphost-authorize <vm>` without one)
+run() { bash "$SCRIPT" "${1:-testvm-alpha}" "$ROOT" ${2:+"$2"} >"$T/out" 2>"$T/err"; echo $?; }
 AK() { echo "$T/jh/.ssh/authorized_keys"; }
 jh_calls() { grep -c ' jumphost_server ' "$T/sshlog"; }
 backups() { find "$T/jh/.ssh" -name 'authorized_keys.bak-*' | wc -l | tr -d ' '; }
@@ -153,16 +158,77 @@ test_the_same_restricted_key_with_another_comment_is_already_authorized_and_chan
   assert_has "says so" "$T/out" "already authorized"
 }
 
-test_the_remote_script_writes_nothing_but_the_restricted_form_of_the_key() {
+test_the_remote_script_writes_nothing_but_the_two_forms_that_the_mac_builds() {
   world
   local blob b64
   blob=$(blob_of "$T/vmkey.pub")
-  for bad in "ssh-ed25519 $blob x" "command=\"/bin/sh\" ssh-ed25519 $blob x" "restrict,command=\"/bin/sh\" ssh-ed25519 $blob x" "restrict,command=\"docker system dial-stdio\" ssh-ed25519 $blob"; do
+  for bad in "ssh-ed25519 $blob x" "ssh-ed25519 $blob shell-jumphost" "ssh-ed25519 $blob testvm-alpha docker-jumphost" \
+    "command=\"/bin/sh\" ssh-ed25519 $blob testvm-alpha shell-jumphost" "no-pty ssh-ed25519 $blob testvm-alpha shell-jumphost" \
+    "restrict,command=\"/bin/sh\" ssh-ed25519 $blob testvm-alpha docker-jumphost" "restrict,command=\"docker system dial-stdio\" ssh-ed25519 $blob" \
+    "restrict,command=\"docker system dial-stdio\" ssh-ed25519 $blob testvm-alpha shell-jumphost" \
+    "$(printf 'ssh-ed25519 %s a\nssh-ed25519 %s testvm-alpha shell-jumphost' "$blob" "$blob")"; do
     b64=$(printf '%s' "$bad" | base64 | tr -d '\n')
-    assert_rc "refused: ${bad:0:40}" "$(cd "$T/jh" && HOME="$T/jh" bash "$ROOT/infra/vm-jumphost-authorize-remote.sh" "$b64" >/dev/null 2>&1; echo $?)" 2
-    assert_eq "authorized_keys unchanged: ${bad:0:40}" "$(sum "$T/ak.orig")" "$(sum "$(AK)")"
+    assert_rc "refused: ${bad:0:60}" "$(cd "$T/jh" && HOME="$T/jh" bash "$ROOT/infra/vm-jumphost-authorize-remote.sh" "$b64" >/dev/null 2>&1; echo $?)" 2
+    assert_eq "authorized_keys unchanged: ${bad:0:60}" "$(sum "$T/ak.orig")" "$(sum "$(AK)")"
   done
   assert_eq "no backup was made" 0 "$(backups)"
+}
+
+test_the_shell_kind_appends_the_shell_key_as_a_plain_login_named_by_the_mac() {
+  world
+  printf 'ssh-ed25519 %s lex@x" ; command="/bin/sh" $(id) end\n' "$(blob_of "$T/vmshellkey.pub")" >"$T/vmshell.pub"
+  assert_rc "run" "$(run testvm-alpha shell)" 0
+  assert_has "it read the shell key's public half" "$T/sshlog" "id_ed25519_jumphost_shell.pub"
+  assert_eq "two lines now" 2 "$(grep -c '' "$(AK)")"
+  assert_eq "the first line is the old one, byte for byte" "$(sed -n 1p "$T/ak.orig")" "$(sed -n 1p "$(AK)")"
+  assert_eq "the second line is the shell key, no options, with the comment made from the VM name" "ssh-ed25519 $(blob_of "$T/vmshellkey.pub") testvm-alpha shell-jumphost" "$(sed -n 2p "$(AK)")"
+  assert_eq "one backup" 1 "$(backups)"
+  assert_eq "authorized_keys mode 600" 600 "$(tl_mode "$(AK)")"
+  assert_has "says the fingerprint of the shell key" "$T/out" "$("$REAL_KEYGEN" -l -f "$T/vmshellkey.pub" | awk '{print $2}')"
+  assert_has "says what it grants" "$T/out" "login shell"
+  assert_rc "second run" "$(run testvm-alpha shell)" 0
+  assert_eq "still two lines" 2 "$(grep -c '' "$(AK)")"
+  assert_eq "still one backup" 1 "$(backups)"
+  assert_has "says so" "$T/out" "already authorized"
+}
+
+test_the_docker_and_the_shell_key_get_one_line_each_and_neither_changes_the_other() {
+  world
+  assert_rc "docker" "$(run testvm-alpha docker)" 0
+  local docker_line
+  docker_line=$(sed -n 2p "$(AK)")
+  assert_rc "shell" "$(run testvm-alpha shell)" 0
+  assert_eq "three lines" 3 "$(grep -c '' "$(AK)")"
+  assert_eq "the Docker line is still the restricted one, byte for byte" "$docker_line" "$(sed -n 2p "$(AK)")"
+  assert_eq "the shell line is the plain one" "ssh-ed25519 $(blob_of "$T/vmshellkey.pub") testvm-alpha shell-jumphost" "$(sed -n 3p "$(AK)")"
+  assert_eq "no kind is the Docker kind" "restrict,command=\"docker system dial-stdio\" ssh-ed25519 $(blob_of "$T/vmkey.pub") testvm-alpha docker-jumphost" "$docker_line"
+}
+
+test_a_shell_key_that_is_already_restricted_on_the_jumphost_is_left_restricted() {
+  world
+  # the VM's shell key file holds the Docker key (a link, or a key copied over): its restricted line must not gain a plain twin
+  cp "$T/vmkey.pub" "$T/vmshell.pub"
+  assert_rc "docker" "$(run testvm-alpha docker)" 0
+  cp "$(AK)" "$T/ak.orig"
+  assert_rc "shell" "$(run testvm-alpha shell)" 1
+  assert_eq "file unchanged" "$(sum "$T/ak.orig")" "$(sum "$(AK)")"
+  assert_has "says why" "$T/err" "other options"
+}
+
+test_an_unknown_kind_is_refused_before_anything_runs() {
+  world
+  local k
+  for k in root Shell 'shell;id' ''; do
+    : >"$T/sshlog"
+    if [ -z "$k" ]; then
+      assert_rc "refused: empty" "$(bash "$SCRIPT" testvm-alpha "$ROOT" '' >"$T/out" 2>"$T/err"; echo $?)" 1
+    else
+      assert_rc "refused: $k" "$(run testvm-alpha "$k")" 1
+    fi
+    assert_has "says why: $k" "$T/err" "docker or shell"
+    assert_eq "nothing was contacted: $k" 0 "$(wc -l <"$T/sshlog" | tr -d ' ')"
+  done
+  assert_rc "a fourth argument is a usage error" "$(bash "$SCRIPT" testvm-alpha "$ROOT" shell extra >/dev/null 2>&1; echo $?)" 2
 }
 
 test_a_link_in_place_of_authorized_keys_is_refused() {
