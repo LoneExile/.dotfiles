@@ -1,0 +1,6 @@
+schema = 1
+id = "scrollback-editor"
+name = "Scrollback Editor"
+version = "0.1.0"
+description = "Open scrollback in editor (open_scrollback) edits the pane's scrollback in nvim, or vim when there is no nvim, in a new tab."
+window = "window.luau"

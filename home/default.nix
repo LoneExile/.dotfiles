@@ -150,6 +150,10 @@ in {
       # "system_traffic_lights": false. macOS's own buttons are not in the page,
       # so the setting and the plugin only work together.
       "Library/Application Support/Tern/plugins/no-traffic-lights".source = ./tern/plugins/no-traffic-lights;
+      # Scrollback Editor (./tern/plugins/scrollback-editor): Open scrollback in
+      # editor (ctrl+a e) opens the pane's scrollback in nvim, or vim when the
+      # host has no nvim, in a new tab, in place of Tern's TextEdit.
+      "Library/Application Support/Tern/plugins/scrollback-editor".source = ./tern/plugins/scrollback-editor;
       # keymap is tmux with prefix ctrl+a, plus Herdr's pane/tab chords
       # (home/herdr/config.toml): hjkl focus, | / - splits, 1–9 select tabs.
       "Library/Keyboard\ Layouts/English.bundle" = {

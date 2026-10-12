@@ -32,6 +32,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Pin and bump](#pin-and-bump)
   - [Image paste is not this plugin's job](#image-paste-is-not-this-plugins-job)
 - [Tern plugin: no-traffic-lights](#tern-plugin-no-traffic-lights)
+- [Tern plugin: scrollback-editor](#tern-plugin-scrollback-editor)
 - [Proxmox VMs](#proxmox-vms)
   - [What lives where](#what-lives-where)
   - [Repo, vault and state](#repo-vault-and-state)
@@ -325,6 +326,16 @@ Removes the window's close, minimize and full screen buttons. Tern has no settin
 Either piece alone leaves the buttons. Without them, the menus still have File › Close, Window › Minimize and Zoom, and View › Enter Full Screen (macOS's menu roles, with their usual shortcuts unless a Tern keybind takes the chord). Turn `system_traffic_lights` back on, or remove the plugin, to get the buttons back.
 
 A running Tern keeps its settings in memory: after `just home`, run Reload settings (⌃A ⇧R, or the command palette) or restart Tern.
+
+## Tern plugin: scrollback-editor
+
+⌃A e (`open_scrollback`, Open scrollback in editor) opens the focused pane's scrollback in nvim, or in vim when the host has no nvim (the agent VMs have only vim). Tern has no vi copy mode, so this is the keyboard way to select and yank terminal output.
+
+- Tern's own command writes the scrollback to `$TMPDIR/tern-scrollback-<pid>-<pane>.txt` and opens it in the Mac's default text app (TextEdit), whatever `EDITOR` or `VISUAL` say (measured on Tern 0.7.3).
+- `home/tern/plugins/scrollback-editor` overrides it for terminal and agent panes. A new tab in the pane's session captures the whole scrollback with `tern capture <pane> --scrollback` into a `mktemp` file, opens it at its last line, and removes the file when the editor quits; the tab closes with it. Other pane kinds keep Tern's own command.
+- Home Manager links it into Tern's plugins folder as a store path; `tern plugin list` must show `scrollback-editor … ready`. After `just home`, run `tern plugin reload` (or restart Tern).
+- Measured in an isolated Tern window on the Mac: nvim opened with all 300 lines of a test command and the prompt, and `:q` closed the tab and removed the file. In a pane of an agent VM the new tab runs on the VM, where `tern capture` and vim exist; that path was not tried from a real window. If the capture fails, the tab says so and waits for Enter.
+- The new tab is titled by its command line (`f=$(mktemp`).
 
 ## Proxmox VMs
 
