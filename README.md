@@ -47,6 +47,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
 - [VM operations](#vm-operations)
   - [Add a VM](#add-a-vm)
   - [Resize a VM](#resize-a-vm)
+    - [Grow the disk](#grow-the-disk)
   - [Remove a VM](#remove-a-vm)
   - [Change a role's code](#change-a-roles-code)
   - [Bump the pinned Debian image](#bump-the-pinned-debian-image)
@@ -669,7 +670,33 @@ Notes:
 
 The provider reboots the VM during the apply (measured with `bpg/proxmox` 0.112.0: about 4 s, no pending change left). Running sessions and containers on the VM stop, and the VM then waits in the initrd, hence step 4.
 
-A larger `disk_gb` enlarges the virtual disk only (see [Disk encryption and unlock](#disk-encryption-and-unlock)).
+A larger `disk_gb` enlarges the virtual disk only. To make the root use it, see [Grow the disk](#grow-the-disk).
+
+#### Grow the disk
+
+`disk_gb` is the whole size in GB, not an increment, and it only grows: the provider refuses a smaller value. Measured with `bpg/proxmox` 0.112.0, 64 to 84 on two agent VMs at once: no reboot, no unlock, nothing stopped.
+
+1. Back up the state object first (see [Back up the state object](#back-up-the-state-object)).
+2. Set the new size, with the exported environment of [secretspec conventions](#secretspec-conventions):
+
+   ```bash
+   secretspec get TF_VAR_vms | jq -c '.["<name>"].disk_gb = <gb>' | secretspec set TF_VAR_vms
+   ```
+
+3. Run `just infra-plan`. It must show only `size = <old> -> <gb>` in that VM's `disk` block. Then run `just infra-apply`.
+   - The provider grows the disk through the Proxmox resize call while the VM runs (about 4 s). No reboot follows and no pending change is left.
+   - The VM's kernel logs `sda: detected capacity change` and `lsblk` shows the new size at once.
+4. Grow partition 3, the LUKS mapping and the ext4 root, on the running VM, as root:
+
+   ```bash
+   ssh root@<ipv4> 'sfdisk -d /dev/sda >/root/sda-before-grow.sfdisk && nix shell nixpkgs#cloud-utils -c growpart /dev/sda 3'
+   secretspec get VM_LUKS_KEYS | jq -je '.["<name>"]' | ssh root@<ipv4> 'cryptsetup resize cryptroot --key-file=- && resize2fs /dev/mapper/cryptroot && df -h /'
+   ```
+
+   - The first line keeps the old partition table on the VM. `growpart` is not installed: `nix shell` takes it from the VM's pinned nixpkgs. It keeps the start of the partition, moves the end to the end of the disk and moves the backup GPT header there. `growpart --dry-run /dev/sda 3` shows the new table without writing it.
+   - `cryptsetup resize` asks for the passphrase even for the open mapping (without one it fails with `Nothing to read on input`). The passphrase goes over stdin, without a newline (`jq -j`), as `vm-install` wrote it. It is never printed.
+   - `resize2fs` grows the mounted file system.
+   - The LUKS2 header gives the data segment the length `(whole device)`, so the next boot opens the whole partition with no other step.
 
 ### Remove a VM
 
@@ -1485,7 +1512,7 @@ After `vm-install`, a reboot, or a restart of the Proxmox host (`on_boot`), the 
 
 - LUKS2 derives the key with Argon2id, and cryptsetup peaked at 1 GiB of memory at unlock (measured on a 4096 MB VM). Keep `memory_mb` at 2048 or more, as the installer already needs (see [Add a VM](#add-a-vm)).
 - A larger `disk_gb` later enlarges the virtual disk only: NixOS runs no growpart or resizefs (there is no cloud-init), and the root is a LUKS partition anyway.
-- The manual way is `growpart /dev/sda 3`, `cryptsetup resize cryptroot` and `resize2fs /dev/mapper/cryptroot` on the VM. It was not exercised.
+- Growing the partition, the LUKS mapping and the file system works on the running VM: see [Grow the disk](#grow-the-disk) (measured).
 
 ### Limits of the encryption
 
