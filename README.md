@@ -61,7 +61,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Podman and zram](#podman-and-zram)
   - [Docker: rootless only, with Compose](#docker-rootless-only-with-compose)
   - [Jumphost: a shell, and its Docker as a context](#jumphost-a-shell-and-its-docker-as-a-context)
-  - [just, lazygit and lazydocker](#just-lazygit-and-lazydocker)
+  - [just, lazygit, lazydocker, tokei and btop](#just-lazygit-lazydocker-tokei-and-btop)
   - [bao, secretspec and the tunnel for the vault login](#bao-secretspec-and-the-tunnel-for-the-vault-login)
   - [SSL_CERT_FILE](#ssl_cert_file)
   - [Interactive zsh](#interactive-zsh)
@@ -751,7 +751,7 @@ What the agent role gives the VM:
 - A login user outside `wheel` with no sudo (root still logs in by key), zsh, and `linger` so that its user services start at boot.
 - Home Manager (`home/linux/agent.nix`, not the Mac's `home/default.nix`): zsh, starship, git with the Mac's identity, direnv with nix-direnv, mise.
 - `programs.nix-ld`, so that glibc programs that were not built for NixOS run (mise's runtimes, omp, Tern).
-- omp, `gh`, rootless podman and rootless Docker, `just`, `lazygit`, `lazydocker`, `bao`, `secretspec`, a headless Chromium behind `/opt/google/chrome/chrome` for the browser tools, zram swap, `curl`, `gcc` and `gnumake`.
+- omp, `gh`, rootless podman and rootless Docker, `just`, `lazygit`, `lazydocker`, `tokei`, `btop`, `bao`, `secretspec`, a headless Chromium behind `/opt/google/chrome/chrome` for the browser tools, zram swap, `curl`, `gcc` and `gnumake`.
 - zsh with the Mac's aliases, options, keybindings and plugins.
 
 The Home Manager input is `home-manager-nixos` (release-25.11, following `nixpkgs-nixos`). The `home-manager` input is master and does not evaluate against nixos-25.11 (it needs nixpkgs-unstable's `lib/services/lib.nix`).
@@ -983,13 +983,13 @@ lazydocker 0.24 reaches an `ssh://` context with `ssh -L` socket forwarding, whi
 - The key files and the contexts already made stay in the home (like the rest of `/home/lex`), and the authorized lines stay on the jumphost until you remove them.
 - The agent-to-clean flip leaves the keys and the contexts in the home and never touches the jumphost.
 
-### just, lazygit and lazydocker
+### just, lazygit, lazydocker, tokei and btop
 
 Option `dotfiles.agent.tools.enable`, on when the agent is.
 
-- They are packages of the user (`/etc/profiles/per-user/lex/bin`, so on the `PATH` of every login, Tern and `zsh -c` shell), from nixos-25.11: `just` 1.43.1, `lazygit` 0.56.0, `lazydocker` 0.24.2. Unstable has 1.58.0, 0.65.1 and 0.25.2; nothing in 25.11 is broken, so it is not used.
-- Their config (`~/.config/lazygit`, `~/.config/lazydocker`) is theirs: nothing manages it, and the first run of lazydocker writes its own.
-- The Mac's alias `ld` (lazydocker) and function `lg` (lazygit that follows the directory change on exit) find their tools on the VM.
+- They are packages of the user (`/etc/profiles/per-user/lex/bin`, so on the `PATH` of every login, Tern and `zsh -c` shell), from nixos-25.11: `just` 1.43.1, `lazygit` 0.56.0, `lazydocker` 0.24.2, `tokei` 13.0.0, `btop` 1.4.5. Unstable has 1.58.0, 0.65.1 and 0.25.2 for the first three; nothing in 25.11 is broken, so it is not used.
+- Their config (`~/.config/lazygit`, `~/.config/lazydocker`, `~/.config/btop`) is theirs: nothing manages it, and the first run of lazydocker and btop writes its own. The Mac's `home/btop/btop.conf` is not put on the VM.
+- The Mac's alias `ld` (lazydocker), alias `top` (btop) and function `lg` (lazygit that follows the directory change on exit) find their tools on the VM.
 - Off: the packages go, nothing else.
 
 ### bao, secretspec and the tunnel for the vault login
@@ -1068,7 +1068,7 @@ Measured.
 #### Left out on purpose
 
 - `home/zsh/zshrc` itself: it is the Mac's (zap installed with `curl` at shell start, `getconf DARWIN_USER_TEMP_DIR`, `~/Library/pnpm`, kubectl, treehouse and aws completions, the todo files).
-- Atuin (a history sync server and a login, the Mac's `Ctrl-R` and its fzf picker), zoxide, eza (the Mac's `ls` integration), bat and tmux (the Mac's `programs.*` in `home/default.nix`, not in the shared files). None is installed on the VM; their aliases (`t`, `ta`, `top` for btop, `v` for nvim) stay defined and say `command not found`.
+- Atuin (a history sync server and a login, the Mac's `Ctrl-R` and its fzf picker), zoxide, eza (the Mac's `ls` integration), bat and tmux (the Mac's `programs.*` in `home/default.nix`, not in the shared files). None is installed on the VM; their aliases (`t`, `ta`, `v` for nvim) stay defined and say `command not found`. `top` runs btop, which the tools piece installs.
 - The Mac's `tmp.zsh` hook is a local file that is not in the repo.
 
 #### Turning the zsh setup off

@@ -131,7 +131,7 @@ in {
     };
     tern.enable = lib.mkEnableOption "the Tern remote service settings, and omp's opt-in to Tern's paste events in every zsh of the user (omp-image-paste.zsh)";
     gh.enable = lib.mkEnableOption "gh as git's credential helper for github.com (the user logs in with `gh auth login`)";
-    tools.enable = lib.mkEnableOption "just, lazygit and lazydocker as packages of the user";
+    tools.enable = lib.mkEnableOption "just, lazygit, lazydocker, tokei and btop as packages of the user";
     vault = {
       enable = lib.mkEnableOption "bao and secretspec as packages of the user";
       packages = lib.mkOption {
@@ -287,8 +287,8 @@ in {
 
     (lib.mkIf cfg.tools.enable {
       # On lex's PATH (/etc/profiles/per-user/lex/bin), which every login shell, Tern shell and `zsh -c` gets. No
-      # config file of any of them is managed: lazygit and lazydocker write their own under ~/.config. With the jumphost piece
-      # lazydocker is the wrapper for ssh:// contexts (lazydockerSsh above).
+      # config file of any of them is managed: lazygit, lazydocker and btop write their own under ~/.config (the Mac's
+      # btop.conf stays the Mac's). With the jumphost piece lazydocker is the wrapper for ssh:// contexts (lazydockerSsh above).
       home.packages = [
         pkgs.just
         pkgs.lazygit
@@ -297,6 +297,8 @@ in {
           then lazydockerSsh
           else pkgs.lazydocker
         )
+        pkgs.tokei
+        pkgs.btop
       ];
     })
 
