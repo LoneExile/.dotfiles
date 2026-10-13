@@ -27,7 +27,7 @@
 #   - the jumphost (option `dotfiles.agent.jumphost.enable`): two ssh keys made on the VM for lex, each authorized on the jumphost by `just vm-jumphost-authorize`:
 #     the Docker key (ssh entry jumphost_docker, restricted to `docker system dial-stdio`) behind the Docker context `jumphost`, which lazydocker reaches
 #     through a local bridge, and the shell key (ssh entry jumphost_server, the Mac's name) for a login shell.
-#   - just, lazygit, lazydocker, tokei and btop as packages of lex (option `dotfiles.agent.tools.enable`).
+#   - just, lazygit, lazydocker, tokei, btop, kubectl, k9s and zoxide as packages of lex, and zoxide's hook in lex's interactive zsh (option `dotfiles.agent.tools.enable`).
 #   - bao (OpenBao's CLI) and secretspec as packages of lex (option `dotfiles.agent.vault.enable`): for a vault that a repo on the VM (the UnitLLM repo) logs in to with
 #     `just vault-login`. Only the two programs: no token, no config, no login, no other infra tool. The browser step of that login runs on the Mac, through
 #     `just vm-vault-tunnel <name>` (infra/vm-vault-tunnel.sh).
@@ -86,7 +86,7 @@ in {
     mason.enable = piece "the Mason language servers of home/omp/mason-lsp.txt for omp's LSP tool, installed by a user service with a minimal Neovim (mason.nvim only; no Neovim config, no other plugin), and shellcheck for bash-language-server";
     podman.enable = piece "rootless podman";
     docker.enable = piece "rootless Docker with Compose: a user service of the user (no rootful daemon, no docker group, no /var/run/docker.sock), and the Docker context `rootless` (current) for its socket; DOCKER_HOST is not exported, so that contexts work";
-    tools.enable = piece "just, lazygit, lazydocker, tokei and btop, as packages of the user";
+    tools.enable = piece "just, lazygit, lazydocker, tokei, btop, kubectl, k9s and zoxide, as packages of the user, and zoxide's hook (z, zi) in the user's interactive zsh";
     vault.enable = piece "bao (OpenBao's CLI) and secretspec, as packages of the user, for a repo on the VM that logs in to a vault with `just vault-login`: no token, config or login is set up (its OIDC redirect is port 8250 of the Mac: `just vm-vault-tunnel`)";
     caBundle.enable = piece "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt for the user, in every zsh and in the user manager's environment: mise's prebuilt Python finds no CA bundle on NixOS and fails every HTTPS request with CERTIFICATE_VERIFY_FAILED";
     zsh.enable = piece "the Mac's aliases, options, keybindings and zsh plugins (nixpkgs) in the interactive zsh of the user, with fzf, and one cached compinit";

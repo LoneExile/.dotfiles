@@ -43,6 +43,10 @@ EOF
 _t_load+=(fzftabsource)
 _t_compdef_known_at_last_plugin=$+functions[compdef]
 EOF
+  cat >"$d/plug/zoxide.zsh" <<'EOF'
+_t_load+=(zoxide)
+_t_compdef_known_at_zoxide=$+functions[compdef]
+EOF
   printf '#compdef fixturecmd\n_fixturecmd() { :; }\n' >"$d/plug/site-functions/_fixturecmd"
   # the shims: every command that an alias of the Mac names, so that a call at load time is seen
   cmds=$(grep -E '^alias [^=]+=' "$ROOT/home/zsh/config/aliases.zsh" | sed -E "s/^alias [^=]+=[\"']?//" | awk '{print $1}' | tr -d "\"'" | sort -u)
@@ -61,6 +65,7 @@ EOF
       -e "s#/nix/store/[a-z0-9]{32}-zsh-fzf-tab-[0-9.]+/share/fzf-tab/fzf-tab\.plugin\.zsh#$d/plug/fzf-tab.zsh#" \
       -e "s#/nix/store/[a-z0-9]{32}-source/fzf-tab-source\.plugin\.zsh#$d/plug/fzf-tab-source.zsh#" \
       -e "s#/nix/store/[a-z0-9]{32}-zsh-completions-[0-9.]+/share/zsh/site-functions#$d/plug/site-functions#" \
+      -e "s#eval \"\\$\\(/nix/store/[a-z0-9]{32}-zoxide-[0-9.]+/bin/zoxide init zsh\\)\"#source $d/plug/zoxide.zsh#" \
       -e "s#eval \"\\$\\(/nix/store/[^ ]*/bin/(starship|mise|direnv) [^)]*\\)\"#true#" \
       -e "s#/home/lex#$d/home#g" \
       >"$d/zd/.zshrc"
@@ -120,15 +125,16 @@ plainrun() {
   shift
   env -i HOME="$d/home" ZDOTDIR="$d/zd" PATH="$d/shims:/usr/bin:/bin" TERM=xterm-256color __ETC_ZSHENV_SOURCED=1 __ETC_ZSHRC_SOURCED=1 __NIX_DARWIN_SET_ENVIRONMENT_DONE=1 __NIXOS_SET_ENVIRONMENT_DONE=1 zsh "$@" </dev/null 2>&1
 }
-RESULT='print -r -- "R load=${_t_load} aliasesfirst=${_t_aliases_first-0} compdefknown=${_t_compdef_known_at_last_plugin-?} editor=$EDITOR visual=$VISUAL fixturecmd=${_comps[fixturecmd]-none} gs=${aliases[gs]-none} ld=${aliases[ld]-none} home=$(bindkey "^[[H")"'
+RESULT='print -r -- "R load=${_t_load} aliasesfirst=${_t_aliases_first-0} compdefknown=${_t_compdef_known_at_last_plugin-?} editor=$EDITOR visual=$VISUAL fixturecmd=${_comps[fixturecmd]-none} gs=${aliases[gs]-none} ld=${aliases[ld]-none} home=$(bindkey "^[[H") zoxidecompdef=${_t_compdef_known_at_zoxide-?}"'
 
 test_a_real_terminal_loads_the_mac_files_then_the_plugins_then_compinit_once() {
   fixture "$T/a"
   local out
   out=$(ptyrun "$T/a" -i -c "$RESULT")
-  assert_has "the plugins loaded in the order of the Mac's zshrc" <(printf '%s\n' "$out") "R load=syntax autosuggest substring fzftab fzftabsource "
+  assert_has "the plugins loaded in the order of the Mac's zshrc, then zoxide's hook" <(printf '%s\n' "$out") "R load=syntax autosuggest substring fzftab fzftabsource zoxide "
   assert_has "the Mac's aliases were already there when the first plugin loaded" <(printf '%s\n' "$out") "aliasesfirst=1"
   assert_has "compinit had not run when the last plugin loaded" <(printf '%s\n' "$out") "compdefknown=0"
+  assert_has "compinit had run when zoxide's hook loaded (its init registers the completion of z only then)" <(printf '%s\n' "$out") "zoxidecompdef=1"
   assert_has "a completer of the zsh-completions fpath entry is registered in \$_comps (compinit ran after the fpath was extended)" <(printf '%s\n' "$out") "fixturecmd=_fixturecmd"
   assert_has "alias gs is the Mac's" <(printf '%s\n' "$out") "gs=git status"
   assert_has "alias ld is the Mac's" <(printf '%s\n' "$out") "ld=lazydocker"

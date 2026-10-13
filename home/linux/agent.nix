@@ -131,7 +131,7 @@ in {
     };
     tern.enable = lib.mkEnableOption "the Tern remote service settings, and omp's opt-in to Tern's paste events in every zsh of the user (omp-image-paste.zsh)";
     gh.enable = lib.mkEnableOption "gh as git's credential helper for github.com (the user logs in with `gh auth login`)";
-    tools.enable = lib.mkEnableOption "just, lazygit, lazydocker, tokei and btop as packages of the user";
+    tools.enable = lib.mkEnableOption "just, lazygit, lazydocker, tokei, btop, kubectl, k9s and zoxide as packages of the user, and zoxide's hook in the user's interactive zsh";
     vault = {
       enable = lib.mkEnableOption "bao and secretspec as packages of the user";
       packages = lib.mkOption {
@@ -292,8 +292,9 @@ in {
 
     (lib.mkIf cfg.tools.enable {
       # On lex's PATH (/etc/profiles/per-user/lex/bin), which every login shell, Tern shell and `zsh -c` gets. No
-      # config file of any of them is managed: lazygit, lazydocker and btop write their own under ~/.config (the Mac's
-      # btop.conf stays the Mac's). With the jumphost piece lazydocker is the wrapper for ssh:// contexts (lazydockerSsh above).
+      # config file of any of them is managed: lazygit, lazydocker, btop and k9s write their own under ~/.config (the Mac's
+      # btop.conf and k9s skin stay the Mac's), and kubectl reads a ~/.kube/config that the user brings. With the jumphost
+      # piece lazydocker is the wrapper for ssh:// contexts (lazydockerSsh above).
       home.packages = [
         pkgs.just
         pkgs.lazygit
@@ -304,7 +305,18 @@ in {
         )
         pkgs.tokei
         pkgs.btop
+        pkgs.kubectl
+        pkgs.k9s
+        pkgs.zoxide
       ];
+
+      # zoxide's hook (`z`, `zi`, and the directory database it keeps) runs after the zsh piece's compinit (order 1000):
+      # its init registers the completion of `z` only when compdef exists, and Home Manager's programs.zoxide puts it at
+      # order 851, before that compinit, so `z` would get no completion (measured). A shell without a terminal leaves at
+      # order 500 and never reaches it, as on the Mac.
+      programs.zsh.initContent = lib.mkOrder 1100 ''
+        eval "$(${lib.getExe pkgs.zoxide} init zsh)"
+      '';
     })
 
     (lib.mkIf cfg.vault.enable {
