@@ -288,6 +288,7 @@ Tern runs its tmux preset with prefix ⌃A (`keymap` and `keymap_prefix` in `hom
 - herdr chords with a Tern command: `h` `j` `k` `l` (`focus_pane:*`), `|` (`split_right`), `-` (`split_down`), `1`–`9` (`goto_tab:N`), `shift+x` (`close_tab`), `shift+n` (`new_session`), `shift+w` (`rename_session`), `shift+d` (`close_session`), `shift+s` (`preferences`), `shift+r` (`reload_config`), `e` (`open_scrollback`), `b` (`toggle_sidebar`), `tab` and `shift+tab` (`next_pane`, `previous_pane`), `q` (`quit`: herdr's detach, and Tern's panes live on in its daemon), `?` (`help`).
 - Chords that already match in the preset: `c`, `n`, `p`, `,`, `x`, `z`, `s` (the session switcher), `w` (Mission Control, the preset default).
 - herdr chords with no Tern command, left as the preset has them: `o` (herdr-plus projects; Tern's `next_pane`), `y`, the annotate chords (`a`, `shift+a`, `m`, `d`, `shift+o`), `shift+g` (new worktree), `shift+p` (rename pane), `r` (resize mode).
+- Plugin chords, free in both keymaps: `v` (`plugin.remote-open.render`, [Render in browser](#tern-plugin-remote-open)). herdr's own `v` default is not used here: `split_vertical` is on `|`.
 - The preset's digits are zero-based (⌃A 1 is the second tab), so the nine `goto_tab:N` entries stay: herdr's `1`–`9` are tabs 1–9. `0` is unbound.
 - A normal Preferences save keeps `keybinds`. The Keyboard page's "Restore all defaults" deletes the whole map (Tern 0.7.2). `just home` puts it back: the live file differs from the repo copy, so it is kept as `settings.json.dotfiles-backup` and the repo copy is installed. `just tern-capture` pulls Preferences changes into the repo the other way.
 - Tern does not reload `settings.json` when it changes on disk (measured on 0.7.2). After `just home`, run Reload settings in the command palette (or restart Tern). Until then the running Tern holds the old keybinds, and its next Preferences save writes them back over the file.
@@ -301,6 +302,7 @@ Tern runs its tmux preset with prefix ⌃A (`keymap` and `keymap_prefix` in `hom
 - an image (`png jpg jpeg gif webp`), as a `file://` link or a plain path: shown in a small viewer whose **Copy image** puts it on the Mac's clipboard and **Save to Downloads** copies it into `~/Downloads` (since 0.2.0);
 - a `localhost` link;
 - an OAuth sign-in URL whose `redirect_uri` is on localhost (this and the `localhost` link start an `ssh -L` forward; the OAuth one closes itself after ten minutes).
+- an HTML file open in a file block (since 0.3.0): ⌃A v, or **Remote Open: Render in browser** in the palette, shows it as a page in Tern's browser block and leaves the file block open for editing. A remote file is copied with `scp` first; a file on the Mac is served where it is. It shows the saved file: save first.
 
 ⌥-click leaves a link to Tern. The plugin needs `ssh` to the VM without a prompt and the VM's key in `known_hosts`.
 

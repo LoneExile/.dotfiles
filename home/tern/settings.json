@@ -46,7 +46,7 @@
   "code_font": "",
   "agent_command": "omp",
   "tabs": "Vertical",
-  "tabs_autohide": true,
+  "tabs_autohide": false,
   "system_title_bar": false,
   "system_traffic_lights": false,
   "pane_headers": "Never",
@@ -333,6 +333,7 @@
     "ctrl+a>shift+w": "rename_session",
     "ctrl+a>shift+x": "close_tab",
     "ctrl+a>tab": "next_pane",
+    "ctrl+a>v": "plugin.remote-open.render",
     "ctrl+a>|": "split_right"
   },
   "keymap": "tmux",

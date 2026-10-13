@@ -142,8 +142,8 @@ in {
       "Library/Application Support/Tern/plugins/remote-open".source = pkgs.fetchFromGitHub {
         owner = "LoneExile";
         repo = "tern-remote-open";
-        rev = "4905c61ca81fadb95c715967d0ccc6361ddf4701";
-        hash = "sha256-GC44al1peDNNZzyWz7IBceKuirzR2TPVVxS6zYPQosY=";
+        rev = "7800b6f55ff021d1cb378c45806e981885b52fc6";
+        hash = "sha256-oCcqL2hUwVU4ia3/PJO/sTtvx2WMYe7qsayzq5tISAU=";
       };
       # No Traffic Lights (./tern/plugins/no-traffic-lights): a style sheet that
       # hides the window buttons Tern draws when settings.json has
