@@ -855,7 +855,7 @@ This only changes the seed. Change `version` and `hash` together, then `just vm-
 
 - `tern remote setup <user>@<ipv4>`, run on the Mac after the role is deployed, downloads Tern (the VM does it itself) into `~/.local/share/tern`, links `~/.local/bin/tern`, writes the user service `~/.config/systemd/user/tern-remote.service` and starts it.
 - `tern remote doctor <user>@<ipv4>` checks it, and the Mac's host list (`~/Library/Application Support/Tern/hosts`) gains `<user>@<ipv4>`.
-- Tern's binary, its state in `~/.config/tern` and that unit are Tern's, not managed by `vm-deploy`. `tern remote update <user>@<ipv4>` updates the binary.
+- Tern's binary, its state in `~/.config/tern` and that unit are Tern's, not managed by `vm-deploy`. See [Update Tern on the VMs](#update-tern-on-the-vms).
 - The service serves QUIC on **UDP 8376** (measured with `ss`; the Tern service on the Mac listens on 8377 because it is told to). The firewall opens exactly that, only with `dotfiles.agent.tern.enable`.
 
 #### Direct LAN only: the drop-in
@@ -864,9 +864,21 @@ This only changes the seed. Change `version` and `hash` together, then `just vm-
 - Deploy before `tern remote setup`. A service that started without the drop-in connected to the iroh relay and published an endpoint id, and its first setup added the host to the Mac's list by endpoint id (`<user>@<endpoint id>`). After the drop-in and a restart, `tern remote setup` again adds `<user>@<ipv4>`; the endpoint-id line is then stale and can go from the hosts file.
 - Without a UDP path from the Mac to the VM (another network, no VPN) the Mac cannot reach it. Before the drop-in, setup fell back to iroh; with it, nothing does. Turning relay or iroh back on is a deliberate change that this module does not make.
 
+#### Update Tern on the VMs
+
+From the Mac, every host in its Tern list at once:
+
+```bash
+tern remote hosts | while read -r h _; do tern remote update "$h" </dev/null; done
+```
+
+- `tern remote update <user>@<ipv4>` does one host, as does Update in Tern's Settings → Hosts. The VM downloads the build with the Mac's Stencil account. The service starts again as the new build: its windows reconnect and the sessions carry on (measured 0.7.1 → 0.8.3 on a VM with five omp running: the session daemon and every omp kept their pids).
+- It needs the drop-in's `PATH`: a NixOS user unit gets only systemd's own `bin`, and the updater shells out to unpack the build. Without it every update failed with `Couldn't unpack the update: No such file or directory` (the VM's `journalctl --user -u tern-remote`), and `tern remote update` on the Mac said only `The host stopped answering: connection lost`.
+- `tern remote update` run on the VM itself (no host) asks for a Stencil sign-in by device code instead; the link from the Mac does not.
+
 #### Limits to know
 
-- The drop-in repeats Tern 0.6.0's own `ExecStart` (`~/.local/share/tern/build/tern remote serve --user --state-dir ~/.config/tern`) with the three flags added. If a `tern remote update` changes that command, change the drop-in too.
+- The drop-in repeats Tern 0.6.0's own `ExecStart` (`~/.local/share/tern/build/tern remote serve --user --state-dir ~/.config/tern`) with the three flags added; 0.8.3 still writes the same command. If a `tern remote update` changes that command, change the drop-in too.
 - A running service takes a changed drop-in only after `systemctl --user restart tern-remote.service` or a reboot. Check with `ps -u <user> -o args=` that its line holds `--no-iroh`.
 
 #### Image paste into omp on the VM

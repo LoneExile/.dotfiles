@@ -261,8 +261,13 @@ in {
       # --no-iroh, so it listens on UDP 8376 and nothing is announced to iroh.stencil.so or any
       # relay: the Mac reaches the VM on the LAN directly, or not at all. The drop-in is there
       # before the unit is, which is fine: systemd merges it when the unit appears.
+      # PATH: a NixOS user unit gets only systemd's own bin directory, and Tern's updater shells out to
+      # unpack a build, so an update over the link (the Mac's `tern remote update <host>`, or Update in
+      # Tern's Settings) failed with "Couldn't unpack the update: No such file or directory" (measured,
+      # Tern 0.7.2 and 0.8.2; zstd alone was not enough). The system profile, as on any other Linux, fixes it.
       xdg.configFile."systemd/user/tern-remote.service.d/10-direct-lan.conf".text = ''
         [Service]
+        Environment=PATH=/run/current-system/sw/bin
         ExecStart=
         ExecStart=%h/.local/share/tern/build/tern remote serve --user --state-dir %h/.config/tern --relay none --pkarr none --no-iroh
       '';
