@@ -25,13 +25,13 @@
       "enabledFeatures": null,
       "enabled": true
     },
-    "@loneexile/omp-superpowers": {
-      "version": "6.4.2-omp.4",
+    "omp-cursor-sdk": {
+      "version": "0.4.5",
       "enabledFeatures": null,
       "enabled": true
     },
-    "omp-cursor-sdk": {
-      "version": "0.4.5",
+    "@loneexile/omp-superpowers": {
+      "version": "7.0.0-omp.2",
       "enabledFeatures": null,
       "enabled": true
     }

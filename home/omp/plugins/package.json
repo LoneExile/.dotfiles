@@ -2,7 +2,7 @@
   "name": "omp-plugins",
   "private": true,
   "dependencies": {
-    "@loneexile/omp-superpowers": "npm:@loneexile/omp-superpowers@6.4.2-omp.4",
+    "@loneexile/omp-superpowers": "npm:@loneexile/omp-superpowers@7.0.0-omp.2",
     "context-mode": "^1.0.169",
     "omp-cursor-sdk": "npm:omp-cursor-sdk@0.4.5",
     "pi-harper-grammar": "npm:pi-harper-grammar",
