@@ -34,7 +34,7 @@ statusLine:
       showUnstaged: true
       showUntracked: true
 modelRoles:
-  slow: anthropic/claude-sonnet-5-5:max
+  slow: anthropic/claude-opus-5-5:max
   plan: anthropic/claude-sonnet-5-5:xhigh
   vision: xai-oauth/grok-4.7:medium
   smol: anthropic/claude-sonnet-5-5:low
@@ -44,14 +44,14 @@ modelRoles:
   task: anthropic/claude-sonnet-5-5:xhigh
   web: xai/grok-4.5
   image: xai/grok-imagine-image
-  default: anthropic/claude-sonnet-5-5:xhigh
+  default: xai-oauth/grok-4.7:xhigh
 task:
   agentModelOverrides:
-    sdd-implementer: cursor-sdk/grok-4.7@500k@slow:high
-    sdd-reviewer: cursor-sdk/grok-4.7@500k@slow:high
-    sdd-rereviewer: cursor-sdk/grok-4.7@500k@slow:low
-    sdd-escalation-implementer: cursor-sdk/grok-4.7@500k@slow:max
-    sdd-final-reviewer: cursor-sdk/grok-4.7@500k@slow:max
+    sdd-implementer: anthropic/claude-sonnet-5-5:xhigh
+    sdd-reviewer: anthropic/claude-sonnet-5-5:xhigh
+    sdd-rereviewer: anthropic/claude-sonnet-5-5:low
+    sdd-escalation-implementer: anthropic/claude-sonnet-5-5:max
+    sdd-final-reviewer: anthropic/claude-sonnet-5-5:max
 providers:
   streamIdleTimeoutSeconds: 300
   anthropic:
