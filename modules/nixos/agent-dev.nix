@@ -37,6 +37,7 @@
 #     the files of home/zsh/config as they are, the plugins from nixpkgs, one cached compinit; /etc/zshrc's own compinit is off then.
 #   - a headless browser for the browser tools (option `dotfiles.agent.browser.enable`): chromium of nixpkgs behind /opt/google/chrome/chrome, where chrome-devtools-mcp
 #     (the chrome-devtools-axi CLI, omp's chrome-devtools MCP server) looks for Chrome. They start it on demand; nothing runs while they do not; its sandbox stays on.
+#   - Blender under a headless Wayland compositor for the MCP for Blender addon (option `dotfiles.agent.blender.enable`): a user service on localhost:9876, and a blender entry merged into the VM's ~/.omp/agent/mcp.json. The Mac's file is not changed.
 # Every piece but the base has an option that follows `dotfiles.agent.enable`.
 inputs: {
   config,
@@ -107,6 +108,8 @@ in {
         description = "The browser that /opt/google/chrome/chrome points to: the link names the main program of the package (bin/chromium for the default).";
       };
     };
+
+    blender.enable = piece "Blender under a headless Wayland compositor with the MCP for Blender addon, so omp on the VM can create 3D objects: a user service on localhost:9876, and a blender entry added to the VM's ~/.omp/agent/mcp.json (the Mac's file is not changed)";
 
     sync = {
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
@@ -194,6 +197,7 @@ in {
             zsh.enable = cfg.zsh.enable;
             jumphost.enable = cfg.jumphost.enable;
             browser.enable = cfg.browser.enable;
+            blender.enable = cfg.blender.enable;
             sync = {
               inherit (cfg.sync) plugins hindsight;
               pluginPackages = [unstable.bun unstable.nodejs_24];
@@ -224,6 +228,10 @@ in {
         {
           assertion = !cfg.jumphost.enable || cfg.docker.enable;
           message = "dotfiles.agent.jumphost needs dotfiles.agent.docker.enable (its context is a Docker context)";
+        }
+        {
+          assertion = !cfg.blender.enable || cfg.omp.enable;
+          message = "dotfiles.agent.blender.enable needs dotfiles.agent.omp.enable (the MCP entry is written into ~/.omp/agent/mcp.json)";
         }
       ];
 

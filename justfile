@@ -203,6 +203,7 @@ test-infra:
   bash home/omp/mason-capture_test.sh
   bash home/linux/mason-lsp-install_test.sh
   bash home/linux/start-user-unit_test.sh
+  bash home/linux/blender-mcp_test.sh
   bash home/linux/seed-user-binary_test.sh
   bash home/linux/zshrc_test.sh
   bash home/linux/omp-image-paste_test.sh

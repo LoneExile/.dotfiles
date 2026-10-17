@@ -78,6 +78,22 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
       chromeWrappers = builtins.filter (n: builtins.match ".*[Cc]hrom.*" n != null) (builtins.attrNames cfg.security.wrappers);
       usernsSysctl = builtins.filter (k: builtins.match ".*(userns|user_namespaces|namespaces).*" k != null) (builtins.attrNames cfg.boot.kernel.sysctl);
       normalUserGroups = builtins.concatMap (n: cfg.users.users.${n}.extraGroups) (builtins.filter (n: cfg.users.users.${n}.isNormalUser) (builtins.attrNames cfg.users.users));
+      # The blender piece: a user service (headless cage + Blender, not blender -b) and an activation that
+      # merges a blender MCP entry into the VM copy of mcp.json. No firewall port.
+      blenderOption = cfg.dotfiles.agent.blender.enable or false;
+      blender = let
+        lexUser = if cfg ? home-manager && cfg.home-manager.users ? lex then cfg.home-manager.users.lex else null;
+        svc = if lexUser == null then null else lexUser.systemd.user.services.blender-mcp or null;
+        asText = v: if builtins.isList v then builtins.concatStringsSep " " v else v;
+      in if svc == null then null else {
+        execStart = asText svc.Service.ExecStart;
+        execStartPre = asText svc.Service.ExecStartPre;
+        environment = asText svc.Service.Environment;
+        restart = svc.Service.Restart;
+        wantedBy = svc.Install.WantedBy;
+        activation = lexUser.home.activation ? blenderMcp;
+        start = lexUser.home.activation ? blenderMcpStart;
+      };
       # What the browser piece must not touch, by value and not by name: all of it is compared with the same agent with the option off, so a rule, unit, wrapper, sysctl, group, package,
       # variable or sudo entry that the piece adds under any name shows up as a difference.
       confine = let
@@ -181,6 +197,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     zshOff = { dotfiles.agent.zsh.enable = false; };
     jumphostOff = { dotfiles.agent.jumphost.enable = false; };
     browserOff = { dotfiles.agent.browser.enable = false; };
+    blenderOff = { dotfiles.agent.blender.enable = false; };
     vaultOff = { dotfiles.agent.vault.enable = false; };
     caBundleOff = { dotfiles.agent.caBundle.enable = false; };
     ternOff = { dotfiles.agent.tern.enable = false; };
@@ -195,6 +212,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     zshOff = summary (c.proxmox-agent.extendModules { modules = [ zshOff ]; }).config;
     jumphostOff = summary (c.proxmox-agent.extendModules { modules = [ jumphostOff ]; }).config;
     browserOff = summary (c.proxmox-agent.extendModules { modules = [ browserOff ]; }).config;
+    blenderOff = summary (c.proxmox-agent.extendModules { modules = [ blenderOff ]; }).config;
     vaultOff = summary (c.proxmox-agent.extendModules { modules = [ vaultOff ]; }).config;
     caBundleOff = summary (c.proxmox-agent.extendModules { modules = [ caBundleOff ]; }).config;
     ompOff = summary (c.proxmox-agent.extendModules { modules = [ ompOff ]; }).config;
@@ -334,6 +352,14 @@ check "agent: the browser facts are populated (a comparison of two empty facts w
 check "agent: the browser piece adds exactly three tmpfiles rules and one line of ~/.zshenv, and nothing else, whatever its name: every other fact (setuid or capability wrappers, kernel settings, tmpfiles settings, every unit, socket, timer, path and target of the system, the user manager and Home Manager, the environment variables of the system, the session and Home Manager, the packages of the system, of the user and of Home Manager, the groups of the user, sudo, the firewall) equals the agent with the option off" '(.agent.confine | del(.tmpfilesRules)) == (.browserOff.confine | del(.tmpfilesRules)) and ((.agent.confine.tmpfilesRules - .browserOff.confine.tmpfilesRules) | length) == 3 and ((.browserOff.confine.tmpfilesRules - .agent.confine.tmpfilesRules) | length) == 0 and ((.agent.userSync.zshenv | sub("export CHROME_DEVTOOLS_AXI_IDLE_TIMEOUT_MS=900000\n"; "") | gsub("\n\n+"; "\n") | ltrimstr("\n")) == (.browserOff.userSync.zshenv | gsub("\n\n+"; "\n") | ltrimstr("\n"))) and (.agent.tcp == .browserOff.tcp) and (.agent.udp == .browserOff.udp) and (.agent.wheel == .browserOff.wheel) and (.agent.linger == .browserOff.linger)'
 check "no role has a browser service, socket or timer by name (system, user, or of the user's Home Manager), and the piece opens no port" '([.guest, .agent, .browserOff] | all(.browserUnits == [])) and (.browserOff.tcp == .agent.tcp) and (.browserOff.udp == .agent.udp)'
 check "agent with the browser option off: no link, no chromium package, none of its variables in zsh (the Hindsight snippet stays)" '.browserOff | (.browserTmpfiles == []) and (.chromiumSystemPackage | not) and (.userSync.zshenv | (contains("CHROME_DEVTOOLS_AXI") | not) and contains("hindsight.env"))'
+
+# The blender piece: headless cage + Mesa llvmpipe + Blender as a user service, the addon installed at a pin, no background
+# mode, no firewall port. NixOS Xvfb has no GLX, so the service must not use it. The MCP entry is merged into the VM's mcp.json, not the Mac's file.
+check "clean: no blender service and the option is off" '.guest | (.blender == null) and (.blenderOption | not)'
+check "agent: the blender piece is on, the service restarts and is wanted at boot, and both activations exist" '.agent | .blenderOption and (.blender.restart == "always") and (.blender.wantedBy == ["default.target"]) and .blender.activation and .blender.start'
+check "agent: the service installs the pinned addon and starts Blender under headless cage, never Xvfb or background mode" '.agent.blender | (.execStartPre | test("blender-mcp-install.sh") and test("/uvx 2\\.1\\.9 ")) and (.execStart | test("blender-mcp-run.sh") and test("/bin/cage ") and test("-mesa-") and test("blender-mcp-enable.py") and test("/blender ")) and (.execStart | test("Xvfb|--background|blender -b") | not) and (.execStartPre | test("--background") | not)'
+check "agent: the blender service PATH has mkdir and grep (a user unit's default PATH has neither, so the install script exits 127)" '.agent.blender.environment | contains("-coreutils-") and contains("-gnugrep-")'
+check "agent with the blender option off: no service, and the firewall is unchanged" '(.blenderOff.blender == null) and (.blenderOff.blenderOption | not) and (.blenderOff.tcp == .agent.tcp) and (.blenderOff.udp == .agent.udp)'
 
 # The init file that the unit hands to nvim: mason.nvim and Neovim's own runtime, nothing else.
 initcode=$(grep -v '^--' "$init")

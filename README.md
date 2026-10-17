@@ -782,7 +782,7 @@ Save a copy of the map to a private file first, and check that the name exists (
 `nixosModules.agent-dev` has these options:
 
 - `dotfiles.agent.enable`;
-- `.omp`, `.mise`, `.tern`, `.gh`, `.mason`, `.podman`, `.docker`, `.jumphost`, `.tools`, `.vault`, `.caBundle`, `.zsh` and `.browser`, each with `.enable`, each on when the agent is;
+- `.omp`, `.mise`, `.tern`, `.gh`, `.mason`, `.podman`, `.docker`, `.jumphost`, `.tools`, `.vault`, `.caBundle`, `.zsh`, `.browser` and `.blender`, each with `.enable`, each on when the agent is;
 - `.sync.hindsight`, `.sync.plugins` and `.sync.skills` (see [Personal setup](#personal-setup-hindsight-plugins-skills)), each on when the agent is;
 - `dotfiles.agent.user`, default `lex`.
 
@@ -791,7 +791,7 @@ What the agent role gives the VM:
 - A login user outside `wheel` with no sudo (root still logs in by key), zsh, and `linger` so that its user services start at boot.
 - Home Manager (`home/linux/agent.nix`, not the Mac's `home/default.nix`): zsh, starship, git with the Mac's identity, direnv with nix-direnv, mise.
 - `programs.nix-ld`, so that glibc programs that were not built for NixOS run (mise's runtimes, omp, Tern).
-- omp, `gh`, rootless podman and rootless Docker, `just`, `lazygit`, `lazydocker`, `tokei`, `btop`, `kubectl`, `k9s`, `zoxide`, `bao`, `secretspec`, a headless Chromium behind `/opt/google/chrome/chrome` for the browser tools, zram swap, `curl`, `gcc` and `gnumake`.
+- omp, `gh`, rootless podman and rootless Docker, `just`, `lazygit`, `lazydocker`, `tokei`, `btop`, `kubectl`, `k9s`, `zoxide`, `bao`, `secretspec`, a headless Chromium behind `/opt/google/chrome/chrome` for the browser tools, Blender under a headless Wayland compositor for the Blender MCP addon, zram swap, `curl`, `gcc` and `gnumake`.
 - zsh with the Mac's aliases, options, keybindings and plugins.
 
 The Home Manager input is `home-manager-nixos` (release-25.11, following `nixpkgs-nixos`). The `home-manager` input is master and does not evaluate against nixos-25.11 (it needs nixpkgs-unstable's `lib/services/lib.nix`).
@@ -1201,6 +1201,18 @@ The agent can browse any site that the VM can reach, with the VM's network: the 
 - systemd-tmpfiles makes a link but does not remove what a rule that is gone once made (measured on a flip to clean for `/lib64/ld-linux-x86-64.so.2`, see [Agent to clean](#agent-to-clean); not measured for this link, no flip was run). So `/opt/google/chrome/chrome` is expected to stay: root's link to a store path that stays until the generations that name it are deleted and garbage collected.
 - `vm-deploy` does not remove it: its removal step runs as the agent user only, never as root. `rm -r /opt/google` as root removes the link.
 - A running browser is not stopped by `vm-deploy`, and `vm_unsync` stops only the install units and the Docker service. The CLI's idle timeout ends a browser of the CLI, and omp's end ends one of its MCP server.
+
+### Blender, so omp can make a 3D object
+
+Option `dotfiles.agent.blender.enable`, on when the agent is. It is not on the Mac: `home/omp/mcp.json` is unchanged. The VM's copy of that file gains a `blender` entry at every activation, after the writable copy, so a newer repo file does not drop it.
+
+- [MCP for Blender](https://github.com/ahujasid/mcp-for-blender) is two processes. omp starts the MCP server (`uvx mcp-for-blender`, pinned `2.1.9` in `home/linux/agent.nix`). That server talks to an addon inside a running Blender, on `127.0.0.1:9876`.
+- The addon refuses `blender -b`: its command timer never runs in background mode, so a command would be accepted and never executed. The user service `blender-mcp` runs Blender under cage's headless Wayland backend with Mesa llvmpipe (the NixOS Xvfb build has no GLX module, so Blender cannot open a window there) and enables the addon from `blender-mcp-enable.py`. The socket stays on localhost. The firewall is unchanged.
+- The addon is installed into `~/.config/blender/<major>.<minor>/scripts/addons` by the same pin, before Blender starts. The first start downloads the package and a uv-managed CPython 3.11, so it needs the network. Later starts use the cache.
+- `BLENDER_MCP_SAFE_MODE=1`: modelling, materials, rendering, saving and import/export work; a script that reads or writes a file directly, runs a program, or opens the network is sent back to the model. `DISABLE_TELEMETRY=true`.
+- One Blender, one MCP client. A second omp session on the same VM that also calls the blender tools will contend for the socket. Exports land in `~/blender`.
+- A new omp session on the VM picks up the entry. An already-running omp does not.
+- `dotfiles.agent.blender.enable = false` removes the unit at the next deploy. The `blender` entry already written into `~/.omp/agent/mcp.json` stays until you delete it (the writable copy keeps a VM edit). A Blender that is already running is not stopped by that deploy: `systemctl --user stop blender-mcp.service`.
 
 ### Clean to agent
 

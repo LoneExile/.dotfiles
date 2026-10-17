@@ -153,6 +153,7 @@ in {
     };
     jumphost.enable = lib.mkEnableOption "the jumphost: its ssh entry with a pinned host key, the user's own key made on this machine, the Docker context `jumphost`, and lazydocker through a bridge";
     browser.enable = lib.mkEnableOption "the idle timeout of the chrome-devtools-axi CLI in every zsh of the user (the browser is the NixOS side of the piece)";
+    blender.enable = lib.mkEnableOption "Blender under a headless Wayland compositor with the MCP for Blender addon, and a blender entry in ~/.omp/agent/mcp.json";
     sync = {
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
       hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
@@ -409,6 +410,73 @@ in {
         export CHROME_DEVTOOLS_AXI_IDLE_TIMEOUT_MS=900000
       '';
     })
+
+    (lib.mkIf cfg.blender.enable (let
+      # PyPI mcp-for-blender 2.1.9, current 2026-10-17. The addon and the server
+      # must be the same pin: the service installs the addon, omp runs the server.
+      mcpForBlenderVersion = "2.1.9";
+      blenderConfigDir = lib.versions.majorMinor pkgs.blender.version;
+      blenderMcpServer = pkgs.writeShellScript "blender-mcp-server" ''
+        export SSL_CERT_FILE="''${SSL_CERT_FILE:-/etc/ssl/certs/ca-certificates.crt}"
+        export BLENDER_HOST="''${BLENDER_HOST:-127.0.0.1}"
+        export BLENDER_PORT="''${BLENDER_PORT:-9876}"
+        export BLENDER_MCP_SAFE_MODE="''${BLENDER_MCP_SAFE_MODE:-1}"
+        export DISABLE_TELEMETRY="''${DISABLE_TELEMETRY:-true}"
+        export UV_PYTHON_PREFERENCE="''${UV_PYTHON_PREFERENCE:-only-managed}"
+        exec ${pkgs.uv}/bin/uvx --python 3.11 mcp-for-blender@${mcpForBlenderVersion} "$@"
+      '';
+    in {
+      # On the user's PATH for a manual blender or uvx. The service and the MCP
+      # wrapper name the store paths, so neither depends on that PATH.
+      home.packages = [pkgs.blender pkgs.uv];
+
+      # The addon refuses blender -b: its command timer never runs in background
+      # mode. NixOS Xvfb has no GLX module, so Blender cannot open a window
+      # there. cage's headless backend plus Mesa llvmpipe can. The socket stays
+      # on localhost. Nothing is added to the firewall.
+      systemd.user.services.blender-mcp = {
+        Unit = {
+          Description = "Blender under headless cage with the MCP for Blender addon (localhost:9876)";
+          StartLimitIntervalSec = 600;
+          StartLimitBurst = 8;
+        };
+        Service = {
+          Type = "simple";
+          TimeoutStartSec = 600;
+          ExecStartPre = "${pkgs.bash}/bin/bash ${./blender-mcp-install.sh} ${pkgs.uv}/bin/uvx ${mcpForBlenderVersion} ${blenderConfigDir}";
+          ExecStart = "${pkgs.bash}/bin/bash ${./blender-mcp-run.sh} ${pkgs.cage}/bin/cage ${pkgs.mesa} ${pkgs.blender}/bin/blender ${./blender-mcp-enable.py}";
+          Restart = "always";
+          RestartSec = 5;
+          # A user unit's default PATH has no mkdir, sleep or grep. Without these
+          # the install script exits 127 and the unit hits the start limit.
+          Environment = [
+            "PATH=${lib.makeBinPath [pkgs.coreutils pkgs.gnugrep pkgs.bash]}"
+            "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt"
+            "LIBGL_ALWAYS_SOFTWARE=1"
+            "GALLIUM_DRIVER=llvmpipe"
+            "SDL_AUDIODRIVER=dummy"
+            "UV_PYTHON_PREFERENCE=only-managed"
+          ];
+        };
+        Install.WantedBy = ["default.target"];
+      };
+
+      # After omp's writable copy, so a new repo mcp.json is merged rather than
+      # left without the blender entry. The Mac's home/omp/mcp.json is not changed.
+      home.activation.blenderMcp = lib.hm.dag.entryAfter ["ompConfig"] ''
+        ${pkgs.bash}/bin/bash ${./blender-mcp-mcpjson.sh} "$HOME/.omp/agent/mcp.json" ${blenderMcpServer}
+      '';
+
+      # A user unit added by a switch stays stopped until the next boot. Start it
+      # when the user manager already knows it (start-user-unit.sh).
+      # reset-failed: a previous switch can leave the unit at its start limit
+      # (exit 127 on a missing mkdir). start alone then refuses.
+      home.activation.blenderMcpStart = lib.hm.dag.entryAfter ["reloadSystemd"] ''
+        ${builtins.readFile ./start-user-unit.sh}
+        run ${pkgs.systemd}/bin/systemctl --user reset-failed blender-mcp.service || true
+        start_user_unit ${pkgs.systemd}/bin/systemctl blender-mcp.service
+      '';
+    }))
 
     (lib.mkIf cfg.sync.hindsight {
       # omp reads HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN from the environment before its config
