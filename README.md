@@ -63,7 +63,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Podman and zram](#podman-and-zram)
   - [Docker: rootless only, with Compose](#docker-rootless-only-with-compose)
   - [Jumphost: a shell, and its Docker as a context](#jumphost-a-shell-and-its-docker-as-a-context)
-  - [just, lazygit, lazydocker, tokei, btop, kubectl, k9s and zoxide](#just-lazygit-lazydocker-tokei-btop-kubectl-k9s-and-zoxide)
+  - [just, lazygit, lazydocker, tokei, btop, kubectl, k9s, superfile and zoxide](#just-lazygit-lazydocker-tokei-btop-kubectl-k9s-superfile-and-zoxide)
   - [bao, secretspec and the tunnel for the vault login](#bao-secretspec-and-the-tunnel-for-the-vault-login)
   - [SSL_CERT_FILE](#ssl_cert_file)
   - [Interactive zsh](#interactive-zsh)
@@ -791,7 +791,7 @@ What the agent role gives the VM:
 - A login user outside `wheel` with no sudo (root still logs in by key), zsh, and `linger` so that its user services start at boot.
 - Home Manager (`home/linux/agent.nix`, not the Mac's `home/default.nix`): zsh, starship, git with the Mac's identity, direnv with nix-direnv, mise.
 - `programs.nix-ld`, so that glibc programs that were not built for NixOS run (mise's runtimes, omp, Tern).
-- omp, `gh`, rootless podman and rootless Docker, `just`, `lazygit`, `lazydocker`, `tokei`, `btop`, `kubectl`, `k9s`, `zoxide`, `bao`, `secretspec`, a headless Chromium behind `/opt/google/chrome/chrome` for the browser tools, Blender under a headless Wayland compositor for the Blender MCP addon, zram swap, `curl`, `gcc` and `gnumake`.
+- omp, `gh`, rootless podman and rootless Docker, `just`, `lazygit`, `lazydocker`, `tokei`, `btop`, `kubectl`, `k9s`, `superfile`, `zoxide`, `bao`, `secretspec`, a headless Chromium behind `/opt/google/chrome/chrome` for the browser tools, Blender under a headless Wayland compositor for the Blender MCP addon, zram swap, `curl`, `gcc` and `gnumake`.
 - zsh with the Mac's aliases, options, keybindings and plugins.
 
 The Home Manager input is `home-manager-nixos` (release-25.11, following `nixpkgs-nixos`). The `home-manager` input is master and does not evaluate against nixos-25.11 (it needs nixpkgs-unstable's `lib/services/lib.nix`).
@@ -1035,17 +1035,19 @@ lazydocker 0.24 reaches an `ssh://` context with `ssh -L` socket forwarding, whi
 - The key files and the contexts already made stay in the home (like the rest of `/home/lex`), and the authorized lines stay on the jumphost until you remove them.
 - The agent-to-clean flip leaves the keys and the contexts in the home and never touches the jumphost.
 
-### just, lazygit, lazydocker, tokei, btop, kubectl, k9s and zoxide
+### just, lazygit, lazydocker, tokei, btop, kubectl, k9s, superfile and zoxide
 
 Option `dotfiles.agent.tools.enable`, on when the agent is.
 
-- They are packages of the user (`/etc/profiles/per-user/lex/bin`, so on the `PATH` of every login, Tern and `zsh -c` shell), from nixos-25.11: `just` 1.43.1, `lazygit` 0.56.0, `lazydocker` 0.24.2, `tokei` 13.0.0, `btop` 1.4.5, `kubectl` 1.34.3, `k9s` 0.50.16, `zoxide` 0.9.9. Unstable has 1.58.0, 0.65.1 and 0.25.2 for the first three; nothing in 25.11 is broken, so it is not used.
+- They are packages of the user (`/etc/profiles/per-user/lex/bin`, so on the `PATH` of every login, Tern and `zsh -c` shell), from nixos-25.11: `just` 1.43.1, `lazygit` 0.56.0, `lazydocker` 0.24.2, `tokei` 13.0.0, `btop` 1.4.5, `kubectl` 1.34.3, `k9s` 0.50.16, `superfile` 1.3.3, `zoxide` 0.9.9. Unstable has 1.58.0, 0.65.1 and 0.25.2 for the first three and 1.6.0 for superfile; nothing in 25.11 is broken, so it is not used.
+- nixpkgs installs superfile's program as `superfile` only; upstream's `spf` is not there. `sf` is the alias for it.
 - `kubectl` 1.34.3 is within one minor version of the clusters it talks to (1.35.0, measured), the skew that Kubernetes supports. Unstable's 1.37.1 is the Mac's; switch the tools piece to it (nixpkgs-unstable, as `modules/nixos/agent-dev.nix` does for secretspec) when a cluster moves to 1.36.
-- Their config (`~/.config/lazygit`, `~/.config/lazydocker`, `~/.config/btop`, `~/.config/k9s`) is theirs: nothing manages it, and the first run of lazydocker, btop and k9s writes its own. The Mac's `home/btop/btop.conf` and its k9s settings and transparent skin (`programs.k9s` in `home/default.nix`) are not put on the VM.
+- Their config (`~/.config/lazygit`, `~/.config/lazydocker`, `~/.config/btop`, `~/.config/k9s`, `~/.config/superfile`) is theirs: nothing manages it, and the first run of lazydocker, btop, k9s and superfile writes its own. The Mac's `home/btop/btop.conf` and its k9s settings and transparent skin (`programs.k9s` in `home/default.nix`) are not put on the VM.
 - No kubeconfig comes with it: `kubectl` and `k9s` read the `~/.kube/config` (or `KUBECONFIG`) that you put on the VM.
 - zoxide's hook (`z`, `zi`, its own directory database under `~/.local/share/zoxide`) is in `~/.zshrc`, after the one `compinit` of the [interactive zsh](#interactive-zsh). Home Manager's `programs.zoxide` is not used: it puts the hook before that `compinit`, and zoxide then registers no completion for `z` (measured). A shell without a terminal (omp's) leaves before it, as on the Mac.
 - The Mac's aliases `ld` (lazydocker), `top` (btop), `k`, `kx` and `kns` (kubectl) and function `lg` (lazygit that follows the directory change on exit) find their tools on the VM.
-- Off: the packages and the hook go, nothing else.
+- `sf` (superfile) is the VM's own alias, next to zoxide's hook in `~/.zshrc`: it is not in the Mac's `aliases.zsh`, because the Mac has no superfile.
+- Off: the packages, the hook and `sf` go, nothing else.
 
 ### bao, secretspec and the tunnel for the vault login
 
@@ -1054,7 +1056,7 @@ Option `dotfiles.agent.vault.enable`, on when the agent is. It installs packages
 - `bao`: `openbao` 2.5.5 of nixos-25.11; its `bin` holds `bao` and no `vault` alias.
 - `secretspec`: 0.21.1 of nixpkgs-unstable, because nixos-25.11's 0.3.3 is too old. Measured on the VM with no token, `secretspec check -n -p unitllm` and `-p unitllm-agent` stop with "No Vault token found" and "No JWT available", not with a parse error.
 
-Nothing else comes with it: no token, no config, no login, and no OpenTofu, terragrunt, talosctl or helm (Terraform stays on the Mac). `kubectl` and `k9s` come with the [tools piece](#just-lazygit-lazydocker-tokei-btop-kubectl-k9s-and-zoxide).
+Nothing else comes with it: no token, no config, no login, and no OpenTofu, terragrunt, talosctl or helm (Terraform stays on the Mac). `kubectl` and `k9s` come with the [tools piece](#just-lazygit-lazydocker-tokei-btop-kubectl-k9s-superfile-and-zoxide).
 
 #### The tunnel
 
@@ -1123,7 +1125,7 @@ Measured.
 #### Left out on purpose
 
 - `home/zsh/zshrc` itself: it is the Mac's (zap installed with `curl` at shell start, `getconf DARWIN_USER_TEMP_DIR`, `~/Library/pnpm`, kubectl, treehouse and aws completions, the todo files).
-- Atuin (a history sync server and a login, the Mac's `Ctrl-R` and its fzf picker), eza (the Mac's `ls` integration), bat and tmux (the Mac's `programs.*` in `home/default.nix`, not in the shared files). None is installed on the VM; their aliases (`t`, `ta`, `v` for nvim) stay defined and say `command not found`. `top` runs btop and `k` runs kubectl, and zoxide's `z` is there: the tools piece installs them.
+- Atuin (a history sync server and a login, the Mac's `Ctrl-R` and its fzf picker), eza (the Mac's `ls` integration), bat and tmux (the Mac's `programs.*` in `home/default.nix`, not in the shared files). None is installed on the VM; their aliases (`t`, `ta`, `v` for nvim) stay defined and say `command not found`. `top` runs btop and `k` runs kubectl, and zoxide's `z` and `sf` (superfile) are there: the tools piece installs them.
 - The Mac's `tmp.zsh` hook is a local file that is not in the repo.
 
 #### Turning the zsh setup off
