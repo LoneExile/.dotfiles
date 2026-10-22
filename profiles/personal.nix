@@ -178,6 +178,7 @@
       # "paseo" # coding-agent orchestrator: Paseo.app + `paseo` CLI
       "calibre"
       "skills-manager"
+      "highball" # Windows games on Apple Silicon (Wine, DXMT, D3DMetal); data in ~/Library/Application Support/Highball
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
