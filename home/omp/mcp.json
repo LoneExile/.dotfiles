@@ -11,7 +11,7 @@
     },
     "zennotes": {
       "type": "stdio",
-      "command": "/opt/homebrew/bin/zn",
+      "command": "${HOME}/Library/Application Support/ZenNotes/cli/zn",
       "args": [
         "mcp"
       ]
@@ -82,6 +82,13 @@
       "auth": {
         "type": "oauth",
         "resource": "https://resume.0dl.me"
+      }
+    },
+    "tududi": {
+      "type": "http",
+      "url": "https://tududi.0dl.me/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${TUDUDI_API_KEY}"
       }
     },
     "context-mode": {
