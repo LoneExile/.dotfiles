@@ -179,6 +179,7 @@
       "calibre"
       "skills-manager"
       "highball" # Windows games on Apple Silicon (Wine, DXMT, D3DMetal); data in ~/Library/Application Support/Highball
+      "steam" # native macOS Steam client; Highball's Windows Steam lives in its own environment
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
