@@ -34,7 +34,7 @@ statusLine:
       showUnstaged: true
       showUntracked: true
 modelRoles:
-  slow: anthropic/claude-opus-5-5:max
+  slow: anthropic/claude-sonnet-5-5:max
   plan: anthropic/claude-sonnet-5-5:xhigh
   vision: xai-oauth/grok-4.7:medium
   smol: anthropic/claude-sonnet-5-5:low
@@ -42,9 +42,9 @@ modelRoles:
   commit: anthropic/claude-haiku-5-5:medium
   advisor: anthropic/claude-sonnet-5-5:medium
   task: anthropic/claude-sonnet-5-5:xhigh
-  web: xai/grok-4.5
+  web: xai-oauth/grok-4.7:xhigh
   image: xai/grok-imagine-image
-  default: xai-oauth/grok-4.7:xhigh
+  default: anthropic/claude-opus-5-5:xhigh
 task:
   agentModelOverrides:
     sdd-implementer: anthropic/claude-sonnet-5-5:xhigh
@@ -66,8 +66,8 @@ retry:
     xai-oauth/*:
       - anthropic/claude-opus-5-5
     web:
-      - xai-oauth/grok-4.5
-      - anthropic/claude-haiku-4-5
+      - xai-oauth/grok-4.7
+      - anthropic/claude-haiku-5-5
       - web/exa
       - web/duckduckgo
     image:
