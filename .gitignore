@@ -22,3 +22,4 @@ home/omp/config.yml.lock
 *.tfstate.*
 *.tfplan
 infra/**/*_generated.tf
+kubeconfig.*
