@@ -5,8 +5,8 @@
       "enabledFeatures": null,
       "enabled": true
     },
-    "pi-refusal-guard": {
-      "version": "0.2.1",
+    "pi-env-reload": {
+      "version": "0.2.0",
       "enabledFeatures": null,
       "enabled": true
     },
@@ -21,17 +21,17 @@
       "enabled": true
     },
     "pi-output-styles": {
-      "version": "0.3.4",
+      "version": "0.3.5",
       "enabledFeatures": null,
       "enabled": true
     },
     "omp-cursor-sdk": {
-      "version": "0.4.5",
+      "version": "0.5.0",
       "enabledFeatures": null,
       "enabled": true
     },
     "@loneexile/omp-superpowers": {
-      "version": "7.0.0-omp.4",
+      "version": "7.0.1-omp.4",
       "enabledFeatures": null,
       "enabled": true
     }

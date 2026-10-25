@@ -2,12 +2,12 @@
   "name": "omp-plugins",
   "private": true,
   "dependencies": {
-    "@loneexile/omp-superpowers": "npm:@loneexile/omp-superpowers@7.0.0-omp.4",
-    "context-mode": "^1.0.169",
-    "omp-cursor-sdk": "npm:omp-cursor-sdk@0.4.5",
-    "pi-harper-grammar": "npm:pi-harper-grammar",
-    "pi-mason-bridge": "^0.2.2",
-    "pi-output-styles": "npm:pi-output-styles@0.3.4",
-    "pi-refusal-guard": "^0.2.1"
+    "@loneexile/omp-superpowers": "7.0.1-omp.4",
+    "context-mode": "1.0.169",
+    "omp-cursor-sdk": "0.5.0",
+    "pi-env-reload": "0.2.0",
+    "pi-harper-grammar": "0.3.1",
+    "pi-mason-bridge": "0.2.2",
+    "pi-output-styles": "0.3.5"
   }
 }
