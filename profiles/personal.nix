@@ -307,11 +307,6 @@
         SortDirection = 0;
       };
 
-      "com.apple.Safari" = {
-        UniversalSearchEnabled = false;
-        SuppressSearchSuggestions = true;
-      };
-
       "com.apple.AdLib" = {
         allowApplePersonalizedAdvertising = false;
       };
@@ -342,4 +337,22 @@
       };
     };
   };
+
+  # Safari prefs live in its sandbox container. nix-darwin writes
+  # CustomUserPreferences with `defaults` under set -e, so a refusal aborts
+  # the rest of activation (launchd, homebrew). On macOS 27 a Full Disk
+  # Access grant on the terminal does not cover /usr/bin/defaults, and that
+  # row is what the write is checked against. Try here, and continue if
+  # refused, so `just switch` can finish.
+  system.activationScripts.postActivation.text = ''
+    echo >&2 "user defaults: com.apple.Safari..."
+    user=${lib.escapeShellArg config.system.primaryUser}
+    if ! launchctl asuser "$(id -u -- "$user")" sudo --user="$user" -- \
+        /usr/bin/defaults write com.apple.Safari UniversalSearchEnabled -bool false \
+      || ! launchctl asuser "$(id -u -- "$user")" sudo --user="$user" -- \
+        /usr/bin/defaults write com.apple.Safari SuppressSearchSuggestions -bool true
+    then
+      echo >&2 "warning: could not write com.apple.Safari. Turn on the 'defaults' row in System Settings → Privacy & Security → Full Disk Access, quit the terminal, and switch again. Continuing."
+    fi
+  '';
 }
