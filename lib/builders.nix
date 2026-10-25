@@ -18,9 +18,42 @@ in {
     profiles ? {},
     extraSpecialArgs ? {},
   }: let
+    # Two unstable packages fail to build on darwin after this nixpkgs bump.
+    # Drop each override once nixpkgs-unstable ships the upstream fix: an
+    # overlay changes the hash, so the package is no longer substitutable.
+    # - jellyfin-ffmpeg 8.1.3-1: APFS is case-insensitive, so the release file
+    #   VERSION is picked up as libc++ <version> when ocio_wrapper.cpp compiles
+    #   with -I. (ffmpeg 8.1-full enables libopencolorio.) Upstream renamed the
+    #   file to FF_VERSION (FFmpeg 72e5fc4b, 2026-09-04).
+    # - qbittorrent-enhanced 5.2.3.10: Qt 6.12 marks Q_OS_MAC deprecated, and
+    #   #ifdef of it is -Werror,-Wdeprecated-pragma. Upstream qBittorrent
+    #   6164ed1 renamed the two remaining sites to Q_OS_MACOS.
     unstablePkgs = import inputs.nixpkgs-unstable {
       inherit system;
       config.allowUnfree = true;
+      overlays = [
+        (_final: prev: {
+          jellyfin-ffmpeg = prev.jellyfin-ffmpeg.overrideAttrs (old: {
+            postPatch =
+              (old.postPatch or "")
+              + ''
+                if [ -f VERSION ]; then
+                  mv VERSION FF_VERSION
+                  substituteInPlace ffbuild/version.sh \
+                    --replace-fail 'cat VERSION' 'cat FF_VERSION'
+                fi
+              '';
+          });
+          qbittorrent-enhanced = prev.qbittorrent-enhanced.overrideAttrs (old: {
+            postPatch =
+              (old.postPatch or "")
+              + ''
+                substituteInPlace src/gui/log/loglistview.cpp src/gui/optionsdialog.cpp \
+                  --replace-fail '#ifdef Q_OS_MAC' '#ifdef Q_OS_MACOS'
+              '';
+          });
+        })
+      ];
     };
 
     # Load host-specific configuration if it exists (optional per host)
