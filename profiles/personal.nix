@@ -346,7 +346,9 @@
   # refused, so `just switch` can finish.
   system.activationScripts.postActivation.text = ''
     echo >&2 "user defaults: com.apple.Safari..."
-    user=${lib.escapeShellArg config.system.primaryUser}
+    # Quoted: escapeShellArg leaves a plain name unquoted, and shellcheck
+    # SC2209 then fails the activation-script build.
+    user="${config.system.primaryUser}"
     if ! launchctl asuser "$(id -u -- "$user")" sudo --user="$user" -- \
         /usr/bin/defaults write com.apple.Safari UniversalSearchEnabled -bool false \
       || ! launchctl asuser "$(id -u -- "$user")" sudo --user="$user" -- \
