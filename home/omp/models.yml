@@ -362,40 +362,6 @@ providers:
         contextWindow: 131072
         maxTokens: 32768
         cost: { input: 2, output: 6, cacheRead: 0.3, cacheWrite: 0 }
-  # --- OmniRoute — second OpenAI-compatible gateway on backbone-cluster, running
-  #   ALONGSIDE litellm (evaluation: it does quota-aware auto-fallback across a
-  #   huge provider pool, which litellm does not). Runtime SQLite state, no
-  #   declarative config in git — re-sync this list from the live gateway if the
-  #   pool changes (GET /v1/models with your key).
-  #   LAN-only ungated API route: https://omniroute-api.home.0dl.me/v1 (Envoy
-  #   TLS). REQUIRE_API_KEY=true is the ONLY gate on that hostname, so put an
-  #   OmniRoute API key (minted in the dashboard, api_keys table) in
-  #   ~/.omp/.env as OMNIROUTE_API_KEY. Keep that key for inference only and
-  #   never hand it to an in-cluster consumer pointing at the Service directly:
-  #   on /v1/* every valid key can also mint/revoke keys (scopes are not
-  #   consulted on /api/v1/*) — the Envoy path-allowlist is the real control.
-  #   The six ids are OmniRoute's README-documented zero-config VIRTUAL combos
-  #   ("auto" variants). A combo's context/max-token limits and per-token cost
-  #   depend on whichever pool member answers a given request, so those fields
-  #   are intentionally omitted (optional in OMP's schema) rather than guessed.
-  omniroute:
-    baseUrl: https://omniroute-api.home.0dl.me/v1
-    apiKey: OMNIROUTE_API_KEY
-    api: openai-completions
-    auth: apiKey
-    models:
-      - id: auto
-        name: OmniRoute Auto (balanced LKGP)
-      - id: auto/coding
-        name: OmniRoute Auto (coding)
-      - id: auto/fast
-        name: OmniRoute Auto (fast)
-      - id: auto/cheap
-        name: OmniRoute Auto (cheap)
-      - id: auto/offline
-        name: OmniRoute Auto (offline)
-      - id: auto/smart
-        name: OmniRoute Auto (smart)
   # --- OpenCode Go — flat-rate SUBSCRIPTION gateway (opencode.ai). The catalog
   #     is BUNDLED in OMP (provider `opencode-go`, baseUrl
   #     https://opencode.ai/zen/go/v1) and the key is read automatically from
