@@ -242,7 +242,8 @@ omp exports its own traces (OpenTelemetry, no plugin) to the self-hosted Laminar
 - **On a Mac, keep them out of `~/.omp/agent/.env`.** omp reads that file before `~/.omp/.env` and the first non-empty value wins, so a copy there would override the vault after a key rotation.
 - **VMs:** `just vm-sync` copies these lines, and nothing else of the blob, to the agent VMs (see [Laminar traces](#laminar-traces)).
 - **Capture:** `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=full` sends prompts and tool output, file contents and secrets included, to Laminar's ClickHouse. Without that line only names and timings go.
-- **LAN only:** the ingest host `laminar-otel.home.0dl.me` is the cluster gateway. Off the LAN the export fails with no error you will see.
+- **Endpoint:** `https://lmnr.0dl.me/v1/traces`, public through the `px-cloud` Cloudflare tunnel, so it works on and off the LAN (from home it goes out and back in). `https://laminar-otel.home.0dl.me/v1/traces` is the same app-server, LAN only, and the agent VMs cannot reach it: an omp there waited 30 s at exit and failed with "Span processor did not completed within timeout". The dashboard, `https://laminar.home.0dl.me`, is LAN only.
+- **The key is the only lock:** both hosts serve all of `/v1`, including `/v1/sql/query`, which reads every stored trace. With capture on, anyone holding the key can read the captured prompts and file contents from anywhere.
 - **Silent off switches:** `telemetry.otlpExportEnabled: false` (`/settings` → Providers → Privacy), or an `OTEL_EXPORTER_OTLP_PROTOCOL` other than `http/protobuf`.
 - omp reads the file at start: restart running sessions after a pull.
 
@@ -1390,7 +1391,7 @@ Option `dotfiles.agent.sync.laminar`, on when the agent is. omp on the VM sends 
 - With no `OTEL_*` line in the blob, the file is removed and `vm-sync` prints one line (`laminar: OMP_ENV in the vault has no OTEL_ lines, removed …`). A file of that name that vm-sync did not write is left alone.
 - An `OTEL_*` line with a CR, a tab or another control character stops the sync before anything reaches the VM, and the file there stays as it was.
 - Rotate the key: edit the header line on a Mac, `just secretspec-sync --push OMP_ENV`, then `just vm-sync <name>` for every agent VM. omp sessions that are already running keep the old key until restarted.
-- The ingest host is LAN-only; the agent VMs are on the LAN.
+- The VMs use the public endpoint of the blob; they cannot reach the LAN ingest host (see [omp traces to Laminar](#omp-traces-to-laminar)).
 - Residual risk: the key is in a mode-600 file of the agent user, so anything that runs as that user can read it. It is the Macs' key: revoking it in Laminar cuts off every machine at once.
 
 ### Mason language servers for omp
