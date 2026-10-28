@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tests for infra/vm-sync-remote.sh, the helper that vm-sync and vm-deploy run on the VM as the
-# agent user: it writes the Hindsight file, prepares the skills directory, reports the plugin install and
+# agent user: it writes the Hindsight file and omp's agent .env, prepares the skills directory, reports the plugin install and
 # removes what the sync placed. Run here against a temp HOME, as the user would run it there.
 # Fixtures only. The token is a fixture string, never a real one.
 set -uo pipefail
@@ -12,6 +12,11 @@ HS_URL=https://hindsight.fixture.example
 HS_TOKEN=fixture0hstoken0123456789abcdefABCD
 HS_TOKEN2=fixture0hstoken0second012345678ABCD
 HS_MARK='# vm-sync: written from the vault map VM_HINDSIGHT; vm-sync removes it when the VM has no entry'
+LA_MARK='# vm-sync: the OTEL_ lines of the vault blob OMP_ENV (omp traces to Laminar); vm-sync removes it when OMP_ENV has none'
+LA_KEY=fixture0laminarkey0123456789abcdef
+LA_LINES="OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://laminar-otel.fixture.example/v1/traces
+OTEL_EXPORTER_OTLP_TRACES_HEADERS=\"authorization=Bearer%20$LA_KEY\"
+OTEL_SERVICE_NAME=omp"
 
 # h SUBCOMMAND ARGS...: run the helper as the user (stdin from $T/stdin, empty unless set).
 h() {
@@ -23,6 +28,9 @@ h() {
 hhs() { printf '%s\n%s\n' "$1" "$2" >"$T/stdin"; h hindsight; }
 HSENV() { echo "$T_HOME/.config/dotfiles/hindsight.env"; }
 MANIFEST() { echo "$T_HOME/.local/state/dotfiles/vm-sync/manifest"; }
+# hla LINES: the laminar subcommand with LINES (and a final newline) on stdin.
+hla() { printf '%s\n' "$1" >"$T/stdin"; h laminar; }
+LAENV() { echo "$T_HOME/.omp/agent/.env"; }
 SKILLS() { echo "$T_HOME/.omp/agent/skills"; }
 # snapshot DIR: every path under DIR with its type, mode and, for files, content hash.
 snapshot() {
@@ -523,6 +531,80 @@ test_hindsight_replaces_a_link_and_unsync_puts_it_back() {
   assert_eq "the link's target is untouched" target "$(cat "$T/target")"
   assert_rc "unsync" "$(h unsync)" 0
   assert_eq "the link is back" "$T/target" "$(readlink "$(HSENV)")"
+}
+
+# ---- laminar
+
+test_laminar_writes_omps_agent_env_file() {
+  assert_rc "laminar" "$(hla "$LA_LINES")" 0
+  assert_bytes "the marker, then the lines as they came" "$(LAENV)" "$LA_MARK
+$LA_LINES
+"
+  assert_eq "mode 600" 600 "$(tl_mode "$(LAENV)")"
+  assert_has "manifest lists the file" "$(MANIFEST)" "file .omp/agent/.env"
+  assert_has "one line of output" "$T/out" "laminar: wrote ~/.omp/agent/.env (3 OTEL_ settings)"
+  assert_lacks "the key is not in stdout" "$T/out" "$LA_KEY"
+  assert_lacks "the key is not in stderr" "$T/err" "$LA_KEY"
+  assert_lacks "the key is not in the manifest" "$(MANIFEST)" "$LA_KEY"
+  assert_absent "~/.omp/.env is not touched" "$T_HOME/.omp/.env"
+}
+
+test_laminar_rejects_what_is_not_one_printable_otel_line_and_writes_nothing() {
+  local bad
+  for bad in 'PATH=/fixture/bin' 'otel_service_name=omp' 'OTEL_SERVICE_NAME' ' OTEL_SERVICE_NAME=omp' "OTEL_EXPORTER_OTLP_TRACES_HEADERS=Bearer%20$LA_KEY"$'\r' "OTEL_EXPORTER_OTLP_TRACES_HEADERS=Bearer"$'\t'"$LA_KEY"; do
+    assert_rc "line: $(printf '%q' "$bad")" "$(hla "OTEL_SERVICE_NAME=omp
+$bad")" 1
+    assert_absent "no file" "$(LAENV)"
+    assert_lacks "stderr hides the key" "$T/err" "$LA_KEY"
+  done
+  : >"$T/stdin"
+  assert_rc "nothing on stdin" "$(h laminar)" 1
+  assert_rc "33 lines" "$(hla "$(for i in $(seq 33); do echo "OTEL_X$i=1"; done)")" 1
+  assert_absent "no file" "$(LAENV)"
+  assert_absent "no manifest" "$(MANIFEST)"
+}
+
+test_laminar_overwrites_its_own_file_and_keeps_a_file_it_did_not_write() {
+  mkdir -p "$T_HOME/.omp/agent"
+  printf 'OTEL_SERVICE_NAME=by-hand\n' >"$(LAENV)"
+  assert_rc "over the user's file" "$(hla "$LA_LINES")" 0
+  assert_has "the user's file is kept" "$(LAENV).dotfiles-backup" "OTEL_SERVICE_NAME=by-hand"
+  assert_has "says so" "$T/out" ".env.dotfiles-backup (unsync puts it back)"
+  assert_rc "again, with the endpoint only" "$(hla "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://laminar-otel.fixture.example/v1/traces")" 0
+  assert_lacks "the old key is gone" "$(LAENV)" "$LA_KEY"
+  assert_has "the backup is still the user's" "$(LAENV).dotfiles-backup" "OTEL_SERVICE_NAME=by-hand"
+  assert_eq "listed once" 1 "$(grep -cx 'file .omp/agent/.env' "$(MANIFEST)")"
+  assert_rc "unsync" "$(h unsync)" 0
+  assert_eq "the user's file is back" "OTEL_SERVICE_NAME=by-hand" "$(cat "$(LAENV)")"
+  assert_absent "no backup left" "$(LAENV).dotfiles-backup"
+  assert_eq "the directory it found stays" yes "$([ -d "$T_HOME/.omp/agent" ] && echo yes)"
+}
+
+test_laminar_remove_deletes_its_file_and_leaves_one_it_did_not_write() {
+  assert_rc "no file" "$(h laminar-remove)" 0
+  assert_has "says there is nothing" "$T/out" "laminar: OMP_ENV in the vault has no OTEL_ lines, no file to remove"
+  assert_rc "write" "$(hla "$LA_LINES")" 0
+  assert_rc "remove" "$(h laminar-remove)" 0
+  assert_absent "file gone" "$(LAENV)"
+  assert_eq "one line of output" 1 "$(wc -l <"$T/out" | tr -d ' ')"
+  assert_has "says it removed" "$T/out" "laminar: OMP_ENV in the vault has no OTEL_ lines, removed ~/.omp/agent/.env"
+  assert_lacks "the manifest forgets the file" "$(MANIFEST)" ".omp/agent/.env"
+  printf 'OTEL_SERVICE_NAME=by-hand\n' >"$(LAENV)"
+  assert_rc "a file of the user" "$(h laminar-remove)" 0
+  assert_eq "it stays" "OTEL_SERVICE_NAME=by-hand" "$(cat "$(LAENV)")"
+  assert_has "says why" "$T/out" "not written by vm-sync"
+  assert_rc "an argument" "$(h laminar-remove testvm-alpha)" 2
+}
+
+test_laminar_does_not_follow_a_link_above_the_file() {
+  mkdir -p "$T/elsewhere" "$T_HOME/.omp"
+  ln -s "$T/elsewhere" "$T_HOME/.omp/agent"
+  assert_rc "write" "$(hla "$LA_LINES")" 1
+  assert_absent "nothing was written behind the link" "$T/elsewhere/.env"
+  assert_has "says why" "$T/err" "is a link"
+  printf '%s\nOTEL_SERVICE_NAME=x\n' "$LA_MARK" >"$T/elsewhere/.env"
+  assert_rc "remove" "$(h laminar-remove)" 1
+  assert_has "the file behind the link stays" "$T/elsewhere/.env" "OTEL_SERVICE_NAME=x"
 }
 
 # ---- plugins-status

@@ -2,13 +2,17 @@
 # Functions of the VM sync, sourced by vm-sync.sh and vm-deploy.sh. Needs ssh, rsync, jq, base64 and python3.
 #
 # What the sync is: the agent role (modules/nixos/agent-dev.nix) lists in /etc/dotfiles-agent-sync.json
-# which of three things it wants (options dotfiles.agent.sync.hindsight, .plugins and .skills):
+# which of four things it wants (options dotfiles.agent.sync.hindsight, .laminar, .plugins and .skills):
 #   hindsight the public Hindsight API of this VM: the URL and key from the vault map VM_HINDSIGHT. The
 #            Mac first asks the gate (GET <url>/health with the key, infra/vm-hindsight-health.py): not
 #            200 means nothing is pushed. Then ~/.config/dotfiles/hindsight.env (mode 600, over ssh
 #            stdin) holds HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN, which zsh exports (home/linux/
 #            agent.nix) and omp prefers over its config file. No entry: the file is removed, with a
 #            one-line notice. ~/.omp/.env is never touched.
+#   laminar  omp's trace export to Laminar: the OTEL_ lines of the vault blob OMP_ENV (the Macs'
+#            ~/.omp/.env; infra/vm-laminar-env.sh, which leaves every other line of it on the Mac) go to
+#            ~/.omp/agent/.env (mode 600, over ssh stdin), which omp reads at start, before ~/.omp/.env.
+#            No OTEL_ line: the file is removed, with a one-line notice.
 #   skills   the skills of the Mac's skills library (the directories of ~/.skills-manager/skills that
 #            hold a SKILL.md), each mirrored with rsync into ~/.omp/agent/skills on the VM
 #   plugins  the captured omp plugin manifests: placed and installed by the VM itself (Home Manager and
@@ -119,9 +123,9 @@ sync_skill_names() {
   printf '%s' "$names"
 }
 
-# vm_sync NAME REPO IP: Hindsight file and skills, as far as the VM's options ask for them.
+# vm_sync NAME REPO IP: Hindsight file, omp's agent .env (Laminar) and skills, as far as the VM's options ask for them.
 vm_sync() {
-  local name=$1 repo=$2 ip=$3 cfg cfgpath on entry names n count=0
+  local name=$1 repo=$2 ip=$3 cfg cfgpath on entry otel names n count=0
   cfgpath=${VM_SYNC_CONFIG_PATH:-/etc/dotfiles-agent-sync.json}
   sync_wait_ssh "$name" "$ip"
   cfg=$(ssh "${sync_ssh_opts[@]}" "$sync_user@$ip" "cat $cfgpath") || sync_die "cannot read $cfgpath on the VM (deploy the agent role first)"
@@ -139,6 +143,17 @@ vm_sync() {
       printf '%s\n' "$entry" | sync_remote "$repo" "$ip" hindsight || sync_die "could not write the Hindsight file on the VM"
     fi
     entry=""
+  fi
+
+  on=$(printf '%s' "$cfg" | jq -r '.laminar // false')
+  if [ "$on" = true ]; then
+    otel=$(SECRETSPEC_FILE="$repo/secretspec.toml" SECRETSPEC_REASON="dotfiles vm-sync laminar" bash "$repo/infra/vm-laminar-env.sh") || exit 1
+    if [ -z "$otel" ]; then
+      sync_remote "$repo" "$ip" laminar-remove || sync_die "could not remove omp's ~/.omp/agent/.env on the VM (see above)"
+    else
+      printf '%s\n' "$otel" | sync_remote "$repo" "$ip" laminar || sync_die "could not write omp's ~/.omp/agent/.env on the VM"
+    fi
+    otel=""
   fi
 
   on=$(printf '%s' "$cfg" | jq -r '.skills // false')

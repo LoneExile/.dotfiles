@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Tests for the Mac side of the VM sync: infra/vm-hindsight-entry.sh (the Hindsight URL and key of one
-# VM out of the vault map), infra/vm-sync.sh and infra/vm-sync-lib.sh (Hindsight file and skills to the agent user of a VM),
+# VM out of the vault map), infra/vm-laminar-env.sh (the OTEL_ lines of the vault blob OMP_ENV, through
+# vm-sync), infra/vm-sync.sh and infra/vm-sync-lib.sh (Hindsight file, omp's agent .env and skills to the agent user of a VM),
 # and the removal that vm-deploy runs before a VM leaves the agent role. The VM is a directory:
 # the `ssh` shim runs the remote command here, as the "user", with HOME set to that directory, and
 # rsync is the real one talking through the shim. Fixtures only: RFC 5737 addresses, invented
@@ -27,6 +28,19 @@ SECRET_ON='{"plugins":true,"skills":true,"hindsight":true}'
 HS_URL=https://hindsight.fixture.example
 HS_KEY=fixture0hstoken0123456789abcdefABCD
 HS_MAP="{\"testvm-alpha\":{\"url\":\"$HS_URL\",\"token\":\"$HS_KEY\"}}"
+LA_ON='{"plugins":false,"skills":false,"laminar":true}'
+LA_KEY=fixture0laminarkey0123456789abcdef
+LA_MARK='# vm-sync: the OTEL_ lines of the vault blob OMP_ENV (omp traces to Laminar); vm-sync removes it when OMP_ENV has none'
+LA_LINES="OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://laminar-otel.fixture.example/v1/traces
+OTEL_EXPORTER_OTLP_TRACES_HEADERS=\"authorization=Bearer%20$LA_KEY\"
+OTEL_SERVICE_NAME=omp"
+# The Macs' ~/.omp/.env as the vault holds it: provider keys that must stay on the Macs, a comment, the OTEL_ lines.
+PROVIDER_KEY=fixture0providerkey0123456789abcd
+OMP_ENV_BLOB="EXA_API_KEY=$PROVIDER_KEY
+
+# Laminar trace export (fixture)
+$LA_LINES
+"
 
 # shims VMS-JSON [VM-CONFIG-JSON [HINDSIGHT-MAP-JSON]]: PATH directory $T/bin and the fake world.
 #   secretspec get|run   a file-backed vault ($T/store); VM_HINDSIGHT absent reads as {} (the manifest default)
@@ -42,7 +56,7 @@ shims() {
 #!/bin/sh
 case "$1" in
   get)
-    printf 'get %s\n' "$2" >>"$STUB_SEQ"
+    printf 'get %s %s\n' "$2" "${SECRETSPEC_FILE:-}" >>"$STUB_SEQ"
     if [ -f "$STUB_DIR/$2" ]; then cat "$STUB_DIR/$2"
     elif [ "$2" = VM_HINDSIGHT ]; then printf '{}'
     else exit 1; fi ;;
@@ -168,6 +182,7 @@ sync_run() { bash "$ROOT/infra/vm-sync.sh" "${1:-testvm-alpha}" "$ROOT" >"$T/out
 deploy() { (cd "$ROOT" && bash "$ROOT/infra/vm-deploy.sh" "${1:-testvm-alpha}" "$ROOT") >"$T/out" 2>"$T/err"; echo $?; }
 VMSKILLS() { echo "$T/vm/.omp/agent/skills"; }
 VMHS() { echo "$T/vm/.config/dotfiles/hindsight.env"; }
+VMLA() { echo "$T/vm/.omp/agent/.env"; }
 # hashes DIR: sorted per-file hashes of DIR, relative paths.
 hashes() { (cd "$1" && find . -type f | LC_ALL=C sort | while IFS= read -r f; do printf '%s %s\n' "$(shasum -a 256 <"$f" | cut -c1-64)" "$f"; done); }
 
@@ -599,6 +614,79 @@ test_deploy_of_the_clean_role_removes_the_hindsight_file_and_nothing_else() {
   assert_absent "the hindsight file is gone" "$(VMHS)"
   assert_eq "the user's file in the same directory stays" "user file" "$(cat "$T/vm/.config/dotfiles/mine.txt")"
   assert_eq "~/.omp/.env stays" "mine" "$(cat "$T/vm/.omp/.env")"
+  assert_absent "no manifest left" "$T/vm/.local/state/dotfiles/vm-sync/manifest"
+}
+
+test_sync_laminar_writes_only_the_otel_lines_of_omp_env_and_puts_nothing_in_an_argument() {
+  shims "$BASE" "$LA_ON"
+  printf '%s' "$OMP_ENV_BLOB" >"$T/store/OMP_ENV"
+  mkdir -p "$T/vm/.omp"
+  printf 'mine' >"$T/vm/.omp/.env"
+  assert_rc "sync" "$(sync_run)" 0
+  assert_bytes "the marker and the OTEL_ lines, nothing else of the blob" "$(VMLA)" "$LA_MARK
+$LA_LINES
+"
+  assert_eq "mode 600" 600 "$(tl_mode "$(VMLA)")"
+  assert_eq "read from the dotfiles project, not the infra one" 1 "$(grep -cxF "get OMP_ENV $ROOT/secretspec.toml" "$T/seq")"
+  assert_has "one line about it" "$T/out" "laminar: wrote ~/.omp/agent/.env (3 OTEL_ settings)"
+  assert_lacks "no provider key on the VM" "$(VMLA)" "$PROVIDER_KEY"
+  assert_lacks "no key on any ssh command line" "$T/sshlog" "$LA_KEY"
+  assert_lacks "no key in the output" "$T/out" "$LA_KEY"
+  assert_lacks "no key in stderr" "$T/err" "$LA_KEY"
+  assert_lacks "no jq argument holds the key" "$T/jqlog" "$LA_KEY"
+  assert_eq "the user's ~/.omp/.env is untouched" "mine" "$(cat "$T/vm/.omp/.env")"
+}
+
+test_sync_laminar_without_otel_lines_removes_the_file_with_one_notice() {
+  shims "$BASE" "$LA_ON"
+  printf '%s' "$OMP_ENV_BLOB" >"$T/store/OMP_ENV"
+  assert_rc "first sync" "$(sync_run)" 0
+  assert_eq "the file is there" yes "$([ -f "$(VMLA)" ] && echo yes)"
+  printf 'EXA_API_KEY=%s\n' "$PROVIDER_KEY" >"$T/store/OMP_ENV"
+  assert_rc "second sync, no OTEL_ lines" "$(sync_run)" 0
+  assert_absent "the file is gone" "$(VMLA)"
+  assert_eq "one line about laminar" 1 "$(grep -c '^laminar:' "$T/out")"
+  assert_has "names the vault key" "$T/out" "OMP_ENV in the vault has no OTEL_ lines, removed"
+}
+
+test_sync_laminar_does_nothing_when_the_vms_option_is_off() {
+  shims "$BASE" "$ALL_ON"
+  printf '%s' "$OMP_ENV_BLOB" >"$T/store/OMP_ENV"
+  assert_rc "option absent" "$(sync_run)" 0
+  printf '{"plugins":false,"skills":false,"hindsight":false,"laminar":false}' >"$T/vm-config.json"
+  assert_rc "option false" "$(sync_run)" 0
+  assert_absent "no file" "$(VMLA)"
+  assert_eq "the blob was not read" 0 "$(grep -c 'get OMP_ENV' "$T/seq")"
+}
+
+test_sync_laminar_refuses_an_unreadable_or_malformed_blob_and_changes_nothing() {
+  shims "$BASE" "$LA_ON"
+  assert_rc "no OMP_ENV in the vault" "$(sync_run)" 1
+  assert_has "names the vault key" "$T/err" "OMP_ENV"
+  assert_absent "no file" "$(VMLA)"
+  printf '%s' "$OMP_ENV_BLOB" >"$T/store/OMP_ENV"
+  assert_rc "a good sync first" "$(sync_run)" 0
+  local before
+  before=$(shasum -a 256 <"$(VMLA)")
+  printf 'OTEL_EXPORTER_OTLP_TRACES_HEADERS="authorization=Bearer%%20%s"\r\n' "$LA_KEY" >"$T/store/OMP_ENV"
+  : >"$T/sshlog"
+  assert_rc "an OTEL_ line with a CR" "$(sync_run)" 1
+  assert_has "names the vault key" "$T/err" "OMP_ENV"
+  assert_lacks "stderr hides the key" "$T/err" "$LA_KEY"
+  assert_eq "no laminar call reached the VM" 0 "$(grep -c "'laminar" "$T/sshlog")"
+  assert_eq "the file on the VM is as it was" "$before" "$(shasum -a 256 <"$(VMLA)")"
+}
+
+test_deploy_of_the_clean_role_removes_the_laminar_file_and_puts_back_the_users() {
+  shims "$BASE" "$LA_ON"
+  printf '%s' "$OMP_ENV_BLOB" >"$T/store/OMP_ENV"
+  mkdir -p "$T/vm/.omp/agent"
+  printf 'OTEL_SERVICE_NAME=by-hand\n' >"$(VMLA)"
+  assert_rc "sync" "$(sync_run)" 0
+  assert_has "the synced file" "$(VMLA)" "$LA_MARK"
+  printf '%s' "$CLEAN" >"$T/store/TF_VAR_vms"
+  assert_rc "deploy as clean" "$(deploy)" 0
+  assert_eq "the user's file is back" "OTEL_SERVICE_NAME=by-hand" "$(cat "$(VMLA)")"
   assert_absent "no manifest left" "$T/vm/.local/state/dotfiles/vm-sync/manifest"
 }
 

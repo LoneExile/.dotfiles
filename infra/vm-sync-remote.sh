@@ -5,6 +5,9 @@
 #   hindsight               read the Hindsight URL and API key (two lines) on stdin, write
 #                           ~/.config/dotfiles/hindsight.env (zsh reads it, see home/linux/agent.nix)
 #   hindsight-remove NAME   remove that file (the vault map has no entry for the VM NAME), one line
+#   laminar                 read the OTEL_ lines of the vault blob OMP_ENV on stdin, write ~/.omp/agent/.env
+#                           (omp reads it at start, before ~/.omp/.env: its trace export to Laminar)
+#   laminar-remove          remove that file (OMP_ENV has no OTEL_ lines), one line
 #   skills-prepare NAME...  make ~/.omp/agent/skills, check the named entries, record them
 #   plugins-status          say whether the captured omp plugins are installed
 #   unsync                  remove exactly what the sync placed (and stop the Mason install service, whose
@@ -68,18 +71,61 @@ parent_is_plain() {
   return 0
 }
 
-# hindsight.env is ours when the manifest has it or its first line is the marker.
+# A file that the sync writes whole (hindsight.env, omp's agent .env) is ours when the manifest has it or
+# its first line is its marker.
 hs_rel=.config/dotfiles/hindsight.env
 hs_mark='# vm-sync: written from the vault map VM_HINDSIGHT; vm-sync removes it when the VM has no entry'
-hs_is_ours() { # hs_is_ours FILE
-  grep -qxF -- "file $hs_rel" "$manifest" 2>/dev/null || [ "$(head -n 1 -- "$1" 2>/dev/null)" = "$hs_mark" ]
+la_rel=.omp/agent/.env
+la_mark='# vm-sync: the OTEL_ lines of the vault blob OMP_ENV (omp traces to Laminar); vm-sync removes it when OMP_ENV has none'
+is_ours() { # is_ours REL MARK
+  grep -qxF -- "file $1" "$manifest" 2>/dev/null || [ "$(head -n 1 -- "$HOME/$1" 2>/dev/null)" = "$2" ]
+}
+
+# place_ours LABEL REL MARK DIR-MODE BODY: write ~/REL as MARK and then BODY, mode 600, through a temporary
+# file in the same directory. Directories it has to make get DIR-MODE and are recorded. A file of the user
+# (or a link) in the way is kept as REL.dotfiles-backup, which unsync puts back. BODY may hold a key: it is
+# only ever written with the printf builtin, never passed to a program.
+place_ours() {
+  local label=$1 rel=$2 mark=$3 dmode=$4 body=$5 file=$HOME/$2 name=${2##*/}
+  parent_is_plain "$rel" || die 1 "a directory above ~/$rel is a link"
+  mkdir_recorded "${rel%/*}" "$dmode"
+  if { [ -e "$file" ] || [ -L "$file" ]; } && ! is_ours "$rel" "$mark"; then
+    mv -f -- "$file" "$file.dotfiles-backup" || die 1 "cannot keep the existing $name"
+    record backup "$rel.dotfiles-backup"
+    echo "$label: kept the existing $name as $name.dotfiles-backup (unsync puts it back)"
+  fi
+  record file "$rel"
+  place_tmp=$(mktemp "${file%/*}/.$name.XXXXXX") || die 1 "cannot create a temporary file"
+  trap 'rm -f -- "$place_tmp"' EXIT
+  printf '%s\n%s' "$mark" "$body" >"$place_tmp" || die 1 "cannot write ~/$rel"
+  mv -f -- "$place_tmp" "$file" || die 1 "cannot place ~/$rel"
+}
+
+# remove_ours LABEL REL MARK WHY: remove ~/REL when it is ours and forget it in the manifest; one line of output.
+remove_ours() {
+  local label=$1 rel=$2 mark=$3 why=$4 file=$HOME/$2 tmp
+  parent_is_plain "$rel" || die 1 "a directory above ~/$rel is a link: left alone"
+  if [ ! -e "$file" ] && [ ! -L "$file" ]; then
+    echo "$label: $why, no file to remove"
+  elif [ -L "$file" ] || [ -d "$file" ] || ! is_ours "$rel" "$mark"; then
+    echo "$label: $why; ~/$rel left alone (not written by vm-sync)"
+  else
+    rm -f -- "$file" || die 1 "cannot remove ~/$rel"
+    if [ -f "$manifest" ]; then
+      tmp=$(mktemp "$state_dir/.manifest.XXXXXX") || die 1 "cannot update the manifest"
+      grep -vxF -- "file $rel" "$manifest" >"$tmp"
+      [ $? -le 1 ] || { rm -f -- "$tmp"; die 1 "cannot update the manifest"; }
+      mv -f -- "$tmp" "$manifest" || die 1 "cannot update the manifest"
+    fi
+    echo "$label: $why, removed ~/$rel"
+  fi
 }
 
 # manifest_allows KIND REL: the only entries the sync ever records. unsync acts on nothing else, so an
 # edited manifest cannot point it at ~/.config/gh, ~/.omp/.env or any other file of the user.
 manifest_allows() {
   case "$1 $2" in
-    "file $hs_rel" | "backup $hs_rel.dotfiles-backup" | "dir .config" | "dir .config/dotfiles" | "dir .omp" | "dir .omp/agent" | "dir .omp/agent/skills") return 0 ;;
+    "file $hs_rel" | "backup $hs_rel.dotfiles-backup" | "file $la_rel" | "backup $la_rel.dotfiles-backup" | "dir .config" | "dir .config/dotfiles" | "dir .omp" | "dir .omp/agent" | "dir .omp/agent/skills") return 0 ;;
   esac
   return 1
 }
@@ -92,7 +138,7 @@ unsync_failed() {
 }
 
 cmd_hindsight() {
-  local url key rest file=$HOME/$hs_rel
+  local url key rest
   IFS= read -r url || true
   IFS= read -r key || true
   if IFS= read -r rest; then die 1 "more than two lines on stdin"; fi
@@ -100,40 +146,36 @@ cmd_hindsight() {
     die 1 "the Hindsight URL on stdin has an unexpected shape (https://host[:port][/path], letters, digits and . - _ / only)"
   [[ $key =~ ^[A-Za-z0-9_-]{20,255}$ ]] ||
     die 1 "the Hindsight key on stdin has an unexpected shape (one line of 20 to 255 letters, digits, underscores or dashes)"
-  parent_is_plain "$hs_rel" || die 1 "a directory above ~/$hs_rel is a link"
-  mkdir_recorded .config/dotfiles 700
-  if { [ -e "$file" ] || [ -L "$file" ]; } && ! hs_is_ours "$file"; then
-    mv -f -- "$file" "$file.dotfiles-backup" || die 1 "cannot keep the existing hindsight.env"
-    record backup "$hs_rel.dotfiles-backup"
-    echo "hindsight: kept the existing hindsight.env as hindsight.env.dotfiles-backup (unsync puts it back)"
-  fi
-  record file "$hs_rel"
-  hs_tmp=$(mktemp "$HOME/.config/dotfiles/.hindsight.env.XXXXXX") || die 1 "cannot create a temporary file"
-  trap 'rm -f -- "$hs_tmp"' EXIT
-  printf '%s\nHINDSIGHT_API_URL='"'%s'"'\nHINDSIGHT_API_TOKEN='"'%s'"'\n' "$hs_mark" "$url" "$key" >"$hs_tmp" || die 1 "cannot write the Hindsight file"
-  mv -f -- "$hs_tmp" "$file" || die 1 "cannot place hindsight.env"
+  place_ours hindsight "$hs_rel" "$hs_mark" 700 "HINDSIGHT_API_URL='$url'
+HINDSIGHT_API_TOKEN='$key'
+"
   echo "hindsight: wrote ~/$hs_rel"
 }
 
 cmd_hindsight_remove() {
   [ $# -eq 1 ] || die 2 "hindsight-remove needs one VM name"
   valid_name "$1" || die 1 "not a usable VM name: $(printf '%q' "$1")"
-  local file=$HOME/$hs_rel tmp
-  parent_is_plain "$hs_rel" || die 1 "a directory above ~/$hs_rel is a link: left alone"
-  if [ ! -e "$file" ] && [ ! -L "$file" ]; then
-    echo "hindsight: no entry for $1 in VM_HINDSIGHT, no file to remove"
-  elif [ -L "$file" ] || [ -d "$file" ] || ! hs_is_ours "$file"; then
-    echo "hindsight: no entry for $1 in VM_HINDSIGHT; ~/$hs_rel left alone (not written by vm-sync)"
-  else
-    rm -f -- "$file" || die 1 "cannot remove ~/$hs_rel"
-    if [ -f "$manifest" ]; then
-      tmp=$(mktemp "$state_dir/.manifest.XXXXXX") || die 1 "cannot update the manifest"
-      grep -vxF -- "file $hs_rel" "$manifest" >"$tmp"
-      [ $? -le 1 ] || { rm -f -- "$tmp"; die 1 "cannot update the manifest"; }
-      mv -f -- "$tmp" "$manifest" || die 1 "cannot update the manifest"
-    fi
-    echo "hindsight: no entry for $1 in VM_HINDSIGHT, removed ~/$hs_rel"
-  fi
+  remove_ours hindsight "$hs_rel" "$hs_mark" "no entry for $1 in VM_HINDSIGHT"
+}
+
+# laminar: 1 to 32 lines, each one OTEL_ setting of printable ASCII (no CR, no tab, no other control
+# character), written as they came. A refused line is named by its number only: it may hold the key.
+cmd_laminar() {
+  local line body="" n=0 LC_ALL=C
+  while IFS= read -r line || [ -n "$line" ]; do
+    n=$((n + 1))
+    [ "$n" -le 32 ] || die 1 "more than 32 lines on stdin"
+    [[ $line =~ ^OTEL_[A-Z0-9_]+=[[:print:]]*$ ]] || die 1 "line $n on stdin is not one OTEL_ setting of printable characters"
+    body=$body$line$'\n'
+  done
+  [ "$n" -ge 1 ] || die 1 "no OTEL_ lines on stdin"
+  place_ours laminar "$la_rel" "$la_mark" 700 "$body"
+  echo "laminar: wrote ~/$la_rel ($n OTEL_ settings)"
+}
+
+cmd_laminar_remove() {
+  [ $# -eq 0 ] || die 2 "laminar-remove takes no argument"
+  remove_ours laminar "$la_rel" "$la_mark" "OMP_ENV in the vault has no OTEL_ lines"
 }
 
 cmd_skills_prepare() {
@@ -305,12 +347,14 @@ cmd_unsync() {
   return "$rc"
 }
 
-[ $# -ge 1 ] || die 2 "usage: vm-sync-remote.sh hindsight | hindsight-remove NAME | skills-prepare NAME... | plugins-status | unsync"
+[ $# -ge 1 ] || die 2 "usage: vm-sync-remote.sh hindsight | hindsight-remove NAME | laminar | laminar-remove | skills-prepare NAME... | plugins-status | unsync"
 sub=$1
 shift
 case $sub in
   hindsight) cmd_hindsight ;;
   hindsight-remove) cmd_hindsight_remove "$@" ;;
+  laminar) cmd_laminar ;;
+  laminar-remove) cmd_laminar_remove "$@" ;;
   skills-prepare) cmd_skills_prepare "$@" ;;
   plugins-status) cmd_plugins_status ;;
   unsync) cmd_unsync ;;

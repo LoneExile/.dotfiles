@@ -190,7 +190,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
         }
         else null;
     };
-    syncOff = { dotfiles.agent.sync = { plugins = false; skills = false; hindsight = false; }; };
+    syncOff = { dotfiles.agent.sync = { plugins = false; skills = false; hindsight = false; laminar = false; }; };
     masonOff = { dotfiles.agent.mason.enable = false; };
     dockerOff = { dotfiles.agent.docker.enable = false; };
     toolsOff = { dotfiles.agent.tools.enable = false; };
@@ -201,7 +201,7 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
     vaultOff = { dotfiles.agent.vault.enable = false; };
     caBundleOff = { dotfiles.agent.caBundle.enable = false; };
     ternOff = { dotfiles.agent.tern.enable = false; };
-    ompOff = { dotfiles.agent = { omp.enable = false; sync = { plugins = false; skills = false; hindsight = false; }; }; };
+    ompOff = { dotfiles.agent = { omp.enable = false; sync = { plugins = false; skills = false; hindsight = false; laminar = false; }; }; };
   in {
     guest = summary c.proxmox-guest.config;
     agent = summary c.proxmox-agent.config;
@@ -248,14 +248,14 @@ check "agent: exactly one normal user, lingering, outside wheel" '(.agent.normal
 check "agent: nix-ld, podman, zram, omp, Home Manager on" '.agent | [.nixLd, .podman, .zram, .omp, .homeManager] | all'
 check "both: root by key only, no password login" '[.guest, .agent] | all(.rootLogin == "prohibit-password" and .passwordAuth == false)'
 check "clean: none of the sync (no harper, no sync file, no user wiring)" '(.guest | [.harper, (.syncFile != null), (.userSync != null)] | any) | not'
-check "agent: the sync options are on by default" '.agent.syncFile == {"plugins": true, "skills": true, "hindsight": true}'
+check "agent: the sync options are on by default" '.agent.syncFile == {"plugins": true, "skills": true, "hindsight": true, "laminar": true}'
 check "agent: harper (harper-cli) is installed" '.agent.harper'
 check "agent: plugin install service and activation" '.agent.userSync.service and .agent.userSync.activation'
 check "agent: gh is git's credential helper for github.com, and Home Manager owns nothing of ~/.config/gh" '(.agent.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$")) and (.agent.userSync.ghOwned | not)'
 check "agent: the manifests are placed before the user units reload, and the unit carries the hash of the captured files" '.agent.userSync.before == ["reloadSystemd"] and ([.agent.userSync.execStart] | flatten | map(test(" [0-9a-f]{64}$")) | any)'
 check "agent: the plugin install unit starts with the user manager at boot and is retried on failure" '.agent.userSync.wantedBy == ["default.target"] and .agent.userSync.restart == "on-failure"'
 check "agent: zsh reads the hindsight file for every shell, and never ~/.omp/.env" '.agent.userSync.zshenv | (contains("config/dotfiles/hindsight.env") and (contains(".omp/.env") | not) and contains("set -a") and contains("set +a"))'
-check "agent with every sync option off: no harper, no service, no activation, no hindsight in zsh; gh stays the credential helper" '.agentOff | (.syncFile == {"plugins": false, "skills": false, "hindsight": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$")) and (.userSync.zshenv | contains("hindsight") | not)'
+check "agent with every sync option off: no harper, no service, no activation, no hindsight in zsh; gh stays the credential helper" '.agentOff | (.syncFile == {"plugins": false, "skills": false, "hindsight": false, "laminar": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$")) and (.userSync.zshenv | contains("hindsight") | not)'
 
 # The user's own omp. omp updates itself (`omp update`) and refuses to run from the Nix store, so the pinned store binary is only the seed: Home Manager copies it once to
 # ~/.local/bin/omp (a regular file of the user's, ahead of the Nix profile directories on PATH), and a deploy never replaces that copy. The store package stays as the fallback.

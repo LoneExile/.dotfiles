@@ -14,9 +14,9 @@
 #   - Tern's remote service reachable on the LAN (UDP 8376), with its relay and iroh off.
 #   - the sync from the Mac (options `dotfiles.agent.sync.*`, run by `just vm-sync` and by vm-deploy):
 #     the captured omp plugins (manifests plus a user service that installs them, and harper-cli),
-#     rsync for the skills the Mac mirrors in, and the zsh side of the Hindsight URL and key (the
-#     file itself is written from the vault); /etc/dotfiles-agent-sync.json tells vm-sync which of
-#     the three.
+#     rsync for the skills the Mac mirrors in, the zsh side of the Hindsight URL and key (the
+#     file itself is written from the vault), and omp's trace export to Laminar (~/.omp/agent/.env,
+#     written from the vault); /etc/dotfiles-agent-sync.json tells vm-sync which of the four.
 #   - Mason's language servers for omp (option `dotfiles.agent.mason.enable`): neovim and mason.nvim
 #     from nixpkgs, and a user service that installs the servers of home/omp/mason-lsp.txt into
 #     ~/.local/share/nvim/mason, where the pi-mason-bridge plugin finds them. Nothing else of Neovim;
@@ -115,6 +115,7 @@ in {
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
       skills = piece "the skills that `just vm-sync` mirrors from the Mac into ~/.omp/agent/skills (needs rsync on the VM)";
       hindsight = piece "the public Hindsight API for omp: zsh reads ~/.config/dotfiles/hindsight.env (written by `just vm-sync` from the vault) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN, which omp prefers over its config file";
+      laminar = piece "omp's trace export to the self-hosted Laminar: `just vm-sync` writes the OTEL_ lines of the vault blob OMP_ENV (the Macs' ~/.omp/.env, the other lines stay on the Mac) into ~/.omp/agent/.env, which omp reads at start";
     };
   };
 
@@ -226,6 +227,10 @@ in {
           message = "dotfiles.agent.sync.hindsight needs dotfiles.agent.omp.enable";
         }
         {
+          assertion = !cfg.sync.laminar || cfg.omp.enable;
+          message = "dotfiles.agent.sync.laminar needs dotfiles.agent.omp.enable";
+        }
+        {
           assertion = !cfg.jumphost.enable || cfg.docker.enable;
           message = "dotfiles.agent.jumphost needs dotfiles.agent.docker.enable (its context is a Docker context)";
         }
@@ -236,7 +241,7 @@ in {
       ];
 
       # What the VM wants synced, read by vm-sync (infra/vm-sync-lib.sh). No secret, world readable.
-      environment.etc."dotfiles-agent-sync.json".text = builtins.toJSON {inherit (cfg.sync) plugins skills hindsight;};
+      environment.etc."dotfiles-agent-sync.json".text = builtins.toJSON {inherit (cfg.sync) plugins skills hindsight laminar;};
     }
 
     (lib.mkIf cfg.omp.enable {

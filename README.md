@@ -18,6 +18,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Activation](#activation)
   - [Status, review and push](#status-review-and-push)
   - [Rules and tools](#rules-and-tools)
+  - [omp traces to Laminar](#omp-traces-to-laminar)
   - [SOPS leftovers](#sops-leftovers)
 - [Shell](#shell)
 - [Homebrew](#homebrew)
@@ -70,8 +71,9 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [A headless browser for the browser tools](#a-headless-browser-for-the-browser-tools)
   - [Clean to agent](#clean-to-agent)
   - [Agent to clean](#agent-to-clean)
-  - [Personal setup: Hindsight, plugins, skills](#personal-setup-hindsight-plugins-skills)
+  - [Personal setup: Hindsight, Laminar, plugins, skills](#personal-setup-hindsight-laminar-plugins-skills)
   - [Hindsight](#hindsight)
+  - [Laminar traces](#laminar-traces)
   - [Mason language servers for omp](#mason-language-servers-for-omp)
 - [Identity: fixed at install](#identity-fixed-at-install)
   - [What a change of the entry does](#what-a-change-of-the-entry-does)
@@ -230,6 +232,19 @@ The live path is **homelab OpenBao**, not SOPS. `home/secretspec/materialize.sh`
 - Login: `just openbao-login` (the recipe name is `openbao-login`, not `secretspec-login`).
 - Binary: `~/.cargo/bin/secretspec` (install script, not the nixpkgs package) is still used by `atuin-login.sh` (`ATUIN_PASSWORD`) and by the contract check in `just secretspec-status`. The sync engine does not call it.
 - Tests: `just test-secrets`.
+
+### omp traces to Laminar
+
+omp exports its own traces (OpenTelemetry, no plugin) to the self-hosted Laminar, project `omp`.
+
+- **Where:** six `OTEL_*` lines at the end of the `OMP_ENV` blob (`~/.omp/.env`), under a comment. Every Mac gets them with `just home`; an edit goes out with `just secretspec-sync --push OMP_ENV`.
+- **The key:** it sits in `OTEL_EXPORTER_OTLP_TRACES_HEADERS` as `authorization=Bearer%20<key>`. Keep the `%20`: a raw space splits the header and Laminar answers 401.
+- **On a Mac, keep them out of `~/.omp/agent/.env`.** omp reads that file before `~/.omp/.env` and the first non-empty value wins, so a copy there would override the vault after a key rotation.
+- **VMs:** `just vm-sync` copies these lines, and nothing else of the blob, to the agent VMs (see [Laminar traces](#laminar-traces)).
+- **Capture:** `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=full` sends prompts and tool output, file contents and secrets included, to Laminar's ClickHouse. Without that line only names and timings go.
+- **LAN only:** the ingest host `laminar-otel.home.0dl.me` is the cluster gateway. Off the LAN the export fails with no error you will see.
+- **Silent off switches:** `telemetry.otlpExportEnabled: false` (`/settings` → Providers → Privacy), or an `OTEL_EXPORTER_OTLP_PROTOCOL` other than `http/protobuf`.
+- omp reads the file at start: restart running sessions after a pull.
 
 ### SOPS leftovers
 
@@ -783,7 +798,7 @@ Save a copy of the map to a private file first, and check that the name exists (
 
 - `dotfiles.agent.enable`;
 - `.omp`, `.mise`, `.tern`, `.gh`, `.mason`, `.podman`, `.docker`, `.jumphost`, `.tools`, `.vault`, `.caBundle`, `.zsh`, `.browser` and `.blender`, each with `.enable`, each on when the agent is;
-- `.sync.hindsight`, `.sync.plugins` and `.sync.skills` (see [Personal setup](#personal-setup-hindsight-plugins-skills)), each on when the agent is;
+- `.sync.hindsight`, `.sync.laminar`, `.sync.plugins` and `.sync.skills` (see [Personal setup](#personal-setup-hindsight-laminar-plugins-skills)), each on when the agent is;
 - `dotfiles.agent.user`, default `lex`.
 
 What the agent role gives the VM:
@@ -839,7 +854,7 @@ This only changes the seed. Change `version` and `hash` together, then `just vm-
 
 - omp's config (`home/omp/config.yml`, `models.yml`, `mcp.json`, as they are in the working tree when you deploy: see [What gets deployed is the working tree, not a commit](#what-gets-deployed-is-the-working-tree-not-a-commit)) is copied into `~/.omp/agent/` as writable files. So is mise's global config (`~/.config/mise/config.toml`). `home/linux/writable-copy.sh` does the copying.
 - The repo copy replaces the file only when the repo copy is new since the last install (a hash under `~/.local/state/dotfiles/writable-copy/`). An edit made on the VM is then kept as `<name>.dotfiles-backup` (one previous version). Otherwise an edit stays across deploys and reboots (Home Manager activates at every boot).
-- Nix pushes no secret. Put `~/.omp/.env` in place by hand: it is deliberately not synced (the command is under [The omp .env file](#the-omp-env-file)). The one secret that reaches the VM is the Hindsight key that `just vm-sync` writes (see [Hindsight](#hindsight)).
+- Nix pushes no secret. Put `~/.omp/.env` in place by hand: it is deliberately not synced (the command is under [The omp .env file](#the-omp-env-file)). Two secrets reach the VM, both written by `just vm-sync`: the Hindsight key (see [Hindsight](#hindsight)) and the Laminar project key of omp's trace export (see [Laminar traces](#laminar-traces)).
 - The `gh` login is yours as well: `gh auth login` on the VM.
 - The omp config in the repo was written for the Mac, and these parts cannot work on the VM: the omniroute, anthropic-refresher and xai-refresher providers (homelab addresses, unreachable from the VM), the `unitllm` provider, and the MCP servers `zennotes`, `open-design` and `unsplash` (Mac paths). `codegraph` is not installed either.
 - The hindsight memory backend works through the public URL and key that `vm-sync` sets as environment variables (see [Hindsight](#hindsight)).
@@ -1253,11 +1268,11 @@ Expected, not measured (no flip was run):
 
 Flipping back to `agent` works: the user, linger, the services and Tern's service return, and the Mac's host entry works again without a new setup. A truly clean VM needs a reinstall with role `clean`.
 
-### Personal setup: Hindsight, plugins, skills
+### Personal setup: Hindsight, Laminar, plugins, skills
 
-- Options `dotfiles.agent.sync.hindsight`, `.plugins` and `.skills`, each on when the agent is. The VM lists them in `/etc/dotfiles-agent-sync.json`, which `just vm-sync <name>` reads.
+- Options `dotfiles.agent.sync.hindsight`, `.laminar`, `.plugins` and `.skills`, each on when the agent is. The VM lists them in `/etc/dotfiles-agent-sync.json`, which `just vm-sync <name>` reads.
 - `just vm-deploy <name>` runs `vm-sync` after an agent deploy. When that sync fails or is refused, the deploy has still happened and exits 1: fix the cause, then `just vm-sync <name>`.
-- `~/.omp/.env` is **not** synced, in any form: it holds the API keys, so put it in place by hand.
+- `~/.omp/.env` itself is **not** synced: it holds the model API keys, so put it in place by hand. Only the `OTEL_*` lines of its vault blob reach the VM, as `~/.omp/agent/.env` (see [Laminar traces](#laminar-traces)).
 - `just vm-sync` itself runs on the Mac and is for the agent role only. Everything it runs on the VM is the agent user's (`infra/vm-sync-remote.sh`, sent over ssh), never root's.
 
 #### Host keys
@@ -1281,7 +1296,7 @@ Flipping back to `agent` works: the user, linger, the services and Tern's servic
 `~/.omp/.env` is manual too. It holds the model API keys and nothing here copies it.
 
 - On the Mac it is written from the vault blob `OMP_ENV` (`just home` pulls it; `just secretspec-sync` pushes an edit).
-- The VM needs only the providers it can reach (see [omp](#omp)). Make a private file with just those lines, outside the repo, then put it in place over ssh. That keeps it off the terminal and out of argv, and `umask 077` makes it mode 600:
+- The VM needs only the providers it can reach (see [omp](#omp)). Make a private file with just those lines, outside the repo, then put it in place over ssh (leave out the `OTEL_*` lines: `vm-sync` writes those into `~/.omp/agent/.env`). That keeps it off the terminal and out of argv, and `umask 077` makes it mode 600:
 
 ```bash
 ssh <user>@<ipv4> 'umask 077 && mkdir -p ~/.omp && cat > ~/.omp/.env' < <your prepared file>
@@ -1314,8 +1329,8 @@ omp reads it at its next start. A reinstall deletes it.
 
 Before the switch, `vm-deploy` runs the removal as the agent user.
 
-- Exactly what the sync placed goes: the files and skill directories the sync recorded in `~/.local/state/dotfiles/vm-sync/manifest` (including the Hindsight file), and the plugin install `~/.omp/plugins` as one directory with its install stamp and the records of its three files.
-- A file of yours that the sync displaced (`hindsight.env`) comes back, and directories the sync made are removed while empty.
+- Exactly what the sync placed goes: the files and skill directories the sync recorded in `~/.local/state/dotfiles/vm-sync/manifest` (including the Hindsight file and omp's `~/.omp/agent/.env`), and the plugin install `~/.omp/plugins` as one directory with its install stamp and the records of its three files.
+- A file of yours that the sync displaced (`hindsight.env`, `~/.omp/agent/.env`) comes back, and directories the sync made are removed while empty.
 - The helper acts only on the few entries the sync records (an edited manifest cannot point it at another file).
 - If a removal fails, the helper says which, exits 1 and keeps the manifest and the records for a retry, and the deploy stops before the role changes.
 - If the switch itself then fails, the synced files are already gone: `vm-deploy` says so. Fix the cause and run `just vm-deploy <name>` again (to stay an agent, set the role back to `agent` first: that deploy syncs again).
@@ -1364,6 +1379,19 @@ Rotate: add the new property, update `VM_HINDSIGHT`, run `just vm-sync <name>`, 
 - The gate does not name the client in its access log, and nothing here verifies per-key scoping inside Hindsight: assume every key has the same access.
 - Cloudflare's 100 second limit can cut a long reflect call.
 - With per-project tagged scoping, the VM's projects can be tagged differently from the Mac's paths, so memories from the VM land under other tags.
+
+### Laminar traces
+
+Option `dotfiles.agent.sync.laminar`, on when the agent is. omp on the VM sends its traces to the same Laminar project as the Macs, with the same key (see [omp traces to Laminar](#omp-traces-to-laminar)).
+
+- `vm-sync` reads the vault blob `OMP_ENV` (project `dotfiles`, `infra/vm-laminar-env.sh`) and keeps only its `OTEL_*` lines. The model API keys in it stay on the Mac.
+- It writes them to `~/.omp/agent/.env` for the agent user over ssh stdin: mode 600, under a comment that says vm-sync wrote it. omp reads that file at start, before `~/.omp/.env`, so these lines win over any `OTEL_*` line in the hand-made file.
+- vm-sync owns that file on the VM. A file of yours already there (a hand-made copy of these lines, say) is kept as `.env.dotfiles-backup`, and the flip to clean puts it back. Put your own variables in `~/.omp/.env`.
+- With no `OTEL_*` line in the blob, the file is removed and `vm-sync` prints one line (`laminar: OMP_ENV in the vault has no OTEL_ lines, removed …`). A file of that name that vm-sync did not write is left alone.
+- An `OTEL_*` line with a CR, a tab or another control character stops the sync before anything reaches the VM, and the file there stays as it was.
+- Rotate the key: edit the header line on a Mac, `just secretspec-sync --push OMP_ENV`, then `just vm-sync <name>` for every agent VM. omp sessions that are already running keep the old key until restarted.
+- The ingest host is LAN-only; the agent VMs are on the LAN.
+- Residual risk: the key is in a mode-600 file of the agent user, so anything that runs as that user can read it. It is the Macs' key: revoking it in Laminar cuts off every machine at once.
 
 ### Mason language servers for omp
 
@@ -1681,7 +1709,7 @@ Do this if you use Tern.
 
 #### The omp .env file and the gh login
 
-Both were on the old disk; do them again (see [Personal setup](#personal-setup-hindsight-plugins-skills)).
+Both were on the old disk; do them again (see [Personal setup](#personal-setup-hindsight-laminar-plugins-skills)).
 
 ### Kexec failed while the VM still runs Debian
 

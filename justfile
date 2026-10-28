@@ -256,7 +256,7 @@ vm-jumphost-authorize name kind="docker":
   set -euo pipefail
   bash "{{infra_dir}}/vm-jumphost-authorize.sh" {{quote(name)}} "{{justfile_directory()}}" {{quote(kind)}}
 
-# Sync the Hindsight URL and key (this VM's entry in the vault map VM_HINDSIGHT) and the Mac's skills library to the agent user of a VM (role agent); vm-deploy runs it after an agent deploy
+# Sync the Hindsight URL and key (this VM's entry in the vault map VM_HINDSIGHT), omp's trace export to Laminar (the OTEL_ lines of the vault blob OMP_ENV) and the Mac's skills library to the agent user of a VM (role agent); vm-deploy runs it after an agent deploy
 vm-sync name:
   #!/usr/bin/env bash
   set -euo pipefail
