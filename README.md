@@ -243,7 +243,7 @@ omp exports its own traces (OpenTelemetry, no plugin) to the self-hosted Laminar
 - **VMs:** `just vm-sync` copies these lines, and nothing else of the blob, to the agent VMs (see [Laminar traces](#laminar-traces)).
 - **Capture:** `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=full` sends prompts and tool output, file contents and secrets included, to Laminar's ClickHouse. Without that line only names and timings go.
 - **Endpoint:** `https://lmnr.0dl.me/v1/traces`, public through the `px-cloud` Cloudflare tunnel, so it works on and off the LAN (from home it goes out and back in). `https://laminar-otel.home.0dl.me/v1/traces` is the same app-server, LAN only, and the agent VMs cannot reach it: an omp there waited 30 s at exit and failed with "Span processor did not completed within timeout". The dashboard, `https://laminar.home.0dl.me`, is LAN only.
-- **The key is the only lock:** both hosts serve all of `/v1`, including `/v1/sql/query`, which reads every stored trace. With capture on, anyone holding the key can read the captured prompts and file contents from anywhere.
+- **What the key opens:** the public host serves only `POST /v1/traces` (homelab `laminar.tf`, route `laminar-public-ingest`); any other path there is a 404. The LAN host serves all of `/v1`, including `/v1/sql/query`, which reads every stored trace, captured prompts and file contents included. So the key can write traces from anywhere but read them only from the LAN.
 - **Silent off switches:** `telemetry.otlpExportEnabled: false` (`/settings` → Providers → Privacy), or an `OTEL_EXPORTER_OTLP_PROTOCOL` other than `http/protobuf`.
 - omp reads the file at start: restart running sessions after a pull.
 
