@@ -466,8 +466,13 @@ in {
     # mise activates only in interactive shells (.zshrc). Login/non-interactive
     # shells (`zsh -lc`) used by GUI apps — e.g. ZenNotes' Raycast/CLI installer
     # probing for node/npm — skip .zshrc, so expose mise's shims here too.
+    # Hermes bootstrap appends ~/.local/bin to this file and treats a failed
+    # write as a failed install. Home Manager publishes it as a nix-store
+    # symlink, so the line has to already be here (installer matches
+    # PATH=.*\.local/bin and skips the write).
     profileExtra = ''
       export PATH="$HOME/.local/share/mise/shims:$PATH"
+      export PATH="$HOME/.local/bin:$PATH"
     '';
   };
 

@@ -180,6 +180,7 @@
       "skills-manager"
       "highball" # Windows games on Apple Silicon (Wine, DXMT, D3DMetal); data in ~/Library/Application Support/Highball
       "steam" # native macOS Steam client; Highball's Windows Steam lives in its own environment
+      "hermes-desktop" # Hermes Agent desktop (Nous); Hermes.app from the official DMG
     ];
 
     # masApps removed: brew bundle re-prompts on every switch because
