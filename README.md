@@ -878,9 +878,9 @@ This only changes the seed. Change `version` and `hash` together, then `just vm-
 
 #### Direct LAN only: the drop-in
 
-- A drop-in that the module installs (`tern-remote.service.d/10-direct-lan.conf`) starts the service with `--relay none --pkarr none --no-iroh`. It never contacts iroh.stencil.so or a relay, and only a Mac with a UDP path to the VM reaches it (measured: the service opens no other UDP port).
-- Deploy before `tern remote setup`. A service that started without the drop-in connected to the iroh relay and published an endpoint id, and its first setup added the host to the Mac's list by endpoint id (`<user>@<endpoint id>`). After the drop-in and a restart, `tern remote setup` again adds `<user>@<ipv4>`; the endpoint-id line is then stale and can go from the hosts file.
-- Without a UDP path from the Mac to the VM (another network, no VPN) the Mac cannot reach it. Before the drop-in, setup fell back to iroh; with it, nothing does. Turning relay or iroh back on is a deliberate change that this module does not make.
+- A drop-in that the module installs (`tern-remote.service.d/10-direct-lan.conf`) starts the service with `--relay none`. It never contacts Stencil's relay (`my.omp.sh` since 0.9.9, iroh.stencil.so before) or any other, and only a Mac with a UDP path to the VM reaches it (measured: the service opens no other UDP port).
+- Deploy before `tern remote setup`. A service that started without the drop-in connected to the relay and published an endpoint id, and its first setup added the host to the Mac's list by endpoint id (`<user>@<endpoint id>`). After the drop-in and a restart, `tern remote setup` again adds `<user>@<ipv4>`; the endpoint-id line is then stale and can go from the hosts file.
+- Without a UDP path from the Mac to the VM (another network, no VPN) the Mac cannot reach it. Before the drop-in, setup fell back to the relay; with it, nothing does. Turning the relay back on is a deliberate change that this module does not make.
 
 #### Update Tern on the VMs
 
@@ -896,8 +896,9 @@ tern remote hosts | while read -r h _; do tern remote update "$h" </dev/null; do
 
 #### Limits to know
 
-- The drop-in repeats Tern 0.6.0's own `ExecStart` (`~/.local/share/tern/build/tern remote serve --user --state-dir ~/.config/tern`) with the three flags added; 0.8.3 still writes the same command. If a `tern remote update` changes that command, change the drop-in too.
-- A running service takes a changed drop-in only after `systemctl --user restart tern-remote.service` or a reboot. Check with `ps -u <user> -o args=` that its line holds `--no-iroh`.
+- The drop-in repeats Tern 0.6.0's own `ExecStart` (`~/.local/share/tern/build/tern remote serve --user --state-dir ~/.config/tern`) with `--relay none` added; 0.9.9 still writes the same command. If a `tern remote update` changes that command, change the drop-in too.
+- Up to 0.8.x the drop-in also passed `--pkarr none --no-iroh`. Tern 0.9.9 dropped both flags (`--relay none` turns off both). An update re-runs the service with the arguments it was started with, so the 0.9.9 update stopped it with `unknown argument --pkarr` (status 2, the VM's `journalctl --user -u tern-remote`), and systemd does not restart on status 2: the Mac then says `The host did not answer … over UDP to <ip>:8376` while ssh still works. When a release drops a flag the drop-in passes: change the drop-in, `just vm-deploy <name>`, then `systemctl --user restart tern-remote.service` on the VM.
+- A running service takes a changed drop-in only after `systemctl --user restart tern-remote.service` or a reboot. Check with `ps -u <user> -o args=` that its line ends in `--relay none`.
 
 #### Image paste into omp on the VM
 

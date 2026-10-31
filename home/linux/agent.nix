@@ -258,10 +258,13 @@ in {
       # `tern remote setup <user>@<ip>`, run from the Mac, downloads Tern into ~/.local/share/tern
       # (the binary is not managed here, nor updated by a deploy) and writes the user service
       # ~/.config/systemd/user/tern-remote.service itself. This drop-in only changes how that
-      # service serves: its own ExecStart (measured, Tern 0.6.0) plus --relay none --pkarr none
-      # --no-iroh, so it listens on UDP 8376 and nothing is announced to iroh.stencil.so or any
-      # relay: the Mac reaches the VM on the LAN directly, or not at all. The drop-in is there
-      # before the unit is, which is fine: systemd merges it when the unit appears.
+      # service serves: its own ExecStart (measured, Tern 0.6.0) plus --relay none, so it listens on
+      # UDP 8376 and nothing is announced to Stencil's relay (my.omp.sh) or any other: the Mac reaches
+      # the VM on the LAN directly, or not at all. Tern 0.9.9 dropped --pkarr and --no-iroh
+      # (--relay none turns off both); an update re-runs the service with the arguments it was started
+      # with, so 0.9.9 met the old flags, stopped with "unknown argument --pkarr" (status 2) and
+      # systemd left it down. The drop-in is there before the unit is, which is fine: systemd merges
+      # it when the unit appears.
       # PATH: a NixOS user unit gets only systemd's own bin directory, and Tern's updater shells out to
       # unpack a build, so an update over the link (the Mac's `tern remote update <host>`, or Update in
       # Tern's Settings) failed with "Couldn't unpack the update: No such file or directory" (measured,
@@ -270,7 +273,7 @@ in {
         [Service]
         Environment=PATH=/run/current-system/sw/bin
         ExecStart=
-        ExecStart=%h/.local/share/tern/build/tern remote serve --user --state-dir %h/.config/tern --relay none --pkarr none --no-iroh
+        ExecStart=%h/.local/share/tern/build/tern remote serve --user --state-dir %h/.config/tern --relay none
       '';
 
       # omp never turns on the paste-events mode of Tern's clipboard protocol (CSI ? 5522 h), so Tern cannot hand it a pasted image: omp
