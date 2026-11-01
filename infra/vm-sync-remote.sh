@@ -5,9 +5,6 @@
 #   hindsight               read the Hindsight URL and API key (two lines) on stdin, write
 #                           ~/.config/dotfiles/hindsight.env (zsh reads it, see home/linux/agent.nix)
 #   hindsight-remove NAME   remove that file (the vault map has no entry for the VM NAME), one line
-#   laminar                 read the OTEL_ lines of the vault blob OMP_ENV on stdin, write ~/.omp/agent/.env
-#                           (omp reads it at start, before ~/.omp/.env: its trace export to Laminar)
-#   laminar-remove          remove that file (OMP_ENV has no OTEL_ lines), one line
 #   skills-prepare NAME...  make ~/.omp/agent/skills, check the named entries, record them
 #   plugins-status          say whether the captured omp plugins are installed
 #   unsync                  remove exactly what the sync placed (and stop the Mason install service, whose
@@ -71,12 +68,10 @@ parent_is_plain() {
   return 0
 }
 
-# A file that the sync writes whole (hindsight.env, omp's agent .env) is ours when the manifest has it or
-# its first line is its marker.
+# A file that the sync writes whole (hindsight.env) is ours when the manifest has it or its first line is
+# its marker.
 hs_rel=.config/dotfiles/hindsight.env
 hs_mark='# vm-sync: written from the vault map VM_HINDSIGHT; vm-sync removes it when the VM has no entry'
-la_rel=.omp/agent/.env
-la_mark='# vm-sync: the OTEL_ lines of the vault blob OMP_ENV (omp traces to Laminar); vm-sync removes it when OMP_ENV has none'
 is_ours() { # is_ours REL MARK
   grep -qxF -- "file $1" "$manifest" 2>/dev/null || [ "$(head -n 1 -- "$HOME/$1" 2>/dev/null)" = "$2" ]
 }
@@ -125,7 +120,7 @@ remove_ours() {
 # edited manifest cannot point it at ~/.config/gh, ~/.omp/.env or any other file of the user.
 manifest_allows() {
   case "$1 $2" in
-    "file $hs_rel" | "backup $hs_rel.dotfiles-backup" | "file $la_rel" | "backup $la_rel.dotfiles-backup" | "dir .config" | "dir .config/dotfiles" | "dir .omp" | "dir .omp/agent" | "dir .omp/agent/skills") return 0 ;;
+    "file $hs_rel" | "backup $hs_rel.dotfiles-backup" | "dir .config" | "dir .config/dotfiles" | "dir .omp" | "dir .omp/agent" | "dir .omp/agent/skills") return 0 ;;
   esac
   return 1
 }
@@ -156,26 +151,6 @@ cmd_hindsight_remove() {
   [ $# -eq 1 ] || die 2 "hindsight-remove needs one VM name"
   valid_name "$1" || die 1 "not a usable VM name: $(printf '%q' "$1")"
   remove_ours hindsight "$hs_rel" "$hs_mark" "no entry for $1 in VM_HINDSIGHT"
-}
-
-# laminar: 1 to 32 lines, each one OTEL_ setting of printable ASCII (no CR, no tab, no other control
-# character), written as they came. A refused line is named by its number only: it may hold the key.
-cmd_laminar() {
-  local line body="" n=0 LC_ALL=C
-  while IFS= read -r line || [ -n "$line" ]; do
-    n=$((n + 1))
-    [ "$n" -le 32 ] || die 1 "more than 32 lines on stdin"
-    [[ $line =~ ^OTEL_[A-Z0-9_]+=[[:print:]]*$ ]] || die 1 "line $n on stdin is not one OTEL_ setting of printable characters"
-    body=$body$line$'\n'
-  done
-  [ "$n" -ge 1 ] || die 1 "no OTEL_ lines on stdin"
-  place_ours laminar "$la_rel" "$la_mark" 700 "$body"
-  echo "laminar: wrote ~/$la_rel ($n OTEL_ settings)"
-}
-
-cmd_laminar_remove() {
-  [ $# -eq 0 ] || die 2 "laminar-remove takes no argument"
-  remove_ours laminar "$la_rel" "$la_mark" "OMP_ENV in the vault has no OTEL_ lines"
 }
 
 cmd_skills_prepare() {
@@ -347,14 +322,12 @@ cmd_unsync() {
   return "$rc"
 }
 
-[ $# -ge 1 ] || die 2 "usage: vm-sync-remote.sh hindsight | hindsight-remove NAME | laminar | laminar-remove | skills-prepare NAME... | plugins-status | unsync"
+[ $# -ge 1 ] || die 2 "usage: vm-sync-remote.sh hindsight | hindsight-remove NAME | skills-prepare NAME... | plugins-status | unsync"
 sub=$1
 shift
 case $sub in
   hindsight) cmd_hindsight ;;
   hindsight-remove) cmd_hindsight_remove "$@" ;;
-  laminar) cmd_laminar ;;
-  laminar-remove) cmd_laminar_remove "$@" ;;
   skills-prepare) cmd_skills_prepare "$@" ;;
   plugins-status) cmd_plugins_status ;;
   unsync) cmd_unsync ;;
