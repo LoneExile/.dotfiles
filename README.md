@@ -1,10 +1,10 @@
 # ~/.dotfiles
 
-Personal macOS config: **nix-darwin** (system) + **Home Manager** (user), driven by this flake. The same flake also builds the NixOS guests of the [Proxmox VMs](#proxmox-vms) stack.
+Personal macOS config: **nix-darwin** (system) + **Home Manager** (user), driven by this flake. The same flake also builds the NixOS guests of the [Proxmox VMs](#proxmox-vms) stack, and the home of [non-NixOS Linux hosts](#non-nixos-linux-hosts).
 
 Hosts `le` and `lex` are entries in the `hosts` table in `flake.nix` (hostname → macOS username). Nothing else names a user or a `/Users/<name>` path: home directories, `system.primaryUser`, Home Manager, Homebrew and nix trusted-users derive from that entry, and `just check` fails on a hardcoded one.
 
-The first part of this README is about the Mac (commands, setup, secrets, shell, apps). The second part, from [Proxmox VMs](#proxmox-vms), is about the NixOS VMs.
+The first part of this README is about the Mac (commands, setup, secrets, shell, apps). Then [Non-NixOS Linux hosts](#non-nixos-linux-hosts) (Arch, CachyOS). The last part, from [Proxmox VMs](#proxmox-vms), is about the NixOS VMs.
 
 ## Contents
 
@@ -33,6 +33,10 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Image paste is not this plugin's job](#image-paste-is-not-this-plugins-job)
 - [Tern plugin: no-traffic-lights](#tern-plugin-no-traffic-lights)
 - [Tern plugin: scrollback-editor](#tern-plugin-scrollback-editor)
+- [Non-NixOS Linux hosts](#non-nixos-linux-hosts)
+  - [Add a Linux host](#add-a-linux-host)
+  - [One-time root steps (Arch)](#one-time-root-steps-arch)
+  - [Rollback and limits](#rollback-and-limits)
 - [Proxmox VMs](#proxmox-vms)
   - [What lives where](#what-lives-where)
   - [Repo, vault and state](#repo-vault-and-state)
@@ -338,6 +342,77 @@ A running Tern keeps its settings in memory: after `just home`, run Reload setti
 - Home Manager links it into Tern's plugins folder as a store path; `tern plugin list` must show `scrollback-editor … ready`. After `just home`, run `tern plugin reload` (or restart Tern).
 - Measured in an isolated Tern window on the Mac: nvim opened with all 300 lines of a test command and the prompt, and `:q` closed the tab and removed the file. In a pane of an agent VM the new tab runs on the VM, where `tern capture` and vim exist; that path was not tried from a real window. If the capture fails, the tab says so and waits for Enter.
 - The new tab is titled by its command line (`f=$(mktemp`).
+
+## Non-NixOS Linux hosts
+
+A Linux machine that is not NixOS (Arch, CachyOS) gets the agent VMs' home from a standalone Home Manager config: the Mac's zsh files and plugins, starship, the [tools](#just-lazygit-lazydocker-tokei-btop-kubectl-k9s-superfile-and-zoxide), [omp](#omp), [mise](#mise), gh, bao and secretspec, the captured omp plugins, the [Mason servers](#mason-language-servers-for-omp) and the [Tern](#tern) remote service, plus Neovim. The desktop and the rest of the system stay the distribution's (pacman, paru).
+
+- **Hosts.** `linuxHosts` in `flake.nix` (hostname → `username`, `system`); the pieces a host turns on, and its non-NixOS paths, in `hosts/linux/<hostname>.nix`.
+- **Pins.** The pieces' packages come from `modules/nixos/agent-dev/packages.nix`, the file the VMs read too.
+- **Neovim.** The nightly build the Mac runs (`neovim-nightly-overlay`), and https://github.com/LoneExile/nvim cloned once to `~/.config/nvim`: a later switch never pulls or replaces it, and a switch without network only warns.
+- **No secrets.** Nothing from OpenBao is written. Run `gh auth login`, and write `~/.omp/.env` and `~/.config/nvim/.env.lua` yourself.
+- **Checks.** `just check` on the Mac evaluates every Linux host, so a change that breaks one fails on the Mac first.
+
+### Add a Linux host
+
+1. Add it to `linuxHosts`: `<hostname> = {username = "<user>"; system = "x86_64-linux";};`, and copy `hosts/linux/rex.nix` to `hosts/linux/<hostname>.nix`.
+2. On the host, the [one-time root steps](#one-time-root-steps-arch).
+3. Clone and switch the first time (no `just` yet; Home Manager is the flake's locked input):
+
+   ```bash
+   git clone https://github.com/LoneExile/.dotfiles ~/.dotfiles && cd ~/.dotfiles
+   nix run --inputs-from . home-manager-nixos -- switch --flake .#<hostname> -b hm-backup
+   ```
+
+   A file in the way is kept as `<name>.hm-backup` (CachyOS: `~/.zshrc`).
+4. `mise install`: Neovim's Mason needs node; the other tools also install on first use.
+5. `sudo chsh -s /usr/bin/zsh <user>`.
+6. From the Mac: `tern remote setup <user>@<ip>`, then `tern remote doctor <user>@<ip>`. Its `linked` warning is expected: the service serves with `--relay none`.
+
+After that, `just switch` in `~/.dotfiles` on the host. A host with no entry gets `no homeConfigurations.<host> in this flake`.
+
+### One-time root steps (Arch)
+
+In this order: `/nix` must be its own subvolume before Nix writes to it.
+
+1. `/nix` on its own Btrfs subvolume, so snapper's snapshots of `/` (one pair for every pacman transaction) leave the store out:
+
+   ```bash
+   uuid=<UUID of the / line in /etc/fstab>
+   sudo mkdir /mnt/btrfs-top && sudo mount -o subvolid=5 "UUID=$uuid" /mnt/btrfs-top
+   sudo btrfs subvolume create /mnt/btrfs-top/@nix && sudo umount /mnt/btrfs-top && sudo rmdir /mnt/btrfs-top
+   echo "UUID=$uuid /nix btrfs subvol=/@nix,defaults,noatime,compress=zstd:1 0 0" | sudo tee -a /etc/fstab
+   sudo mkdir /nix && sudo systemctl daemon-reload && sudo mount /nix
+   ```
+
+2. `sudo pacman -S paru nix`, then append the Mac's settings (`lib/builders.nix`) to `/etc/nix/nix.conf`:
+
+   ```ini
+   experimental-features = nix-command flakes
+   substituters = https://cache.nixos.org https://nix-community.cachix.org
+   trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+   ```
+
+   `sudo systemctl enable --now nix-daemon.socket`, and `sudo systemctl start nix-daemon.service` once: the daemon makes `/nix/store`. No group is needed; the package lets every user use the daemon.
+3. `sudo ufw allow proto udp from <subnet> to any port 8376 comment tern` for each subnet the Mac comes from, and `sudo loginctl enable-linger <user>`, so Tern and the install services run without a session.
+4. SSH with keys only. Keep a session open until a new key login works:
+
+   ```bash
+   printf 'PasswordAuthentication no\n' | sudo tee /etc/ssh/sshd_config.d/10-keys-only.conf
+   sudo sshd -t && sudo systemctl reload sshd
+   sudo sshd -T | grep -i '^passwordauthentication'   # no
+   ```
+
+   The file name sorts before CachyOS's own drop-ins, and sshd keeps the first value it reads.
+
+### Rollback and limits
+
+- Home: `home-manager generations`, then run the `activate` of an older one; or restore the `*.hm-backup` files.
+- Shell: `sudo chsh -s <old shell> <user>`. SSH: remove `10-keys-only.conf` and reload sshd.
+- Nix: disable `nix-daemon.socket`, `sudo pacman -Rns nix`, unmount `/nix`, drop its fstab line, delete `@nix`.
+- ufw: `sudo ufw status numbered`, `sudo ufw delete <n>`. Linger: `sudo loginctl disable-linger <user>`.
+- Rolling `/` back to a snapshot also rolls back pacman's `nix`, while `/nix` stays current: update `nix` again before using it. Booting a snapshot older than the `/nix` fstab line leaves `/nix` unmounted.
+- Graphical programs stay the distribution's: Home Manager's GPU driver setup for Nix programs is off.
 
 ## Proxmox VMs
 
