@@ -206,7 +206,12 @@ in {
         ../hosts/linux/${hostname}.nix
         {
           home = {inherit username homeDirectory;};
-          targets.genericLinux.enable = true;
+          targets.genericLinux = {
+            enable = true;
+            # Graphical programs come from the distribution, not Nix, so Nix's GPU driver setup (a root script Home
+            # Manager asks for at every switch) has nothing to serve.
+            gpu.enable = false;
+          };
         }
       ];
     };
