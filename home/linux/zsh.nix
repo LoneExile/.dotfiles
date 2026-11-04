@@ -24,8 +24,23 @@
     rev = "3253ab5afa76cadd944a2775eb750321a64f6b8b";
     hash = "sha256-d7+yKrHp4Vcl5WlQfQ/UMNK5j3wz8Ls168Cuj1LYTgI=";
   };
+
+  # The line that keys the compinit dump on the active generation. NixOS's link keeps the line it always had. A host's own link
+  # goes through a variable: zsh 5.9 (macOS's /bin/zsh, which zshrc_test.sh runs) leaves `${${:-<path>}:A:t}` unresolved, with
+  # zsh's internal dash token in the result, while `${var:A:t}` resolves on 5.9 and 5.9.2 alike (measured).
+  zcKeyLine =
+    if cfg.generationLink == "/run/current-system"
+    then "_zc_key=\${\${:-/run/current-system}:A:t}"
+    else "_zc_link=${cfg.generationLink}\n_zc_key=\${_zc_link:A:t}\nunset _zc_link";
 in {
-  options.dotfiles.agent.zsh.enable = lib.mkEnableOption "the Mac's aliases, options, keybindings and zsh plugins (nixpkgs) in the interactive zsh of the user, with fzf";
+  options.dotfiles.agent.zsh = {
+    enable = lib.mkEnableOption "the Mac's aliases, options, keybindings and zsh plugins (nixpkgs) in the interactive zsh of the user, with fzf";
+    generationLink = lib.mkOption {
+      type = lib.types.str;
+      default = "/run/current-system";
+      description = "The link that names the active generation, as a zsh word (assigned to a variable, so parameter expansions work): `:A:t` of it keys the compinit dump, so a new generation rebuilds it. A NixOS host has /run/current-system; a standalone Home Manager host names its Home Manager profile link.";
+    };
+  };
 
   config = lib.mkIf cfg.enable {
     # fzf-tab calls it.
@@ -67,7 +82,7 @@ in {
         # (with its security audit) happens once a day. The dump is also for one system generation: a deploy changes the
         # packages that have completers, and a dump made before it (even a young one) would not know them.
         _zc_dir=''${XDG_CACHE_HOME:-$HOME/.cache}/zsh
-        _zc_key=''${''${:-/run/current-system}:A:t}
+        ${zcKeyLine}
         mkdir -p $_zc_dir
         [[ -r $_zc_dir/zcompdump.key ]] && _zc_have=$(<$_zc_dir/zcompdump.key) || _zc_have=
         autoload -Uz compinit

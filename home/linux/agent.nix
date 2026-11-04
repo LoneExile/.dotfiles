@@ -129,7 +129,14 @@ in {
         description = "The mise package.";
       };
     };
-    tern.enable = lib.mkEnableOption "the Tern remote service settings, and omp's opt-in to Tern's paste events in every zsh of the user (omp-image-paste.zsh)";
+    tern = {
+      enable = lib.mkEnableOption "the Tern remote service settings, and omp's opt-in to Tern's paste events in every zsh of the user (omp-image-paste.zsh)";
+      servicePath = lib.mkOption {
+        type = lib.types.str;
+        default = "/run/current-system/sw/bin";
+        description = "The PATH of the Tern remote service (its updater shells out to unpack a build): NixOS's system profile by default, the system directories on any other Linux.";
+      };
+    };
     gh.enable = lib.mkEnableOption "gh as git's credential helper for github.com (the user logs in with `gh auth login`)";
     tools.enable = lib.mkEnableOption "just, lazygit, lazydocker, tokei, btop, kubectl, k9s, superfile and zoxide as packages of the user, and zoxide's hook and the alias sf (superfile) in the user's interactive zsh";
     vault = {
@@ -271,7 +278,7 @@ in {
       # Tern 0.7.2 and 0.8.2; zstd alone was not enough). The system profile, as on any other Linux, fixes it.
       xdg.configFile."systemd/user/tern-remote.service.d/10-direct-lan.conf".text = ''
         [Service]
-        Environment=PATH=/run/current-system/sw/bin
+        Environment=PATH=${cfg.tern.servicePath}
         ExecStart=
         ExecStart=%h/.local/share/tern/build/tern remote serve --user --state-dir %h/.config/tern --relay none
       '';

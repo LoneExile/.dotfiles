@@ -162,6 +162,24 @@ test_compinit_is_cached_like_the_mac_and_refreshed_when_the_system_or_the_day_ch
   assert_eq "a dump older than a day is rebuilt (full compinit)" 1 "$(ptyrun "$T/b" -i -x -c true | grep -cE '> compinit -d ')"
 }
 
+test_the_dump_key_follows_the_link_the_host_names() {
+  # A host without /run/current-system (a standalone Home Manager host) names its own generation link.
+  local raw
+  raw=$(nix eval --raw "$ROOT#nixosConfigurations.proxmox-agent" --apply 'c: (c.extendModules { modules = [{ home-manager.users.lex.dotfiles.agent.zsh.generationLink = "$HOME/gen-link"; }]; }).config.home-manager.users.lex.programs.zsh.initContent') || {
+    bad "the agent's zsh evaluates with a generation link of the host" "nix eval failed"
+    return
+  }
+  RAW=$raw fixture "$T/g"
+  local home=$T/g/home cache=$T/g/home/.cache/zsh
+  mkdir -p "$home/gen-a" "$home/gen-b"
+  ln -s gen-a "$home/gen-link"
+  ptyrun "$T/g" -i -c true >/dev/null
+  assert_eq "the key is the generation the link points to" gen-a "$(cat "$cache/zcompdump.key" 2>/dev/null)"
+  ln -sfn gen-b "$home/gen-link"
+  assert_eq "a new generation rebuilds the dump (full compinit)" 1 "$(ptyrun "$T/g" -i -x -c true | grep -cE '> compinit -d ')"
+  assert_eq "and records the new generation" gen-b "$(cat "$cache/zcompdump.key" 2>/dev/null)"
+}
+
 test_a_stale_dump_from_before_the_plugins_does_not_hide_a_completer() {
   fixture "$T/c"
   local cache=$T/c/home/.cache/zsh
