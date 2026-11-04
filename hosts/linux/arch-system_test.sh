@@ -18,10 +18,16 @@ setu() { { grep -v "^$2 " "$1" 2>/dev/null; echo "$2 $3 $4"; } >"$1.new"; mv "$1
 case $name in
   id) case ${1:-} in -u) cat "$S/uid" ;; -un) echo rex ;; esac ;;
   sudo)
+    # -v (with -S or -n): validate, which always succeeds here; a refresh (-n -v) made while a build runs is logged.
+    v="" n=""
     while [[ ${1:-} == -* ]]; do
-      case $1 in -v) exit 0 ;; -p) shift ;; esac
+      case $1 in -v) v=1 ;; -n) n=1 ;; -p) shift ;; esac
       shift
     done
+    if [ -n "$v" ]; then
+      if [ -n "$n" ] && [ -e "$S/building" ]; then log "refresh during the build"; fi
+      exit 0
+    fi
     [ $# -eq 0 ] || exec "$@" ;;
   systemctl)
     u=""
@@ -68,7 +74,11 @@ case $name in
     case ${1:-} in
       --printsrcinfo) cat SRCINFO ;;
       --packagelist) echo "$PWD/$p-1-1-x86_64.pkg.tar.zst"; echo "$PWD/$p-debug-1-1-x86_64.pkg.tar.zst" ;;
-      *) : >"$p-1-1-x86_64.pkg.tar.zst"; : >"$p-debug-1-1-x86_64.pkg.tar.zst"; log "build $p" ;;
+      *)
+        if [ -e "$S/fail_build" ]; then exit 1; fi
+        # A build that takes 2 s, longer than the test's refresh interval (ARCH_SYSTEM_SUDO_REFRESH=1).
+        : >"$S/building"; sleep 2; rm -f "$S/building"
+        : >"$p-1-1-x86_64.pkg.tar.zst"; : >"$p-debug-1-1-x86_64.pkg.tar.zst"; log "build $p" ;;
     esac ;;
 esac
 STUB
@@ -133,7 +143,7 @@ TOML
 arch() {
   (
     export PATH="$T/bin:$PATH" STUB_STATE="$T/st" STUB_HOME="$T_HOME" ARCH_SYSTEM_ROOT="$T/root" HOME="$T_HOME" \
-      XDG_CACHE_HOME="$T/cache"
+      XDG_CACHE_HOME="$T/cache" ARCH_SYSTEM_SUDO_REFRESH=1
     bash "$ROOT/hosts/linux/arch-system.sh" "$@"
   ) >"$T/out" 2>"$T/err" </dev/null
   echo $?
@@ -229,12 +239,22 @@ test_packages_installs_only_what_is_missing() {
   assert_lacks "a present dependency not reinstalled" "$T/st/calls" "glibc"
   assert_has "built as the user" "$T/st/calls" "makepkg build zen-bin"
   assert_has "the package installed" "$T/st/calls" "pacman -U zen-bin"
+  assert_has "sudo's credential kept fresh while the build runs" "$T/st/calls" "sudo refresh during the build"
   assert_lacks "not its debug package" "$T/st/calls" "zen-bin-debug"
   local before
   before=$(calls)
   assert_rc "apply again" "$(arch packages "$T/host")" 0
   assert_eq "second run changes nothing" "$before" "$(calls)"
   assert_rc "check after apply" "$(arch packages --check "$T/host")" 0
+}
+
+test_packages_a_failed_build_stops_before_installing() {
+  world
+  echo 1000 >"$T/st/uid"
+  : >"$T/st/fail_build"
+  assert_rc "apply" "$(arch packages "$T/host")" 1
+  assert_has "says which package and where the log is" "$T/err" "zen-bin: makepkg failed (log: "
+  assert_lacks "nothing installed from the failed build" "$T/st/calls" "pacman -U"
 }
 
 test_packages_check_reports_missing_and_unlisted() {

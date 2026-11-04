@@ -50,7 +50,8 @@ list() { [ -f "$1" ] && awk '{sub(/#.*/, "")} NF {print $1}' "$1"; }
 
 sudo_ready=0
 # as_root CMD...: CMD through sudo, asking for the password once (from the terminal, or stdin when there is none).
-# Called from this shell, not a subshell, so the sudo credential of the first call is reused.
+# Called from this shell, not a subshell, so the sudo credential of the first call is reused; aur_install keeps it
+# fresh while a build runs, as a source build can outlast sudo's cache (5 minutes by default).
 as_root() {
   if [ "$sudo_ready" = 0 ]; then
     if [ -t 0 ]; then sudo -v; else sudo -S -p '' -v; fi
@@ -60,7 +61,7 @@ as_root() {
 }
 
 aur_install() {
-  local p=$1 dir deps need files
+  local p=$1 dir deps need files bp t=0 every=${ARCH_SYSTEM_SUDO_REFRESH:-60}
   dir=${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/aur/$p
   if [ -d "$dir/.git" ]; then
     git -C "$dir" pull -q --ff-only
@@ -79,8 +80,16 @@ aur_install() {
     as_root pacman -S --needed --noconfirm --asdeps "${need[@]%%[<>=]*}" ||
       die "$p: a dependency is not in the repos (an AUR one?): ${need[*]}"
   fi
-  (cd "$dir" && makepkg --noconfirm --force --cleanbuild) >"$dir/build.log" 2>&1 ||
-    die "$p: makepkg failed (log: $dir/build.log)"
+  # The build runs in the background while this shell refreshes the credential (`sudo -n -v`: the same shell, so the
+  # same timestamp record; never a prompt), so the pacman -U after a long build needs no second password.
+  (cd "$dir" && makepkg --noconfirm --force --cleanbuild) >"$dir/build.log" 2>&1 &
+  bp=$!
+  while kill -0 "$bp" 2>/dev/null; do
+    if [ "$sudo_ready" = 1 ] && [ $((t % every)) = 0 ]; then sudo -n -v 2>/dev/null || :; fi
+    sleep 1
+    t=$((t + 1))
+  done
+  wait "$bp" || die "$p: makepkg failed (log: $dir/build.log)"
   mapfile -t files < <(cd "$dir" && makepkg --packagelist | grep -v -- '-debug-')
   as_root pacman -U --noconfirm "${files[@]}"
 }
