@@ -81,8 +81,9 @@ aur_install() {
       die "$p: a dependency is not in the repos (an AUR one?): ${need[*]}"
   fi
   # The build runs in the background while this shell refreshes the credential (`sudo -n -v`: the same shell, so the
-  # same timestamp record; never a prompt), so the pacman -U after a long build needs no second password.
-  (cd "$dir" && makepkg --noconfirm --force --cleanbuild) >"$dir/build.log" 2>&1 &
+  # same timestamp record; never a prompt), so the pacman -U after a long build needs no second password. --clean
+  # drops src/ and pkg/ after a good build (gigabytes for a Rust build); the sources and the package file stay.
+  (cd "$dir" && makepkg --noconfirm --force --cleanbuild --clean) >"$dir/build.log" 2>&1 &
   bp=$!
   while kill -0 "$bp" 2>/dev/null; do
     if [ "$sudo_ready" = 1 ] && [ $((t % every)) = 0 ]; then sudo -n -v 2>/dev/null || :; fi
