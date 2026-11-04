@@ -158,6 +158,17 @@
       lex = {username = "lex";};
     };
 
+    # Every Linux machine that is not NixOS (Arch/CachyOS and the like), keyed by hostname: a
+    # standalone Home Manager configuration each, applied on the machine with `just switch` from
+    # its clone of this repo (README: Non-NixOS Linux hosts). `username` is the login account;
+    # `homeDirectory` defaults to /home/<username>. Which pieces it turns on: hosts/linux/<hostname>.nix.
+    linuxHosts = {
+      rex = {
+        username = "rex";
+        system = "x86_64-linux";
+      };
+    };
+
     # What every NixOS guest role is built from.
     guestModules = [inputs.disko.nixosModules.disko ./hosts/nixos/proxmox-guest];
   in {
@@ -179,6 +190,11 @@
             // host)
       )
       hosts;
+
+    # Standalone Home Manager configurations of the non-NixOS Linux machines.
+    homeConfigurations =
+      builtins.mapAttrs (hostname: host: lib.mkLinuxHome ({inherit hostname;} // host))
+      linuxHosts;
 
     # The clean NixOS guest for Proxmox VMs: the role a VM entry gets without a `role`.
     nixosConfigurations.proxmox-guest = inputs.nixpkgs-nixos.lib.nixosSystem {

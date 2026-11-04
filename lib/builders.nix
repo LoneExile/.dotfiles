@@ -185,6 +185,32 @@ in {
       modules = allModules;
     };
 
+  # A Linux machine that is not NixOS (Arch/CachyOS and the like): a standalone Home Manager
+  # configuration of the agent pieces (home/linux/agent.nix), the same input pair as the NixOS
+  # VMs (nixpkgs-nixos with home-manager-nixos), and hosts/linux/<hostname>.nix for which pieces
+  # the machine turns on. The system itself (packages, the Nix daemon, sshd) is not managed here.
+  mkLinuxHome = {
+    hostname,
+    username,
+    system,
+    homeDirectory ? "/home/${username}",
+  }:
+    inputs.home-manager-nixos.lib.homeManagerConfiguration {
+      pkgs = import inputs.nixpkgs-nixos {
+        inherit system;
+        config.allowUnfree = true;
+      };
+      extraSpecialArgs = {inherit inputs hostname username;};
+      modules = [
+        ../home/linux/agent.nix
+        ../hosts/linux/${hostname}.nix
+        {
+          home = {inherit username homeDirectory;};
+          targets.genericLinux.enable = true;
+        }
+      ];
+    };
+
   # Create configuration profiles with predefined feature sets
   mkProfile = {
     name,

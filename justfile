@@ -123,6 +123,22 @@ switch target_host=hostname:
   echo "switching to new config for {{target_host}}"
   sudo darwin-rebuild switch --flake ".#{{target_host}}"
 
+# Switch a Linux machine that is not NixOS (flake.nix linuxHosts) to its Home Manager configuration,
+# from the clone on that machine. Home Manager is the flake's own locked input (`--inputs-from .`), so
+# a new host's first switch needs nothing installed but Nix; a file in the way is kept as <name>.hm-backup.
+[linux]
+switch target_host=hostname:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cd "{{justfile_directory()}}"
+  hosts=$(nix eval --raw .#homeConfigurations --apply 'h: builtins.concatStringsSep " " (builtins.attrNames h)')
+  if [[ " $hosts " != *" {{target_host}} "* ]]; then
+    echo "no homeConfigurations.{{target_host}} in this flake: add the host to linuxHosts in flake.nix" >&2
+    exit 1
+  fi
+  echo "switching to new home config for {{target_host}}"
+  nix run --inputs-from . home-manager-nixos -- switch --flake ".#{{target_host}}" -b hm-backup
+
 # Update flake inputs to their latest revisions.
 # Unauthenticated GitHub API is 60 req/hr and 403s; pass `gh auth token` when logged in.
 update:
@@ -274,6 +290,7 @@ vm-vault-tunnel name:
 check:
   @echo "🔍 Checking flake configuration..."
   nix flake check --no-build
+  @hosts=$(nix eval --raw .#homeConfigurations --apply 'h: builtins.concatStringsSep " " (builtins.attrNames h)') || exit 1; for h in $hosts; do nix eval --raw ".#homeConfigurations.$h.activationPackage.drvPath" >/dev/null || exit 1; echo "homeConfigurations.$h evaluates"; done
   @! git grep -nE '/Users/[A-Za-z0-9._-]+' || { echo "hardcoded /Users/<name> above: use \$HOME, ~ or config.home.homeDirectory"; exit 1; }
 
 # Format all Nix files

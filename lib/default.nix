@@ -11,6 +11,7 @@ in {
   inherit
     (builders)
     mkDarwin
+    mkLinuxHome
     mkProfile
     mkModule
     ;
