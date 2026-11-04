@@ -16,20 +16,27 @@
   };
 
   # greetd logs the user in at boot (initial_session in /etc/greetd/config.toml, README), so Sunshine streams without a
-  # login at the machine; this locks that session as soon as Noctalia answers on its socket (`noctalia msg` exits 1
-  # before that). Only right after boot: a manual login later, or a `just switch` that starts the unit mid-session,
-  # must not lock. Exits 1 when it gives up, so a session left unlocked shows as a failed unit.
+  # login at the machine; this locks that session. Noctalia answers `msg session lock` with "ok" before its lock screen
+  # can lock (measured: "ok" 1 s after Noctalia started, and the session stayed unlocked), so the proof is logind's
+  # LockedHint, which the lock screen sets: ask again until it is set. Only right after boot: a manual login later, or a
+  # `just switch` that starts the unit mid-session, must not lock. Exits 1 when it gives up, so a session left unlocked
+  # shows as a failed unit.
   lockAfterAutologin = pkgs.writeShellScript "lock-after-autologin" ''
     up=$(cut -d. -f1 /proc/uptime)
     if [ "$up" -gt 300 ]; then
       echo "up ''${up}s, not right after boot: not locking"
       exit 0
     fi
-    for _ in $(seq 150); do
-      /usr/bin/noctalia msg session lock && exit 0
-      sleep 0.2
+    for i in $(seq 60); do
+      session=$(loginctl show-user "$(id -un)" -p Display --value)
+      if [ -n "$session" ] && [ "$(loginctl show-session "$session" -p LockedHint --value)" = yes ]; then
+        echo "session $session locked after $i tries"
+        exit 0
+      fi
+      /usr/bin/noctalia msg session lock >/dev/null 2>&1 || true
+      sleep 1
     done
-    echo "noctalia did not answer in 30 s: the session is NOT locked" >&2
+    echo "the session is NOT locked after 60 s" >&2
     exit 1
   '';
 in {
