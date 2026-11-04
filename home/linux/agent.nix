@@ -110,7 +110,7 @@
   # Linux program that needs a bundle takes. Not a store path: it follows the system's bundle (security.pki.certificateFiles and the rest) after a deploy.
   caBundleFile = "/etc/ssl/certs/ca-certificates.crt";
 in {
-  imports = [./zsh.nix];
+  imports = [./zsh.nix ./neovim.nix];
 
   options.dotfiles.agent = {
     omp = {
