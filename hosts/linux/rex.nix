@@ -18,6 +18,11 @@ in {
   # and make come from pacman (base-devel).
   home.packages = [pkgs.gh agentPkgs.harper];
 
+  # Games (Steam and Proton from pacman) on the RX 9070 XT: Mesa keeps at most 1 GiB of compiled shaders, and a large game
+  # needs more, or it compiles them again at every launch (CachyOS gaming guide). environment.d, so the Hyprland session,
+  # Sunshine and everything they start read it.
+  systemd.user.sessionVariables.MESA_SHADER_CACHE_MAX_SIZE = "12G";
+
   dotfiles.agent = {
     zsh = {
       enable = true;
