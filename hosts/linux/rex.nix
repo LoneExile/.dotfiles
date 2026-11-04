@@ -10,10 +10,13 @@
   ...
 }: let
   inherit (pkgs.stdenv.hostPlatform) system;
-  agentPkgs = import ../../modules/nixos/agent-dev/packages.nix {
-    inherit pkgs;
-    unstable = inputs.nixpkgs-unstable.legacyPackages.${system};
+  # nixpkgs-unstable with unfree allowed, like the Mac's unstablePkgs (lib/builders.nix): rtk is unfree and only in
+  # unstable. The agent pieces' pins read the same instance.
+  unstable = import inputs.nixpkgs-unstable {
+    inherit system;
+    config.allowUnfree = true;
   };
+  agentPkgs = import ../../modules/nixos/agent-dev/packages.nix {inherit pkgs unstable;};
 
   # greetd logs the user in at boot (initial_session in /etc/greetd/config.toml, README), so Sunshine streams without a
   # login at the machine; this locks that session. Noctalia answers `msg session lock` with "ok" before its lock screen
@@ -43,7 +46,71 @@ in {
   # What a VM gets on its system PATH from modules/nixos/agent-dev.nix for these pieces, here as packages of the user: gh
   # (the gh piece only makes it git's credential helper) and harper-cli (the captured pi-harper-grammar plugin). curl, gcc
   # and make come from pacman (base-devel).
-  home.packages = [pkgs.gh agentPkgs.harper];
+  home.packages =
+    [pkgs.gh agentPkgs.harper]
+    # Command-line tools the Mac also has, picked for rex. Desktop programs and services come from pacman (README:
+    # Non-NixOS Linux hosts).
+    ++ (with pkgs; [
+      # shell and files
+      yazi
+      htop
+      atuin
+      sshpass
+      yq-go
+      # git and code
+      git-lfs
+      git-filter-repo
+      jujutsu
+      glab
+      vale
+      xmlformat
+      pgformatter
+      # databases and APIs
+      postgresql_18
+      redis
+      mongosh
+      sqlcmd
+      protoc-gen-go
+      protoc-gen-go-grpc
+      # Kubernetes
+      kubernetes-helm
+      fluxcd
+      talosctl
+      kubevirt
+      krew
+      kubelogin-oidc
+      argocd
+      k3sup
+      skaffold
+      telepresence2
+      harbor-cli
+      # images and registries
+      crane
+      skopeo
+      # cloud and IaC
+      opentofu
+      terraform
+      terragrunt
+      packer
+      awscli2
+      aws-vault
+      cloudflared
+      # network
+      nmap
+      bandwhich
+      # media and documents
+      yt-dlp
+      vhs
+      asciinema
+      asciinema-agg
+      # Nix
+      alejandra
+      deadnix
+      statix
+      nixpkgs-fmt
+    ])
+    # Only in unstable.
+    ++ [unstable.rtk unstable.llmfit];
 
   # Games (Steam and Proton from pacman) on the RX 9070 XT: Mesa keeps at most 1 GiB of compiled shaders, and a large game
   # needs more, or it compiles them again at every launch (CachyOS gaming guide). environment.d, so the Hyprland session,
