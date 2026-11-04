@@ -57,6 +57,9 @@ in {
       # the overlay's pinned nixpkgs, not nixos-25.11's older libraries.
       package = inputs.neovim-nightly-overlay.packages.${system}.default;
       inherit (agentPkgs) treeSitter;
+      # No gcc or make from Nix: pacman's (base-devel) build the parsers, and Nix's would come first on PATH, where they
+      # find none of the system's headers or libraries and break paru/makepkg builds (measured).
+      extraPackages = with pkgs; [ripgrep fd unzip];
     };
   };
 }
