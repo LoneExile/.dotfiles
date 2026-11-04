@@ -30,6 +30,10 @@
   # bun and node on the PATH of the plugin install service.
   pluginPackages = [unstable.bun unstable.nodejs_24];
 
+  # harper-cli for the captured pi-harper-grammar plugin (`harper-cli lint`): only the unstable package builds harper-cli,
+  # 25.11's has harper-ls alone. A VM gets it on the system PATH, a Linux host as a package of the user.
+  inherit (unstable) harper;
+
   # What the install of the listed servers runs, measured with every one of them (README): curl for
   # the registry and the release assets, gzip and tar to unpack them, getconf for Mason's glibc
   # check (without it Mason takes NixOS for an unsupported platform), node with npm for the npm

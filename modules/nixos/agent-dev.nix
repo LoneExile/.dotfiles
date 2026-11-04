@@ -54,8 +54,8 @@ inputs: {
       description = "Whether to set up ${what}.";
     };
 
-  # Packages that nixos-25.11 lacks or has too old. Here only harper (only the unstable one builds harper-cli, 25.11's has harper-ls
-  # alone); the packages of the Home Manager pieces come from agent-dev/packages.nix, which the standalone Linux hosts read too.
+  # nixpkgs-unstable for what nixos-25.11 lacks or has too old. Every package of the pieces, the VM's and the standalone Linux
+  # hosts' alike, comes from agent-dev/packages.nix, which names the reason for each.
   unstable = inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
   agentPkgs = import ./agent-dev/packages.nix {inherit pkgs unstable;};
 in {
@@ -284,7 +284,7 @@ in {
 
     (lib.mkIf cfg.sync.plugins {
       # pi-harper-grammar runs `harper-cli lint`.
-      environment.systemPackages = [unstable.harper];
+      environment.systemPackages = [agentPkgs.harper];
     })
 
     (lib.mkIf cfg.sync.skills {

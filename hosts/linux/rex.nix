@@ -13,6 +13,11 @@
     unstable = inputs.nixpkgs-unstable.legacyPackages.${system};
   };
 in {
+  # What a VM gets on its system PATH from modules/nixos/agent-dev.nix for these pieces, here as packages of the user: gh
+  # (the gh piece only makes it git's credential helper) and harper-cli (the captured pi-harper-grammar plugin). curl, gcc
+  # and make come from pacman (base-devel).
+  home.packages = [pkgs.gh agentPkgs.harper];
+
   dotfiles.agent = {
     zsh = {
       enable = true;
