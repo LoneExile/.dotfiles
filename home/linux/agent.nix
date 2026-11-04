@@ -60,15 +60,7 @@
   # python: python-build exited 1 after minutes), while the prebuilt runtimes run through nix-ld
   # (measured). Installed tools live in ~/.local/share/mise, outside Nix.
   miseConfig = (pkgs.formats.toml {}).generate "mise-config.toml" {
-    tools = {
-      node = "latest";
-      python = "3";
-      uv = "latest";
-      go = "latest";
-      rust = "latest";
-      bun = "latest";
-      "npm:pnpm" = "latest";
-    };
+    inherit (cfg.mise) tools;
     settings = {
       not_found_auto_install = true;
       plugin_autoupdate_last_check_duration = "0";
@@ -127,6 +119,19 @@ in {
         default = pkgs.mise;
         defaultText = lib.literalExpression "pkgs.mise";
         description = "The mise package.";
+      };
+      tools = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = {
+          node = "latest";
+          python = "3";
+          uv = "latest";
+          go = "latest";
+          rust = "latest";
+          bun = "latest";
+          "npm:pnpm" = "latest";
+        };
+        description = "The global tools of ~/.config/mise/config.toml (tool -> version).";
       };
     };
     tern = {

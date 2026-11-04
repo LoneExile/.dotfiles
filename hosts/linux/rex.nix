@@ -4,6 +4,7 @@
 # .env.lua are the user's own. The one-time root steps and the first switch are in the README.
 {
   inputs,
+  options,
   pkgs,
   ...
 }: let
@@ -37,6 +38,9 @@ in {
     mise = {
       enable = true;
       package = agentPkgs.mise;
+      # No Python: pacman's python3 stays first on PATH. Arch's own Python tools (powerprofilesctl, which
+      # `game-performance` runs) start with `#!/usr/bin/env python3` and need its system modules (gi), which mise's lacks.
+      tools = builtins.removeAttrs options.dotfiles.agent.mise.tools.default ["python"];
     };
     gh.enable = true;
     tern = {
