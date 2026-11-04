@@ -37,6 +37,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Add a Linux host](#add-a-linux-host)
   - [One-time root steps (Arch)](#one-time-root-steps-arch)
   - [Rollback and limits](#rollback-and-limits)
+  - [Stream host on rex](#stream-host-on-rex)
   - [Gaming on rex](#gaming-on-rex)
 - [Proxmox VMs](#proxmox-vms)
   - [What lives where](#what-lives-where)
@@ -353,6 +354,7 @@ A Linux machine that is not NixOS (Arch, CachyOS) gets the agent VMs' home from 
 - **Neovim.** The nightly build the Mac runs (`neovim-nightly-overlay`), and https://github.com/LoneExile/nvim cloned once to `~/.config/nvim`: a later switch never pulls or replaces it, and a switch without network only warns.
 - **No secrets.** Nothing from OpenBao is written. Run `gh auth login`, and write `~/.omp/.env` and `~/.config/nvim/.env.lua` yourself.
 - **Checks.** `just check` on the Mac evaluates every Linux host, so a change that breaks one fails on the Mac first.
+- **Updates.** `sudo pacman -Syu` weekly, and reboot after a kernel or Mesa update. snap-pac snapshots each transaction, and the Limine boot menu lists the snapshots. CachyOS's `pacman.conf.pacnew` is Arch's stock file, without CachyOS's repos and with `[multilib]` off: keep the current file and delete the `.pacnew`.
 
 ### Add a Linux host
 
@@ -410,6 +412,8 @@ In this order: `/nix` must be its own subvolume before Nix writes to it.
 
    The file name sorts before CachyOS's own drop-ins, and sshd keeps the first value it reads.
 
+5. Disk and package-cache upkeep: `sudo systemctl enable --now btrfs-scrub@-.timer paccache.timer` (a monthly scrub of `/`, which repairs the twice-stored metadata and reports damaged files; a weekly cleanup that keeps 3 versions of each package).
+
 ### Rollback and limits
 
 - Home: in `~/.dotfiles`, `nix run --inputs-from . home-manager-nixos -- generations` (the `home-manager` command is not installed), then run `<generation>/activate` of an older one; or restore the `*.hm-backup` files.
@@ -418,6 +422,19 @@ In this order: `/nix` must be its own subvolume before Nix writes to it.
 - ufw: `sudo ufw status numbered`, `sudo ufw delete <n>`. Linger: `sudo loginctl disable-linger <user>`.
 - Rolling `/` back to a snapshot also rolls back pacman's `nix`, while `/nix` stays current: update `nix` again before using it. Booting a snapshot older than the `/nix` fstab line leaves `/nix` unmounted.
 - Graphical programs stay the distribution's: Home Manager's GPU driver setup for Nix programs is off.
+- rex's mise has no Python (`hosts/linux/rex.nix`): Arch's own Python tools (`powerprofilesctl`, which `game-performance` runs) start with `#!/usr/bin/env python3` and need pacman's Python and its system modules.
+
+### Stream host on rex
+
+Sunshine on rex streams its Hyprland session to Moonlight on the Mac (the `moonlight` cask).
+
+- **Sunshine (pacman, by hand):** `sudo pacman -S sunshine` (the `cachyos` repo's build, a pre-release), then `systemctl --user enable --now app-dev.lizardbyte.app.Sunshine.service`; it starts with the graphical session.
+- **Its settings:** `~/.config/sunshine/sunshine.conf` is a writable copy of `hosts/linux/rex-sunshine.conf` (the RX 9070 on `renderD128`, KMS capture, the VA-API encoder), so the web UI can still save. The pairing state (`sunshine_state.json`) and the web UI login (`credentials/`) stay on the host.
+- **Firewall:** for each subnet Moonlight comes from, `sudo ufw allow proto tcp from <subnet> to any port 47984,47989,48010` and `sudo ufw allow proto udp from <subnet> to any port 47998:48000`. The web UI port 47990 stays closed: `ssh -N -L 47990:localhost:47990 <user>@<ip>`, then https://localhost:47990.
+- **Autologin:** in `/etc/greetd/config.toml`, an `[initial_session]` with `command = "uwsm start -e -D Hyprland hyprland.desktop"` and `user = "<user>"`; greetd runs it once per boot. The `lock-after-autologin` user service (`hosts/linux/rex.nix`) locks that session as soon as Noctalia answers, and only in the first 5 minutes after boot. Lock rather than log out: a logout stops Sunshine until the next boot.
+- **Pairing:** in Moonlight, add `<ip>`; it shows a PIN; enter it in the web UI's PIN tab.
+- **Power:** in the BIOS, Restore AC Power Loss → Power On (rex comes back after a power cut) and Power On By PCI-E; on rex, `sudo nmcli con modify "<connection>" 802-3-ethernet.wake-on-lan magic` (from the next boot; `sudo ethtool <nic>` shows `Wake-on: g`). Moonlight's wake works on the home LAN only.
+- **Rollback:** remove the `[initial_session]` block; `systemctl --user disable --now app-dev.lizardbyte.app.Sunshine.service` and `sudo pacman -Rns sunshine`; the ufw rules as above.
 
 ### Gaming on rex
 
@@ -426,7 +443,7 @@ Steam only, set up per the [CachyOS gaming guide](https://wiki.cachyos.org/confi
 - **Packages (pacman, by hand):** `sudo pacman -S cachyos-gaming-meta steam gamescope mangohud lib32-mangohud`. The meta-package brings Proton-CachyOS (`proton-cachyos-slr`), Wine-CachyOS, umu-launcher, protontricks and vulkan-tools.
 - **Shader cache:** `MESA_SHADER_CACHE_MAX_SIZE=12G` in `hosts/linux/rex.nix` (`systemd.user.sessionVariables`). The session reads it when it starts: log in again or reboot after a change.
 - **Default Proton:** Steam's default compatibility tool is `proton-cachyos-slr` (Settings → Compatibility, or `CompatToolMapping` `"0"` in `~/.local/share/Steam/config/config.vdf` while Steam is closed).
-- **Launch options:** `game-performance %command%` (performance power profile while the game runs). Add `PROTON_FSR4_UPGRADE=1` in front for FSR4 on this RDNA4 card, and `mangohud` for an overlay.
+- **Launch options:** `game-performance %command%` (performance power profile while the game runs). Add `PROTON_FSR4_UPGRADE=1` in front for FSR4 on this RDNA4 card (Proton games only; native Linux games such as Dota 2 ignore it), and `mangohud` for an overlay.
 - **No gamemode:** ananicy-cpp runs, and the two conflict. The single-CCD X3D CPU needs no core parking.
 - **GPU:** Vulkan lists the RX 9070 XT first and the iGPU second, so nothing is pinned. Check with `vulkaninfo --summary`.
 
