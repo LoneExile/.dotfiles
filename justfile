@@ -194,6 +194,7 @@ brew-upgrade target_host=hostname:
 
 # Update everything: flake inputs, then the system (which syncs the taps), then
 # Homebrew packages. `just update && just brew-upgrade` reaches the same state.
+[macos]
 update-all target_host=hostname: (update-system target_host) (brew-upgrade target_host)
 
 # Garbage collect old OS generations and remove stale packages from the nix store
