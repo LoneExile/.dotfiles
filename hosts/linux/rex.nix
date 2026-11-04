@@ -4,6 +4,7 @@
 # .env.lua are the user's own. The one-time root steps and the first switch are in the README.
 {
   inputs,
+  lib,
   options,
   pkgs,
   ...
@@ -13,6 +14,24 @@
     inherit pkgs;
     unstable = inputs.nixpkgs-unstable.legacyPackages.${system};
   };
+
+  # greetd logs the user in at boot (initial_session in /etc/greetd/config.toml, README), so Sunshine streams without a
+  # login at the machine; this locks that session as soon as Noctalia answers on its socket (`noctalia msg` exits 1
+  # before that). Only right after boot: a manual login later, or a `just switch` that starts the unit mid-session,
+  # must not lock. Exits 1 when it gives up, so a session left unlocked shows as a failed unit.
+  lockAfterAutologin = pkgs.writeShellScript "lock-after-autologin" ''
+    up=$(cut -d. -f1 /proc/uptime)
+    if [ "$up" -gt 300 ]; then
+      echo "up ''${up}s, not right after boot: not locking"
+      exit 0
+    fi
+    for _ in $(seq 150); do
+      /usr/bin/noctalia msg session lock && exit 0
+      sleep 0.2
+    done
+    echo "noctalia did not answer in 30 s: the session is NOT locked" >&2
+    exit 1
+  '';
 in {
   # What a VM gets on its system PATH from modules/nixos/agent-dev.nix for these pieces, here as packages of the user: gh
   # (the gh piece only makes it git's credential helper) and harper-cli (the captured pi-harper-grammar plugin). curl, gcc
@@ -23,6 +42,27 @@ in {
   # needs more, or it compiles them again at every launch (CachyOS gaming guide). environment.d, so the Hyprland session,
   # Sunshine and everything they start read it.
   systemd.user.sessionVariables.MESA_SHADER_CACHE_MAX_SIZE = "12G";
+
+  # The stream host (README: Stream host on rex). Sunshine's own settings, as a writable file: its web UI saves into it,
+  # and an edit made there stays until this copy changes (home/linux/writable-copy.sh). Its pairing state
+  # (sunshine_state.json) and web UI login (credentials/) are secrets of the host and stay out of the repo.
+  home.activation.sunshineConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    ${builtins.readFile ../../home/linux/writable-copy.sh}
+    writable_copy ${./rex-sunshine.conf} "$HOME/.config/sunshine/sunshine.conf"
+  '';
+
+  systemd.user.services.lock-after-autologin = {
+    Unit = {
+      Description = "Lock the session greetd logs in at boot, once Noctalia answers";
+      After = ["graphical-session.target"];
+      PartOf = ["graphical-session.target"];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${lockAfterAutologin}";
+    };
+    Install.WantedBy = ["graphical-session.target"];
+  };
 
   dotfiles.agent = {
     zsh = {
