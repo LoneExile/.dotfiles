@@ -37,6 +37,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Add a Linux host](#add-a-linux-host)
   - [One-time root steps (Arch)](#one-time-root-steps-arch)
   - [Rollback and limits](#rollback-and-limits)
+  - [Gaming on rex](#gaming-on-rex)
 - [Proxmox VMs](#proxmox-vms)
   - [What lives where](#what-lives-where)
   - [Repo, vault and state](#repo-vault-and-state)
@@ -417,6 +418,17 @@ In this order: `/nix` must be its own subvolume before Nix writes to it.
 - ufw: `sudo ufw status numbered`, `sudo ufw delete <n>`. Linger: `sudo loginctl disable-linger <user>`.
 - Rolling `/` back to a snapshot also rolls back pacman's `nix`, while `/nix` stays current: update `nix` again before using it. Booting a snapshot older than the `/nix` fstab line leaves `/nix` unmounted.
 - Graphical programs stay the distribution's: Home Manager's GPU driver setup for Nix programs is off.
+
+### Gaming on rex
+
+Steam only, set up per the [CachyOS gaming guide](https://wiki.cachyos.org/configuration/gaming/) for an RX 9070 XT and a Ryzen 7 9850X3D. Played at rex's own desktop or streamed through Sunshine (its "Steam Big Picture" app); Hyprland keeps running, as Sunshine streams its session.
+
+- **Packages (pacman, by hand):** `sudo pacman -S cachyos-gaming-meta steam gamescope mangohud lib32-mangohud`. The meta-package brings Proton-CachyOS (`proton-cachyos-slr`), Wine-CachyOS, umu-launcher, protontricks and vulkan-tools.
+- **Shader cache:** `MESA_SHADER_CACHE_MAX_SIZE=12G` in `hosts/linux/rex.nix` (`systemd.user.sessionVariables`). The session reads it when it starts: log in again or reboot after a change.
+- **Default Proton:** Steam's default compatibility tool is `proton-cachyos-slr` (Settings → Compatibility, or `CompatToolMapping` `"0"` in `~/.local/share/Steam/config/config.vdf` while Steam is closed).
+- **Launch options:** `game-performance %command%` (performance power profile while the game runs). Add `PROTON_FSR4_UPGRADE=1` in front for FSR4 on this RDNA4 card, and `mangohud` for an overlay.
+- **No gamemode:** ananicy-cpp runs, and the two conflict. The single-CCD X3D CPU needs no core parking.
+- **GPU:** Vulkan lists the RX 9070 XT first and the iGPU second, so nothing is pinned. Check with `vulkaninfo --summary`.
 
 ## Proxmox VMs
 
