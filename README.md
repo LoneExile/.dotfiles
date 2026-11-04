@@ -36,6 +36,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
 - [Non-NixOS Linux hosts](#non-nixos-linux-hosts)
   - [Add a Linux host](#add-a-linux-host)
   - [One-time root steps (Arch)](#one-time-root-steps-arch)
+  - [System packages and settings](#system-packages-and-settings)
   - [Rollback and limits](#rollback-and-limits)
   - [Stream host on rex](#stream-host-on-rex)
   - [Gaming on rex](#gaming-on-rex)
@@ -347,9 +348,10 @@ A running Tern keeps its settings in memory: after `just home`, run Reload setti
 
 ## Non-NixOS Linux hosts
 
-A Linux machine that is not NixOS (Arch, CachyOS) gets the agent VMs' home from a standalone Home Manager config: the Mac's zsh files and plugins, starship, the [tools](#just-lazygit-lazydocker-tokei-btop-kubectl-k9s-superfile-and-zoxide), [omp](#omp), [mise](#mise), gh, bao and secretspec, the captured omp plugins, the [Mason servers](#mason-language-servers-for-omp) and the [Tern](#tern) remote service, plus Neovim. The desktop and the rest of the system stay the distribution's (pacman, paru).
+A Linux machine that is not NixOS (Arch, CachyOS) gets the agent VMs' home from a standalone Home Manager config: the Mac's zsh files and plugins, starship, the [tools](#just-lazygit-lazydocker-tokei-btop-kubectl-k9s-superfile-and-zoxide), [omp](#omp), [mise](#mise), gh, bao and secretspec, the captured omp plugins, the [Mason servers](#mason-language-servers-for-omp) and the [Tern](#tern) remote service, plus Neovim. The desktop and the rest of the system stay the distribution's (pacman, paru); what the dotfiles add to them, packages and root settings, is in `hosts/linux/<hostname>/` ([System packages and settings](#system-packages-and-settings)).
 
 - **Hosts.** `linuxHosts` in `flake.nix` (hostname → `username`, `system`); the pieces a host turns on, and its non-NixOS paths, in `hosts/linux/<hostname>.nix`.
+- **System side.** `hosts/linux/<hostname>/`: the pacman and AUR lists and `system.conf`, applied by `just arch-packages` and `just arch-system`, checked by `just arch-check`.
 - **Pins.** The pieces' packages come from `modules/nixos/agent-dev/packages.nix`, the file the VMs read too.
 - **Neovim.** The nightly build the Mac runs (`neovim-nightly-overlay`), and https://github.com/LoneExile/nvim cloned once to `~/.config/nvim`: a later switch never pulls or replaces it, and a switch without network only warns.
 - **No secrets.** Nothing from OpenBao is written. Run `gh auth login`, and write `~/.omp/.env` and `~/.config/nvim/.env.lua` yourself.
@@ -358,18 +360,17 @@ A Linux machine that is not NixOS (Arch, CachyOS) gets the agent VMs' home from 
 
 ### Add a Linux host
 
-1. Add it to `linuxHosts`: `<hostname> = {username = "<user>"; system = "x86_64-linux";};`, and copy `hosts/linux/rex.nix` to `hosts/linux/<hostname>.nix`.
-2. On the host, the [one-time root steps](#one-time-root-steps-arch).
-3. Clone and switch the first time (no `just` yet; Home Manager is the flake's locked input):
+1. Add it to `linuxHosts`: `<hostname> = {username = "<user>"; system = "x86_64-linux";};`. Copy `hosts/linux/rex.nix` to `hosts/linux/<hostname>.nix`, and `hosts/linux/rex/` to `hosts/linux/<hostname>/`: edit its lists and `system.conf`, and replace `cachyos-base.txt` with the host's `pacman -Qqe` right after its install.
+2. On the host, the [one-time root steps](#one-time-root-steps-arch). They clone this repo to `~/.dotfiles`.
+3. Switch the first time (no `just` yet; Home Manager is the flake's locked input):
 
    ```bash
-   git clone https://github.com/LoneExile/.dotfiles ~/.dotfiles && cd ~/.dotfiles
-   nix run --inputs-from . home-manager-nixos -- switch --flake .#<hostname> -b hm-backup
+   cd ~/.dotfiles && nix run --inputs-from . home-manager-nixos -- switch --flake .#<hostname> -b hm-backup
    ```
 
    A file in the way is kept as `<name>.hm-backup` (CachyOS: `~/.zshrc`).
 4. `mise install`: Neovim's Mason needs node; the other tools also install on first use.
-5. `sudo chsh -s /usr/bin/zsh <user>`.
+5. `just arch-packages`, then `just arch-system` (its root part again, all `ok`, and the user units).
 6. From the Mac: `tern remote setup <user>@<ip>`, then `tern remote doctor <user>@<ip>`. Its `linked` warning is expected: the service serves with `--relay none`.
 
 After that, `just switch` in `~/.dotfiles` on the host. A host with no entry gets `no homeConfigurations.<host> in this flake`.
@@ -392,33 +393,36 @@ In this order: `/nix` must be its own subvolume before Nix writes to it.
 
    One chain: a step that fails stops it before `/etc/fstab` changes. The mount options are the ones of the other subvolumes' lines.
 
-2. `sudo pacman -S paru nix`, then append the Mac's settings (`lib/builders.nix`) to `/etc/nix/nix.conf`:
-
-   ```ini
-   experimental-features = nix-command flakes
-   substituters = https://cache.nixos.org https://nix-community.cachix.org
-   trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
-   ```
-
-   `sudo systemctl enable --now nix-daemon.socket`, and `sudo systemctl start nix-daemon.service` once: the daemon makes `/nix/store`. No group is needed; the package lets every user use the daemon.
-3. `sudo ufw allow proto udp from <subnet> to any port 8376 comment tern` for each subnet the Mac comes from, and `sudo loginctl enable-linger <user>`, so Tern and the install services run without a session.
-4. SSH with keys only. Keep a session open until a new key login works:
+2. `sudo pacman -S --needed nix git`, `git clone https://github.com/LoneExile/.dotfiles ~/.dotfiles`, and the host's server values in `~/.config/dotfiles/arch-system.env`: `UFW_SUBNETS="<subnet> <subnet>"`, the subnets the Mac comes from.
+3. The root settings of `system.conf` (no `just` yet). Keep an SSH session open until a new key login works, as this turns password logins off:
 
    ```bash
-   printf 'PasswordAuthentication no\n' | sudo tee /etc/ssh/sshd_config.d/10-keys-only.conf
-   sudo sshd -t && sudo systemctl reload sshd
+   sudo bash ~/.dotfiles/hosts/linux/arch-system.sh system ~/.dotfiles/hosts/linux/<hostname> <user>
+   sudo systemctl start nix-daemon.service    # once: the daemon makes /nix/store
    sudo sshd -T | grep -i '^passwordauthentication'   # no
    ```
 
-   The file name sorts before CachyOS's own drop-ins, and sshd keeps the first value it reads.
+   The Mac's Nix settings (`lib/builders.nix`) go to `/etc/nix/nix.conf`; no group is needed, the package lets every user use the daemon.
 
-5. Disk and package-cache upkeep: `sudo systemctl enable --now btrfs-scrub@-.timer paccache.timer` (a monthly scrub of `/`, which repairs the twice-stored metadata and reports damaged files; a weekly cleanup that keeps 3 versions of each package).
+### System packages and settings
+
+`hosts/linux/<hostname>/` holds what the dotfiles add to the distribution, run by `hosts/linux/arch-system.sh` (tested by `arch-system_test.sh`).
+
+- **Lists.** `pacman.txt` and `aur.txt`: the packages the host adds. `cachyos-base.txt`: the ones its installer chose, so a package installed by hand and never listed shows up as unlisted.
+- **Settings.** `system.conf`: system units to enable and to keep off, user units, linger, login shell, SSH keys only, `nix.conf`, greetd autologin, Wake-on-LAN, ufw rules. The subnets the rules allow are server values: `UFW_SUBNETS` in `~/.config/dotfiles/arch-system.env` on the host, never in the repo.
+- **`just arch-packages`** installs what the lists name and the host lacks. An AUR package is built with makepkg as you (its repo dependencies installed first, as dependencies) and installed with pacman; `paru` updates it later.
+- **`just arch-system`** applies `system.conf`: the root part through sudo, then the user units.
+- **`just arch-check`** reports what is missing, unlisted or different, changing nothing; it exits 1 on any drift.
+- **Rules.** Nothing is ever uninstalled or removed. Each step changes only what differs and prints `ok:` or `changed:`. A rewritten file keeps its previous version as `<file>.dotfiles-backup`. The SSH drop-in (`10-keys-only.conf`, read before CachyOS's own; sshd keeps the first value) is tested with `sshd -t` and rolled back if rejected. greetd's `[initial_session]`, with the comments above it, is the dotfiles' block. The script never enables ufw, and only checks that `/nix` is the `@nix` subvolume.
+- **Add software.** A line in `pacman.txt` or `aur.txt`, commit, then `just arch-packages` on the host.
+- **rex's services.** Docker through `docker.socket`, used with `sudo docker` (no docker group: it equals root); Syncthing as a user unit (pair devices in its web UI, 127.0.0.1:8384); WARP's daemon off until WARP is wanted, as a connect reroutes rex; Tailscale installed, not running (`sudo systemctl enable --now tailscaled`, then `sudo tailscale up`).
 
 ### Rollback and limits
 
 - Home: in `~/.dotfiles`, `nix run --inputs-from . home-manager-nixos -- generations` (the `home-manager` command is not installed), then run `<generation>/activate` of an older one; or restore the `*.hm-backup` files.
 - Shell: `sudo chsh -s <old shell> <user>`. SSH: remove `10-keys-only.conf` and reload sshd.
 - Nix: disable `nix-daemon.socket`, `sudo pacman -Rns nix`, unmount `/nix`, drop its fstab line, delete `@nix`.
+- System side: change `system.conf` or a list back (the script re-applies what they say, and removes nothing); a rewritten file's previous version is `<file>.dotfiles-backup`.
 - ufw: `sudo ufw status numbered`, `sudo ufw delete <n>`. Linger: `sudo loginctl disable-linger <user>`.
 - Rolling `/` back to a snapshot also rolls back pacman's `nix`, while `/nix` stays current: update `nix` again before using it. Booting a snapshot older than the `/nix` fstab line leaves `/nix` unmounted.
 - Graphical programs stay the distribution's: Home Manager's GPU driver setup for Nix programs is off.
@@ -428,19 +432,19 @@ In this order: `/nix` must be its own subvolume before Nix writes to it.
 
 Sunshine on rex streams its Hyprland session to Moonlight on the Mac (the `moonlight` cask).
 
-- **Sunshine (pacman, by hand):** `sudo pacman -S sunshine` (the `cachyos` repo's build, a pre-release), then `systemctl --user enable --now app-dev.lizardbyte.app.Sunshine.service`; it starts with the graphical session.
+- **Sunshine:** in `pacman.txt` (the `cachyos` repo's build, a pre-release); its user unit `app-dev.lizardbyte.app.Sunshine.service` is in `system.conf` and starts with the graphical session.
 - **Its settings:** `~/.config/sunshine/sunshine.conf` is a writable copy of `hosts/linux/rex-sunshine.conf` (the RX 9070 on `renderD128`, KMS capture, the VA-API encoder), so the web UI can still save. The pairing state (`sunshine_state.json`) and the web UI login (`credentials/`) stay on the host.
-- **Firewall:** for each subnet Moonlight comes from, `sudo ufw allow proto tcp from <subnet> to any port 47984,47989,48010` and `sudo ufw allow proto udp from <subnet> to any port 47998:48000`. The web UI port 47990 stays closed: `ssh -N -L 47990:localhost:47990 <user>@<ip>`, then https://localhost:47990.
-- **Autologin:** in `/etc/greetd/config.toml`, an `[initial_session]` with `command = "uwsm start -e -D Hyprland hyprland.desktop"` and `user = "<user>"`; greetd runs it once per boot. The `lock-after-autologin` user service (`hosts/linux/rex.nix`) locks that session, and only in the first 5 minutes after boot: it asks Noctalia until logind reports the session locked (`loginctl show-session <id> -p LockedHint`), and fails if that takes over 60 s. Lock rather than log out: a logout stops Sunshine until the next boot.
+- **Firewall:** the Sunshine ports are `UFW_RULES` in `system.conf`, allowed from each subnet of `UFW_SUBNETS`. The web UI port 47990 stays closed: `ssh -N -L 47990:localhost:47990 <user>@<ip>`, then https://localhost:47990.
+- **Autologin:** `GREETD_AUTOLOGIN` in `system.conf` becomes greetd's `[initial_session]` (`uwsm start -e -D Hyprland hyprland.desktop`, as the user); greetd runs it once per boot. The `lock-after-autologin` user service (`hosts/linux/rex.nix`) locks that session, and only in the first 5 minutes after boot: it asks Noctalia until logind reports the session locked (`loginctl show-session <id> -p LockedHint`), and fails if that takes over 60 s. Lock rather than log out: a logout stops Sunshine until the next boot.
 - **Pairing:** in Moonlight, add `<ip>`; it shows a PIN; enter it in the web UI's PIN tab.
-- **Power:** in the BIOS, Restore AC Power Loss → Power On (rex comes back after a power cut) and Power On By PCI-E; on rex, `sudo nmcli con modify "<connection>" 802-3-ethernet.wake-on-lan magic` (from the next boot; `sudo ethtool <nic>` shows `Wake-on: g`). Moonlight's wake works on the home LAN only.
-- **Rollback:** remove the `[initial_session]` block; `systemctl --user disable --now app-dev.lizardbyte.app.Sunshine.service` and `sudo pacman -Rns sunshine`; the ufw rules as above.
+- **Power:** in the BIOS, Restore AC Power Loss → Power On (rex comes back after a power cut) and Power On By PCI-E; Wake-on-LAN is `WOL_CONNECTION` in `system.conf` (from the connection's next activation; `sudo ethtool <nic>` shows `Wake-on: g`). Moonlight's wake works on the home LAN only.
+- **Rollback:** take Sunshine out of `pacman.txt`, `system.conf` (its user unit, `GREETD_AUTOLOGIN`, its `UFW_RULES`) first, or the script puts it back; then remove the `[initial_session]` block, `systemctl --user disable --now app-dev.lizardbyte.app.Sunshine.service`, `sudo pacman -Rns sunshine`, and the ufw rules (`sudo ufw status numbered`, `sudo ufw delete <n>`).
 
 ### Gaming on rex
 
 Steam only, set up per the [CachyOS gaming guide](https://wiki.cachyos.org/configuration/gaming/) for an RX 9070 XT and a Ryzen 7 9850X3D. Played at rex's own desktop or streamed through Sunshine (its "Steam Big Picture" app); Hyprland keeps running, as Sunshine streams its session.
 
-- **Packages (pacman, by hand):** `sudo pacman -S cachyos-gaming-meta steam gamescope mangohud lib32-mangohud`. The meta-package brings Proton-CachyOS (`proton-cachyos-slr`), Wine-CachyOS, umu-launcher, protontricks and vulkan-tools.
+- **Packages:** in `pacman.txt`: `cachyos-gaming-meta steam gamescope mangohud lib32-mangohud`. The meta-package brings Proton-CachyOS (`proton-cachyos-slr`), Wine-CachyOS, umu-launcher, protontricks and vulkan-tools.
 - **Shader cache:** `MESA_SHADER_CACHE_MAX_SIZE=12G` in `hosts/linux/rex.nix` (`systemd.user.sessionVariables`). The session reads it when it starts: log in again or reboot after a change.
 - **Default Proton:** Steam's default compatibility tool is `proton-cachyos-slr` (Settings → Compatibility, or `CompatToolMapping` `"0"` in `~/.local/share/Steam/config/config.vdf` while Steam is closed).
 - **Launch options:** `game-performance %command%` (performance power profile while the game runs). Add `PROTON_FSR4_UPGRADE=1` in front for FSR4 on this RDNA4 card (Proton games only; native Linux games such as Dota 2 ignore it), and `mangohud` for an overlay.

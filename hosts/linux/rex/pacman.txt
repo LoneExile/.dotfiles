@@ -1,0 +1,40 @@
+# What rex adds from pacman on top of CachyOS's installer (that list: cachyos-base.txt). `just arch-packages`
+# installs any that are missing and never removes one. One package per line; `#` starts a comment.
+
+# SSH, and Nix for the dotfiles' Home Manager (README: One-time root steps)
+openssh
+nix
+paru
+
+# Stream host (README: Stream host on rex)
+sunshine
+
+# Games (README: Gaming on rex)
+cachyos-gaming-meta
+steam
+gamescope
+mangohud
+lib32-mangohud
+
+# Desktop apps
+brave-bin
+discord
+telegram-desktop
+obs-studio
+audacity
+gimp
+feishin
+dbeaver
+rpi-imager
+
+# Services and system tools (which of them run: system.conf)
+tailscale
+syncthing
+docker
+docker-compose
+docker-buildx
+wireguard-tools
+cloudflare-warp-bin
+
+# Fonts
+ttf-jetbrains-mono-nerd

@@ -139,6 +139,28 @@ switch target_host=hostname:
   echo "switching to new home config for {{target_host}}"
   nix run --inputs-from . home-manager-nixos -- switch --flake ".#{{target_host}}" -b hm-backup
 
+# A non-NixOS Linux host's system side, from hosts/linux/<host>/ (hosts/linux/arch-system.sh; README: Non-NixOS Linux
+# hosts): install what its pacman.txt and aur.txt list and the host lacks. Never removes a package.
+[linux]
+arch-packages target_host=hostname:
+  bash "{{justfile_directory()}}/hosts/linux/arch-system.sh" packages "{{justfile_directory()}}/hosts/linux/{{target_host}}"
+
+# Apply the root settings of hosts/linux/<host>/system.conf (through sudo), then its user units.
+[linux]
+arch-system target_host=hostname:
+  sudo bash "{{justfile_directory()}}/hosts/linux/arch-system.sh" system "{{justfile_directory()}}/hosts/linux/{{target_host}}" "{{user}}"
+  bash "{{justfile_directory()}}/hosts/linux/arch-system.sh" user "{{justfile_directory()}}/hosts/linux/{{target_host}}"
+
+# Report what differs from hosts/linux/<host>/'s lists and system.conf, changing nothing; exits 1 on any drift.
+[linux]
+arch-check target_host=hostname:
+  #!/usr/bin/env bash
+  s="{{justfile_directory()}}/hosts/linux/arch-system.sh" d="{{justfile_directory()}}/hosts/linux/{{target_host}}" rc=0
+  bash "$s" packages --check "$d" || rc=1
+  sudo bash "$s" system --check "$d" "{{user}}" || rc=1
+  bash "$s" user --check "$d" || rc=1
+  exit "$rc"
+
 # Update flake inputs to their latest revisions.
 # Unauthenticated GitHub API is 60 req/hr and 403s; pass `gh auth token` when logged in.
 update:
@@ -215,6 +237,7 @@ test-infra:
   bash infra/vm-hindsight-health_test.sh
   bash home/linux/writable-copy_test.sh
   bash home/linux/clone-once_test.sh
+  bash hosts/linux/arch-system_test.sh
   bash home/linux/omp-plugins-install_test.sh
   bash home/omp/plugins-capture_test.sh
   bash home/omp/lsp-builtins-extract_test.sh

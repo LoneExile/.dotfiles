@@ -1,0 +1,12 @@
+# What rex adds from the AUR. `just arch-packages` builds any that are missing with makepkg as the user (repo
+# dependencies first) and installs them with pacman; `paru` updates them later. Upstreams checked when added.
+google-chrome
+slack-desktop
+# https://github.com/ZenNotes/zennotes
+zennotes-bin
+# https://github.com/xingkongliang/skills-manager
+skills-manager
+# https://github.com/cjpais/Handy (speech-to-text)
+handy
+# headless browser for agents (no Nix package)
+lightpanda-bin
