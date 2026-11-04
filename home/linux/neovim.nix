@@ -29,16 +29,22 @@ in {
       defaultText = lib.literalExpression ''"''${config.xdg.configHome}/nvim"'';
       description = "Where the config is cloned. Anything already there is left as it is.";
     };
+    treeSitter = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.tree-sitter;
+      defaultText = lib.literalExpression "pkgs.tree-sitter";
+      description = "The tree-sitter CLI that nvim-treesitter builds parsers with; its main branch wants 0.26.1 or later, newer than nixos-25.11's.";
+    };
     extraPackages = lib.mkOption {
       type = lib.types.listOf lib.types.package;
-      default = with pkgs; [ripgrep fd gcc gnumake unzip tree-sitter];
-      defaultText = lib.literalExpression "with pkgs; [ripgrep fd gcc gnumake unzip tree-sitter]";
-      description = "The programs the config calls (search, parser builds, Mason's unpacking), as packages of the user.";
+      default = with pkgs; [ripgrep fd gcc gnumake unzip];
+      defaultText = lib.literalExpression "with pkgs; [ripgrep fd gcc gnumake unzip]";
+      description = "The other programs the config calls (search, parser builds, Mason's unpacking), as packages of the user.";
     };
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [cfg.package] ++ cfg.extraPackages;
+    home.packages = [cfg.package cfg.treeSitter] ++ cfg.extraPackages;
 
     home.activation.neovimConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
       ${builtins.readFile ./clone-once.sh}

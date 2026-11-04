@@ -34,6 +34,10 @@
   # 25.11's has harper-ls alone. A VM gets it on the system PATH, a Linux host as a package of the user.
   inherit (unstable) harper;
 
+  # The tree-sitter CLI of the neovim piece: nvim-treesitter's main branch refuses one older than 0.26.1 (checkhealth),
+  # nixos-25.11 has 0.25.10, and the Mac runs unstable's (0.26.11).
+  treeSitter = unstable.tree-sitter;
+
   # What the install of the listed servers runs, measured with every one of them (README): curl for
   # the registry and the release assets, gzip and tar to unpack them, getconf for Mason's glibc
   # check (without it Mason takes NixOS for an unsupported platform), node with npm for the npm

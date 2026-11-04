@@ -56,6 +56,7 @@ in {
       # The overlay's own build, at the Mac's commit (lib/builders.nix applies the same overlay on darwin): built against
       # the overlay's pinned nixpkgs, not nixos-25.11's older libraries.
       package = inputs.neovim-nightly-overlay.packages.${system}.default;
+      inherit (agentPkgs) treeSitter;
     };
   };
 }
