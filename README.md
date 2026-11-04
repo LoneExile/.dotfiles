@@ -414,8 +414,8 @@ In this order: `/nix` must be its own subvolume before Nix writes to it.
 - **`just arch-system`** applies `system.conf`: the root part through sudo, then the user units.
 - **`just arch-check`** reports what is missing, unlisted or different, changing nothing; it exits 1 on any drift.
 - **Rules.** Nothing is ever uninstalled or removed. Each step changes only what differs and prints `ok:` or `changed:`. A rewritten file keeps its previous version as `<file>.dotfiles-backup`. The SSH drop-in (`10-keys-only.conf`, read before CachyOS's own; sshd keeps the first value) is tested with `sshd -t` and rolled back if rejected. greetd's `[initial_session]`, with the comments above it, is the dotfiles' block. The script never enables ufw, and only checks that `/nix` is the `@nix` subvolume.
-- **Add software.** A line in `pacman.txt` or `aur.txt`, commit, then `just arch-packages` on the host.
-- **rex's services.** Docker through `docker.socket`, used with `sudo docker` (no docker group: it equals root); Syncthing as a user unit (pair devices in its web UI, 127.0.0.1:8384); WARP's daemon off until WARP is wanted, as a connect reroutes rex; Tailscale installed, not running (`sudo systemctl enable --now tailscaled`, then `sudo tailscale up`).
+- **Add software.** A line in `pacman.txt` or `aur.txt`, commit, then `just arch-packages` on the host. It builds an AUR package without asking, so read its PKGBUILD (`paru -Gp <pkg>`: the sources, checksums and any `.install` script) before adding the line.
+- **rex's services.** Docker through `docker.socket`, used with `sudo docker` (no docker group: it equals root); a published port bypasses ufw (Docker's iptables rules forward it before ufw sees it), so publish on `127.0.0.1` (`-p 127.0.0.1:8080:80`) unless the LAN should reach it. Syncthing as a user unit (pair devices in its web UI, 127.0.0.1:8384); WARP's daemon off until WARP is wanted, as a connect reroutes rex; Tailscale installed, not running (`sudo systemctl enable --now tailscaled`, then `sudo tailscale up`).
 
 ### Rollback and limits
 
