@@ -144,6 +144,7 @@
       "openvpn-connect"
       "cloudflare-warp"
       "realvnc-connect-viewer"
+      "moonlight" # client for the Sunshine stream host on the CachyOS box
       "visual-studio-code"
       "cap"
       # "figma"
