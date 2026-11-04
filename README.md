@@ -379,11 +379,15 @@ In this order: `/nix` must be its own subvolume before Nix writes to it.
 
    ```bash
    uuid=<UUID of the / line in /etc/fstab>
-   sudo mkdir /mnt/btrfs-top && sudo mount -o subvolid=5 "UUID=$uuid" /mnt/btrfs-top
-   sudo btrfs subvolume create /mnt/btrfs-top/@nix && sudo umount /mnt/btrfs-top && sudo rmdir /mnt/btrfs-top
-   echo "UUID=$uuid /nix btrfs subvol=/@nix,defaults,noatime,compress=zstd:1 0 0" | sudo tee -a /etc/fstab
-   sudo mkdir /nix && sudo systemctl daemon-reload && sudo mount /nix
+   sudo mkdir -p /mnt/btrfs-top && sudo mount -o subvolid=5 "UUID=$uuid" /mnt/btrfs-top &&
+     sudo btrfs subvolume create /mnt/btrfs-top/@nix && sudo umount /mnt/btrfs-top && sudo rmdir /mnt/btrfs-top &&
+     sudo cp -p /etc/fstab /etc/fstab.pre-nix &&
+     echo "UUID=$uuid /nix btrfs subvol=/@nix,defaults,noatime,compress=zstd:1 0 0" | sudo tee -a /etc/fstab &&
+     sudo mkdir /nix && sudo systemctl daemon-reload && sudo mount /nix
+   findmnt -no SOURCE /nix; ls -A /nix; sudo findmnt --verify   # [/@nix], empty, no errors
    ```
+
+   One chain: a step that fails stops it before `/etc/fstab` changes. The mount options are the ones of the other subvolumes' lines.
 
 2. `sudo pacman -S paru nix`, then append the Mac's settings (`lib/builders.nix`) to `/etc/nix/nix.conf`:
 
@@ -407,7 +411,7 @@ In this order: `/nix` must be its own subvolume before Nix writes to it.
 
 ### Rollback and limits
 
-- Home: `home-manager generations`, then run the `activate` of an older one; or restore the `*.hm-backup` files.
+- Home: in `~/.dotfiles`, `nix run --inputs-from . home-manager-nixos -- generations` (the `home-manager` command is not installed), then run `<generation>/activate` of an older one; or restore the `*.hm-backup` files.
 - Shell: `sudo chsh -s <old shell> <user>`. SSH: remove `10-keys-only.conf` and reload sshd.
 - Nix: disable `nix-daemon.socket`, `sudo pacman -Rns nix`, unmount `/nix`, drop its fstab line, delete `@nix`.
 - ufw: `sudo ufw status numbered`, `sudo ufw delete <n>`. Linger: `sudo loginctl disable-linger <user>`.
