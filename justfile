@@ -161,6 +161,25 @@ arch-check target_host=hostname:
   bash "$s" user --check "$d" || rc=1
   exit "$rc"
 
+# Bring a Windows host (hosts/windows/<name>/; README: Windows hosts) to the dotfiles from this Mac, over SSH as
+# <user>@<address>: winget packages, omp (config, models, MCP servers, .env, plugins, skills), Tern (settings,
+# hosts, host keys) and SSH (its own key, from the vault map WIN_SSH_KEYS, made the first time, and a config).
+# Changes only what differs; the host's SSH host key must already be pinned in ~/.ssh/known_hosts.
+[macos]
+win-sync name target:
+  bash "{{justfile_directory()}}/hosts/windows/win-sync.sh" {{quote(name)}} {{quote(target)}}
+
+# Report what win-sync would change on a Windows host, changing nothing on either side; exits 1 on any drift.
+[macos]
+win-check name target:
+  bash "{{justfile_directory()}}/hosts/windows/win-sync.sh" {{quote(name)}} {{quote(target)}} --check
+
+# Add a Windows host's own SSH key (vault map WIN_SSH_KEYS) on the hosts of hosts/windows/<name>/ssh-hosts.txt,
+# through this Mac's login there, and to the gh account for github.com (needs the admin:public_key scope).
+[macos]
+win-authorize name:
+  bash "{{justfile_directory()}}/hosts/windows/win-authorize.sh" {{quote(name)}}
+
 # Update flake inputs to their latest revisions.
 # Unauthenticated GitHub API is 60 req/hr and 403s; pass `gh auth token` when logged in.
 update:
@@ -224,7 +243,7 @@ gc:
   nix-collect-garbage -d
 
 ### Proxmox NixOS VMs
-# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts, the Docker start step, the Docker contexts, the ssh key and lazydocker bridge of the jumphost piece, the jumphost authorization, the vault tunnel, the interactive zsh of the agent role, its writable config copies and the seed of the user's own omp (no network, no vault)
+# Test the leak check, the vault map helpers, the VM identity files, the VM roles, the VM sync, the plugin and Mason capture and install scripts, the Docker start step, the Docker contexts, the ssh key and lazydocker bridge of the jumphost piece, the jumphost authorization, the vault tunnel, the interactive zsh of the agent role, its writable config copies, the seed of the user's own omp and the Windows host sync and key authorization (no network, no vault)
 test-infra:
   @echo "🔎 Testing the infra leak check, vault map helpers, VM identity files, VM roles, VM sync, plugin and Mason scripts, vault tunnel and writable config copies..."
   bash infra/leak-check_test.sh
@@ -238,6 +257,8 @@ test-infra:
   bash home/linux/writable-copy_test.sh
   bash home/linux/clone-once_test.sh
   bash hosts/linux/arch-system_test.sh
+  bash hosts/windows/win-sync_test.sh
+  bash hosts/windows/win-authorize_test.sh
   bash home/linux/omp-plugins-install_test.sh
   bash home/omp/plugins-capture_test.sh
   bash home/omp/lsp-builtins-extract_test.sh

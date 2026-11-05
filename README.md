@@ -1,10 +1,10 @@
 # ~/.dotfiles
 
-Personal macOS config: **nix-darwin** (system) + **Home Manager** (user), driven by this flake. The same flake also builds the NixOS guests of the [Proxmox VMs](#proxmox-vms) stack, and the home of [non-NixOS Linux hosts](#non-nixos-linux-hosts).
+Personal macOS config: **nix-darwin** (system) + **Home Manager** (user), driven by this flake. The same flake also builds the NixOS guests of the [Proxmox VMs](#proxmox-vms) stack, and the home of [non-NixOS Linux hosts](#non-nixos-linux-hosts); [Windows hosts](#windows-hosts) get omp, Tern and SSH from the Mac.
 
 Hosts `le` and `lex` are entries in the `hosts` table in `flake.nix` (hostname → macOS username). Nothing else names a user or a `/Users/<name>` path: home directories, `system.primaryUser`, Home Manager, Homebrew and nix trusted-users derive from that entry, and `just check` fails on a hardcoded one.
 
-The first part of this README is about the Mac (commands, setup, secrets, shell, apps). Then [Non-NixOS Linux hosts](#non-nixos-linux-hosts) (Arch, CachyOS). The last part, from [Proxmox VMs](#proxmox-vms), is about the NixOS VMs.
+The first part of this README is about the Mac (commands, setup, secrets, shell, apps). Then [Non-NixOS Linux hosts](#non-nixos-linux-hosts) (Arch, CachyOS) and [Windows hosts](#windows-hosts). The last part, from [Proxmox VMs](#proxmox-vms), is about the NixOS VMs.
 
 ## Contents
 
@@ -40,6 +40,9 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Rollback and limits](#rollback-and-limits)
   - [Stream host on rex](#stream-host-on-rex)
   - [Gaming on rex](#gaming-on-rex)
+- [Windows hosts](#windows-hosts)
+  - [Add a Windows host](#add-a-windows-host)
+  - [Windows limits and rollback](#windows-limits-and-rollback)
 - [Proxmox VMs](#proxmox-vms)
   - [What lives where](#what-lives-where)
   - [Repo, vault and state](#repo-vault-and-state)
@@ -450,6 +453,45 @@ Steam only, set up per the [CachyOS gaming guide](https://wiki.cachyos.org/confi
 - **Launch options:** `game-performance %command%` (performance power profile while the game runs). Add `PROTON_FSR4_UPGRADE=1` in front for FSR4 on this RDNA4 card (Proton games only; native Linux games such as Dota 2 ignore it), and `mangohud` for an overlay.
 - **No gamemode:** ananicy-cpp runs, and the two conflict. The single-CCD X3D CPU needs no core parking.
 - **GPU:** Vulkan lists the RX 9070 XT first and the iGPU second, so nothing is pinned. Check with `vulkaninfo --summary`.
+
+## Windows hosts
+
+A Windows machine gets omp, Tern and SSH from this Mac, over SSH: `just win-sync <name> <user>@<ip>` renders a bundle from the repo and the vault, copies it to the host and applies it there with PowerShell (`hosts/windows/apply.ps1`). Nothing on Windows runs it on a schedule: sync again after a change.
+
+- **Host.** `hosts/windows/<name>/`: `winget.txt` (packages), `mcp-overrides.json` (the MCP servers to drop or replace), `ssh-hosts.txt` (the `programs.ssh` aliases that its `~/.ssh/config` gets) and `tern-hosts.txt` (its Tern hosts, by SSH alias, so an address lives only in `programs.ssh`).
+- **What it sets up.** The winget packages (installed when missing, never upgraded or removed: `winget upgrade --all`). omp's `config.yml`, `models.yml` and `mcp.json` (with the host's overrides, `${HOME}` turned into `${USERPROFILE}`), `~/.omp/.env` (`OMP_ENV` of the vault), the captured plugins (`bun install --frozen-lockfile`, when the manifests change) and the skills library (picked as vm-sync picks it). Tern's `settings.json`, host list and host keys (pinned from the Mac's Tern `known_hosts`). `~/.ssh/config` and the host's own SSH key.
+- **Files.** Written the way the VMs' writable copies are: a file edited on Windows stays until the repo copy changes, and is then kept as `<file>.dotfiles-backup`. `~/.omp/.env` and the key are readable by the user and SYSTEM only.
+- **Its SSH key.** Made by the first sync and kept in the infra vault map `WIN_SSH_KEYS`, so a reinstall gets the same key back. `just win-authorize <name>` adds its public half to `~/.ssh/authorized_keys` on each host of `ssh-hosts.txt` (through the Mac's own login there), and to the gh account for `github.com`. Tern's remote service reads the same file. Nothing is ever removed.
+- **Check.** `just win-check <name> <user>@<ip>` reports drift, exits 1 on any, and changes nothing.
+- **Host key.** The host's SSH host key must be pinned in the Mac's `~/.ssh/known_hosts`: win-sync sends secrets, so it never trusts a key on first use.
+
+### Add a Windows host
+
+1. On the host: install Tern by hand (it brings its own omp, in `%LOCALAPPDATA%\Tern\omp`).
+2. On the host, in an admin PowerShell: the OpenSSH server, logins with the Mac's key only (an administrator's keys are read from `administrators_authorized_keys`, never `~\.ssh`), PowerShell as the login shell, port 22 open on Private networks only:
+
+   ```powershell
+   Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+   Start-Service sshd; Set-Service sshd -StartupType Automatic
+   Set-Content -Encoding ascii C:\ProgramData\ssh\administrators_authorized_keys '<the Mac public key line>'
+   icacls C:\ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant "*S-1-5-32-544:F" /grant "*S-1-5-18:F"
+   New-ItemProperty -Path HKLM:\SOFTWARE\OpenSSH -Name DefaultShell -Value C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -PropertyType String -Force
+   Set-NetConnectionProfile -InterfaceAlias Ethernet -NetworkCategory Private
+   Set-NetFirewallRule -Name OpenSSH-Server-In-TCP -Profile Private
+   ```
+
+   Windows can add a second rule, `sshd`, open on every network: `Disable-NetFirewallRule -Name sshd`. Then, in `C:\ProgramData\ssh\sshd_config`, set `PasswordAuthentication no` and `KbdInteractiveAuthentication no` above the `Match Group administrators` block, check with `sshd -t`, and `Restart-Service sshd`.
+3. On the Mac, pin its host key: print the fingerprint at the host (`ssh-keygen -lf C:\ProgramData\ssh\ssh_host_ed25519_key.pub`), then `ssh-keygen -R <ip>`, connect once with `ssh -o StrictHostKeyChecking=ask <user>@<ip>`, and compare the two.
+4. Copy `hosts/windows/rex/` to `hosts/windows/<name>/` and edit its lists.
+5. `just win-sync <name> <user>@<ip>`, then `just win-authorize <name>`. GitHub needs a scope the default gh login does not have; once: `gh auth refresh -h github.com -s admin:public_key`.
+
+### Windows limits and rollback
+
+- omp is Tern's own copy, updated by Tern; this repo does not manage it.
+- MCP servers: zennotes, open-design and unsplash are left out (Mac apps and paths), and playwright too: with `browser.enabled` (omp's own browser tool), omp skips browser MCP servers on every machine. codegraph runs through npx; chrome-devtools uses the Chrome of `winget.txt`. reactive-resume needs its OAuth sign-in once per machine.
+- Not synced: omp's extensions (rtk, env-reload, herdr's), the Tern plugins (macOS only) and the Mac's other SSH keys.
+- From a Tern pane on the home LAN, `secretspec` can fail with `No route to host` while the Mac's own `ssh` still works: macOS's Local Network privacy, which does not limit Apple's tools. Run the recipe in Terminal.app.
+- Rollback: a file the sync replaced is kept as `<file>.dotfiles-backup`; a package goes with `winget uninstall --id <id>`; the key goes from each host's `authorized_keys`, from GitHub (titled `<name> (Windows)`) and from `WIN_SSH_KEYS`.
 
 ## Proxmox VMs
 

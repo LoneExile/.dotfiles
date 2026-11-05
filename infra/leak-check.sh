@@ -2,7 +2,8 @@
 # Fail when a git-tracked file holds an identifying server value from TF_VAR_*,
 # the S3 endpoint host (TF_STATE_S3_ENDPOINT), the S3 secret key (AWS_SECRET_ACCESS_KEY)
 # or a LUKS passphrase (VM_LUKS_KEYS, a JSON map of VM name to passphrase), or the Hindsight host and
-# key of a VM (VM_HINDSIGHT, a JSON map of VM name to {url, token}); the last one is optional: unset,
+# key of a VM (VM_HINDSIGHT, a JSON map of VM name to {url, token}), or the SSH key of a Windows host
+# (WIN_SSH_KEYS, a JSON map of host name to private key); the last two are optional: unset,
 # empty or {} means none yet.
 # Skipped on purpose: the other TF_VAR_* values (datastores, bridge, node, sizing: generic),
 # TF_STATE_S3_BUCKET (generic, like datastores), AWS_ACCESS_KEY_ID (its value equals the
@@ -81,6 +82,18 @@ while IFS= read -r line && IFS= read -r hs_key; do
   add "hindsight host" "$(endpoint_host "$line")"
   add "hindsight key" "$hs_key"
 done <"$hslist"
+
+# WIN_SSH_KEYS: optional JSON object, Windows host name -> its own SSH private key (OpenSSH format, made
+# by hosts/windows/win-sync.sh). The base64 lines of each key are patterns, but the first: that one is
+# the format's header, the same in every unencrypted ed25519 key.
+wk_map=${WIN_SSH_KEYS:-}
+[[ -n $wk_map ]] || wk_map='{}'
+wklist=$work/wk
+printf '%s' "$wk_map" | jq -r 'if type == "object" then .[] | if type == "string" then split("\n") | map(select(length > 0 and (startswith("-----") | not))) | .[1:][] else error("not a string") end else error("not an object") end' >"$wklist" 2>/dev/null ||
+  die 2 "WIN_SSH_KEYS is not a JSON object of strings"
+while IFS= read -r line; do
+  add "windows ssh key" "$line"
+done <"$wklist"
 
 sort -u "$raw" >"$patterns"
 nvalues=$(wc -l <"$patterns" | tr -d ' ')

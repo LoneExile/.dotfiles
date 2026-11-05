@@ -1,0 +1,11 @@
+# What win-sync installs on rex with winget: one package id per line, `#` starts a comment.
+# Installed when missing; the sync never upgrades or removes one (`winget upgrade --all` updates them).
+Git.Git
+# node and npx: the npx MCP servers, context-mode's server, the plugins' install scripts
+OpenJS.NodeJS.LTS
+# bun installs the omp plugins (bun install --frozen-lockfile)
+Oven-sh.Bun
+# the browser of the chrome-devtools and playwright MCP servers (Windows on rex has none)
+Google.Chrome
+# Tern's font (font_family in home/tern/settings.json)
+DEVCOM.JetBrainsMonoNerdFont

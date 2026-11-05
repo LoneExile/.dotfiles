@@ -1,0 +1,5 @@
+# Tern's remote hosts on rex: [user@]<SSH alias>[:port], then optionally a tab and the name Tern shows. win-sync
+# turns each alias into its HostName in programs.ssh (home/default.nix) and pins each host key from the Mac's Tern
+# known_hosts; `#` starts a comment. The port is 8376 when none is given.
+ubuntu@pxc_hermes
+le@home:8377	home

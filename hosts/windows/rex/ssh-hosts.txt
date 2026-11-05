@@ -1,0 +1,11 @@
+# The SSH hosts of the Mac (programs.ssh in home/default.nix) that rex gets in ~/.ssh/config: one Host alias
+# per line, `#` starts a comment. rex logs in to each with its own key (IdentityFile ~/.ssh/id_ed25519), and
+# `just win-authorize rex` adds that key on each. Left out: the hosts rex's LAN cannot reach (the office, the
+# cloud and the public ones), office-home (the Mac's own login there is refused) and pxc_llm (down when listed).
+github.com
+home
+pxc_hermes
+pxc_lab
+pxc_root
+px_lab
+px_root

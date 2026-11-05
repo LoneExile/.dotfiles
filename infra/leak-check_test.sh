@@ -339,6 +339,55 @@ test_short_hindsight_key_aborts_naming_the_label() {
   assert_lacks "does not echo the value" "$T/err" "x1"
 }
 
+WK_FIXTURE='{"rex":"-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nfixture0winkey0line0two0123456789abcdefABCDEFGHIJKLMNOPQRSTUVWXYZ0123\nfixture0winkey0line0three0123456789abcdef\n-----END OPENSSH PRIVATE KEY-----\n"}'
+
+test_windows_ssh_key_lines_are_checked() {
+  fixture_env
+  export WIN_SSH_KEYS=$WK_FIXTURE
+  fresh_repo
+  track k1.txt 'fixture0winkey0line0two0123456789abcdefABCDEFGHIJKLMNOPQRSTUVWXYZ0123'
+  assert_rc "a key line" "$(check)" 1
+  assert_has "names the path" "$T/out" "LEAK in k1.txt"
+  assert_lacks "stdout hides the key" "$T/out" "fixture0winkey"
+  assert_lacks "stderr hides the key" "$T/err" "fixture0winkey"
+  rm -rf "$T/r"
+  fresh_repo
+  track k2.txt 'fixture0winkey0line0three0123456789abcdef'
+  assert_rc "the last, short line" "$(check)" 1
+}
+
+test_the_common_header_line_of_a_windows_key_is_not_a_pattern() {
+  fixture_env
+  export WIN_SSH_KEYS=$WK_FIXTURE
+  fresh_repo
+  track k3.txt 'b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW'
+  track k4.txt '-----BEGIN OPENSSH PRIVATE KEY-----'
+  assert_rc "header lines pass" "$(check)" 0
+}
+
+test_windows_ssh_keys_are_optional() {
+  fixture_env
+  unset WIN_SSH_KEYS
+  fresh_repo
+  assert_rc "unset" "$(check)" 0
+  export WIN_SSH_KEYS=
+  assert_rc "empty" "$(check)" 0
+  export WIN_SSH_KEYS='{}'
+  assert_rc "empty map" "$(check)" 0
+}
+
+test_malformed_windows_ssh_keys_fail_closed() {
+  local bad
+  for bad in 'not json' '["x"]' '{"rex":7}' '{"rex":null}'; do
+    fixture_env
+    export WIN_SSH_KEYS=$bad
+    fresh_repo
+    assert_rc "malformed WIN_SSH_KEYS: $bad" "$(check)" 2
+    assert_has "names the variable" "$T/err" "WIN_SSH_KEYS"
+    rm -rf "$T/r"
+  done
+}
+
 tl_init_pure
 tl_run_all
 tl_done

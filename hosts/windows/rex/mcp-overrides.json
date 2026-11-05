@@ -1,0 +1,10 @@
+{
+  "drop": ["zennotes", "open-design", "unsplash", "playwright"],
+  "replace": {
+    "codegraph": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@colbymchenry/codegraph@latest", "serve", "--mcp"]
+    }
+  }
+}
