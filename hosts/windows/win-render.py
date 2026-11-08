@@ -19,8 +19,10 @@ apply.ps1 installs from:
     tern-hosts.txt, tern-pins.txt    the Mac's Tern host list (the hosts its Tern window lists), without the
                                      lines that name TARGET_ADDRESS, then MAC_LINE; and the host key the Mac
                                      has pinned for each [user@]host[:port] line (the port is 8376 when none
-                                     is given); a host the Mac has not pinned is an error. An endpoint id needs
-                                     no pin: the id is the key.
+                                     is given), plus each endpoint id the Mac pinned with that same key (so
+                                     Tern falls back to the relay when the address does not answer); a host
+                                     the Mac has not pinned is an error. An endpoint id line needs no pin:
+                                     the id is the key.
     ssh/config                       the Host blocks of ssh-hosts.txt and `Host *`, from the Mac's
                                      settings, with IdentityFile set to the host's own key and the
                                      macOS-only options left out
@@ -184,16 +186,22 @@ def render_tern_pins(hosts, known_hosts):
     if keys and not known_hosts.is_file():
         raise RenderError(f"no Tern known_hosts on this Mac at {known_hosts}")
     pins = {}
+    linked = {}
     if keys:
         for line in known_hosts.read_text().splitlines():
             fields = line.split()
             if len(fields) == 2:
                 pins.setdefault(fields[0], fields[1])
+                if ENDPOINT_ID.fullmatch(fields[0]):
+                    linked.setdefault(fields[1], []).append(fields[0])
     out = []
     for key in keys:
         if key not in pins:
             raise RenderError(f"this Mac has no pinned Tern host key for {key}: connect to it once from the Mac (tern remote doctor) first")
-        out.append(f"{key} {pins[key]}")
+        for pinned in [key, *linked.get(pins[key], [])]:
+            line = f"{pinned} {pins[key]}"
+            if line not in out:
+                out.append(line)
     return "\n".join(out) + "\n"
 
 

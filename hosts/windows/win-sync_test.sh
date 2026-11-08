@@ -10,9 +10,12 @@ set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 # shellcheck source=../../home/secretspec/testlib.sh
 . "$ROOT/home/secretspec/testlib.sh" || exit 1
-# Fixture Tern endpoint ids: the Mac's own, and one already in its host list.
+# Fixture Tern endpoint ids: the Mac's own, one already in its host list, and two the Mac pinned: one with the
+# key of a listed address (linked: its pin goes along), one with the key of an address not listed.
 EID=$(printf 'a%.0s' $(seq 64))
 EID2=$(printf 'b%.0s' $(seq 64))
+EID3=$(printf 'c%.0s' $(seq 64))
+EID4=$(printf 'd%.0s' $(seq 64))
 
 write_stub() {
   cat >"$T/stub" <<'STUB'
@@ -79,7 +82,7 @@ world() {
   "px_root": {"data": {"header": "Host px_root", "HostName": "203.0.113.179", "IdentityFile": "~/.ssh/id_crypt"}}
 }
 JSON
-  printf '198.51.100.29:8376 SHA256:pinA\n198.51.100.249:8377 SHA256:pinB\n198.51.100.249:8376 SHA256:other\n203.0.113.40:8376 SHA256:pinC\n' >"$T/tern/known_hosts"
+  printf '%s SHA256:pinB\n198.51.100.29:8376 SHA256:pinA\n198.51.100.249:8377 SHA256:pinB\n198.51.100.249:8376 SHA256:other\n%s SHA256:other\n203.0.113.40:8376 SHA256:pinC\n' "$EID3" "$EID4" >"$T/tern/known_hosts"
   printf '# Remote hosts Tern connects to\nubuntu@198.51.100.29\nle@198.51.100.249:8377\thome\nlex@203.0.113.40\nuser@192.0.2.10\nme@%s\tother\n' "$EID2" >"$T/tern/hosts"
   echo '# alpha' >"$T/skills/alpha/SKILL.md"
   echo 'body' >"$T/skills/alpha/notes.md"
@@ -164,8 +167,8 @@ test_tern_gets_the_macs_host_list_without_the_host_itself_plus_the_mac() {
   assert_eq "the Mac's lines, comment and the Windows host left out, then the Mac by endpoint id" \
     "$(printf 'ubuntu@198.51.100.29\nle@198.51.100.249:8377\thome\nlex@203.0.113.40\nme@%s\tother\n%s@%s\t%s' "$EID2" "$(id -un)" "$EID" "$(hostname -s)")" \
     "$(cat "$T/b/tern-hosts.txt")"
-  assert_eq "one pin per address line, port 8376 when none; none for an endpoint id" \
-    "$(printf '198.51.100.29:8376 SHA256:pinA\n198.51.100.249:8377 SHA256:pinB\n203.0.113.40:8376 SHA256:pinC')" "$(cat "$T/b/tern-pins.txt")"
+  assert_eq "one pin per address line, port 8376 when none, then the endpoint ids pinned with its key; none for an endpoint id line" \
+    "$(printf '198.51.100.29:8376 SHA256:pinA\n198.51.100.249:8377 SHA256:pinB\n%s SHA256:pinB\n203.0.113.40:8376 SHA256:pinC' "$EID3")" "$(cat "$T/b/tern-pins.txt")"
 }
 
 test_without_the_macs_tern_endpoint_id_nothing_is_sent() {
