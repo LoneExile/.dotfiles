@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Tests for hosts/windows/win-authorize.sh: a Windows host's key goes into authorized_keys on the hosts it logs in
-# to. secretspec, ssh and gh are stubs (bin/<name> -> stub) with their state in $T/st. The ssh stub runs the
-# command it gets with a plain sh, as the remote host would, with HOME set to $T/st/hosts/<alias>, so the script
-# that edits authorized_keys is the real one. The host list is the repo's (hosts/windows/rex/ssh-hosts.txt).
+# to, by SSH or Tern, and on this Mac. secretspec, ssh and gh are stubs (bin/<name> -> stub) with their state in
+# $T/st. The ssh stub runs the command it gets with a plain sh, as the remote host would, with HOME set to
+# $T/st/hosts/<destination>, so the script that edits authorized_keys is the real one; `ssh -G` answers from the
+# alias map $T/st/sshg. The SSH host list is the repo's (hosts/windows/rex/ssh-hosts.txt); the Mac's Tern host
+# list is a fixture, and this Mac's own file is $T_HOME/.ssh/authorized_keys.
 set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 # shellcheck source=../../home/secretspec/testlib.sh
@@ -17,6 +19,12 @@ case $name in
   secretspec)
     if [ -f "$S/vault/$2" ]; then cat "$S/vault/$2"; else printf '{}'; fi ;;
   ssh)
+    if [ "${1:-}" = -G ]; then
+      m=$(awk -v a="$2" '$1==a{print $2}' "$S/sshg")
+      [ -n "$m" ] || case $2 in *@*) m=$2 ;; *) m=root@$2 ;; esac
+      printf 'user %s\nhostname %s\n' "${m%@*}" "${m#*@}"
+      exit 0
+    fi
     while [[ ${1:-} == -o ]]; do shift 2; done
     alias=$1
     shift
@@ -51,11 +59,15 @@ world() {
   PUB=$(cat "$T/k.pub")
   : >"$S/gh-keys"
   : >"$S/calls"
+  printf 'pxc_hermes ubuntu@198.51.100.29\nhome le@198.51.100.249\n' >"$S/sshg"
+  mkdir -p "$T/tern"
+  printf '# Remote hosts\nlex@203.0.113.40\nroot@203.0.113.63\tth-dc2\nubuntu@198.51.100.29\nle@198.51.100.249:8377\thome\nuser@192.0.2.10\nlex@%s\tlex\n' "$(printf 'a%.0s' $(seq 64))" >"$T/tern/hosts"
+  export WIN_SYNC_TERN_DIR=$T/tern
   export STUB_STATE=$S HOME=$T_HOME TMPDIR=$T/tmp PATH=$T_SHIM:$PATH
 }
 
 authorize() {
-  bash "$ROOT/hosts/windows/win-authorize.sh" rex >"$T/out" 2>"$T/err"
+  bash "$ROOT/hosts/windows/win-authorize.sh" rex user@192.0.2.10 >"$T/out" 2>"$T/err"
   rc=$?
 }
 
@@ -67,10 +79,16 @@ test_every_host_gets_the_key_once() {
   authorize
   assert_rc "first run" "$rc" 0
   local a
-  for a in home pxc_hermes pxc_lab pxc_root px_lab px_root; do
+  for a in home pxc_hermes pxc_lab pxc_root px_lab px_root lex@203.0.113.40 root@203.0.113.63; do
     assert_eq "$a holds the key" "$PUB" "$(keys "$a")"
     assert_has "$a is reported as changed" "$T/out" "changed: $a: key added"
   done
+  assert_eq "this Mac holds it too" "$PUB" "$(cat "$T_HOME/.ssh/authorized_keys")"
+  assert_has "reported as changed" "$T/out" "changed: this Mac: key added"
+  assert_lacks "a Tern line that is an SSH alias's user and host is not done twice" "$S/calls" "ssh ubuntu@198.51.100.29"
+  assert_lacks "nor one with a Tern port" "$S/calls" "ssh le@198.51.100.249"
+  assert_lacks "the Windows host itself is left out" "$S/calls" "192.0.2.10"
+  assert_lacks "an endpoint id is left out" "$S/calls" "aaaaaaaa"
   assert_eq "the new file is the user's only" "600" "$(stat -f %Lp "$S/hosts/home/.ssh/authorized_keys")"
   assert_eq "and so is the new directory" "700" "$(stat -f %Lp "$S/hosts/home/.ssh")"
   assert_eq "GitHub holds it" "$(awk '{print $1" "$2}' "$T/k.pub")" "$(cat "$S/gh-keys")"
@@ -78,7 +96,8 @@ test_every_host_gets_the_key_once() {
   authorize
   assert_rc "second run" "$rc" 0
   assert_eq "no second line" "$PUB" "$(keys home)"
-  assert_eq "seven ok lines" "7" "$(grep -c '^ok: ' "$T/out")"
+  assert_eq "no second line on this Mac" "$PUB" "$(cat "$T_HOME/.ssh/authorized_keys")"
+  assert_eq "ten ok lines (GitHub, six aliases, two Tern hosts, this Mac)" "10" "$(grep -c '^ok: ' "$T/out")"
   assert_eq "GitHub got it once" "1" "$(grep -c 'gh ssh-key add' "$S/calls")"
 }
 
@@ -125,6 +144,16 @@ test_no_key_in_the_vault_is_an_error() {
   authorize
   assert_rc "run" "$rc" 1
   assert_has "says what to run" "$T/err" "run just win-sync first"
+  assert_eq "no host was touched" "" "$(cat "$S/calls")"
+  assert_absent "nor this Mac" "$T_HOME/.ssh/authorized_keys"
+}
+
+test_no_tern_host_list_is_an_error() {
+  world
+  rm "$T/tern/hosts"
+  authorize
+  assert_rc "run" "$rc" 1
+  assert_has "says where it looked" "$T/err" "no Tern host list on this Mac at $T/tern/hosts"
   assert_eq "no host was touched" "" "$(cat "$S/calls")"
 }
 

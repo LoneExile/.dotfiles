@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Render the bundle that win-sync (hosts/windows/win-sync.sh) sends to a Windows host.
 
-    win-render.py REPO NAME STAGE SSH_SETTINGS TERN_KNOWN_HOSTS
+    win-render.py REPO NAME STAGE SSH_SETTINGS TERN_DIR TARGET_ADDRESS MAC_LINE
 
 REPO is the dotfiles checkout, NAME the host (hosts/windows/NAME/), STAGE the bundle directory,
-SSH_SETTINGS the Mac's programs.ssh.settings as JSON (nix eval --json) and TERN_KNOWN_HOSTS the Mac's
-Tern known_hosts. win-sync writes the secret files first (omp/env, ssh/id_ed25519 and its .pub); this
-script writes everything else, and files.tsv, the table apply.ps1 installs from:
+SSH_SETTINGS the Mac's programs.ssh.settings as JSON (nix eval --json), TERN_DIR the Mac's Tern directory
+(its host list `hosts` and its pins `known_hosts`), TARGET_ADDRESS the Windows host's address and MAC_LINE
+the Mac's own Tern line, <user>@<endpoint id><tab><name>. win-sync writes the secret files first
+(omp/env, ssh/id_ed25519 and its .pub); this script writes everything else, and files.tsv, the table
+apply.ps1 installs from:
 
     omp/config.yml, omp/models.yml   the repo copies (home/omp/)
     omp/mcp.json                     home/omp/mcp.json with hosts/windows/NAME/mcp-overrides.json applied
@@ -14,10 +16,11 @@ script writes everything else, and files.tsv, the table apply.ps1 installs from:
                                      ${USERPROFILE} in every string (Windows sets USERPROFILE, not HOME)
     plugins/*, plugins.sha256        the captured plugin manifests (home/omp/plugins/) and their hash
     tern/settings.json               home/tern/settings.json
-    tern-hosts.txt, tern-pins.txt    the lines of tern-hosts.txt, each SSH alias turned into the HostName
-                                     of its Host block in programs.ssh (so an address lives in one place),
-                                     and the host key the Mac has pinned for each; a host the Mac has not
-                                     pinned is an error
+    tern-hosts.txt, tern-pins.txt    the Mac's Tern host list (the hosts its Tern window lists), without the
+                                     lines that name TARGET_ADDRESS, then MAC_LINE; and the host key the Mac
+                                     has pinned for each [user@]host[:port] line (the port is 8376 when none
+                                     is given); a host the Mac has not pinned is an error. An endpoint id needs
+                                     no pin: the id is the key.
     ssh/config                       the Host blocks of ssh-hosts.txt and `Host *`, from the Mac's
                                      settings, with IdentityFile set to the host's own key and the
                                      macOS-only options left out
@@ -135,36 +138,59 @@ def render_ssh(settings, aliases):
     return head + "\n".join(blocks)
 
 
-def resolve_tern_host(spec, settings):
-    """A tern-hosts.txt line, [user@]ALIAS[:port][<tab>name], as a line of Tern's host list: ALIAS becomes the
-    HostName of its Host block in programs.ssh (the alias itself when the block has none)."""
-    target, tab, label = spec.partition("\t")
-    m = re.fullmatch(r"(?:([A-Za-z0-9._-]+)@)?([A-Za-z0-9._-]+)(?::([0-9]{1,5}))?", target.strip())
+ENDPOINT_ID = re.compile(r"[0-9a-f]{64}")
+
+
+def parse_tern_line(line):
+    """(user, host, port) of a line of Tern's host list: [user@]host[:port] or [user@]<endpoint id>, then
+    optionally a tab and the name Tern shows."""
+    target = line.split("\t", 1)[0].strip()
+    m = re.fullmatch(r"(?:([A-Za-z0-9._-]+)@)?([A-Za-z0-9.-]+)(?::([0-9]{1,5}))?", target)
     if not m:
-        raise RenderError(f"tern-hosts.txt: not a [user@]alias[:port] line: {spec!r}")
-    user, alias, port = m.groups()
-    data = ssh_entry(settings, alias, "tern-hosts.txt").get("data", {})
-    address = data.get("HostName", alias)
-    line = (f"{user}@" if user else "") + address + (f":{port}" if port else "")
-    return line + (tab + label.strip() if tab and label.strip() else "")
+        raise RenderError(f"the Tern host list has a line that is not [user@]host[:port]: {line!r}")
+    return m.groups()
+
+
+def mac_tern_hosts(tern_dir, target_address, mac_line):
+    """The Mac's Tern host list without the Windows host itself, then the Mac's own line."""
+    hosts = tern_dir / "hosts"
+    if not hosts.is_file():
+        raise RenderError(f"no Tern host list on this Mac at {hosts}")
+    out = []
+    for line in hosts.read_text().splitlines():
+        line = line.rstrip()
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if parse_tern_line(line)[1] != target_address:
+            out.append(line)
+    _, host, port = parse_tern_line(mac_line)
+    if not ENDPOINT_ID.fullmatch(host) or port:
+        raise RenderError(f"the Mac's own Tern line is not <user>@<endpoint id>: {mac_line!r}")
+    if mac_line not in out:
+        out.append(mac_line)
+    return out
 
 
 def tern_pin_key(line):
-    target = line.split("\t", 1)[0].split("@", 1)[-1]
-    return target if ":" in target else f"{target}:{TERN_DEFAULT_PORT}"
+    """The known_hosts key of a Tern host line, or None for an endpoint id (the id is the key)."""
+    _, host, port = parse_tern_line(line)
+    if ENDPOINT_ID.fullmatch(host):
+        return None
+    return f"{host}:{port or TERN_DEFAULT_PORT}"
 
 
 def render_tern_pins(hosts, known_hosts):
-    if not known_hosts.is_file():
+    keys = [k for k in (tern_pin_key(spec) for spec in hosts) if k]
+    if keys and not known_hosts.is_file():
         raise RenderError(f"no Tern known_hosts on this Mac at {known_hosts}")
     pins = {}
-    for line in known_hosts.read_text().splitlines():
-        fields = line.split()
-        if len(fields) == 2:
-            pins.setdefault(fields[0], fields[1])
+    if keys:
+        for line in known_hosts.read_text().splitlines():
+            fields = line.split()
+            if len(fields) == 2:
+                pins.setdefault(fields[0], fields[1])
     out = []
-    for spec in hosts:
-        key = tern_pin_key(spec)
+    for key in keys:
         if key not in pins:
             raise RenderError(f"this Mac has no pinned Tern host key for {key}: connect to it once from the Mac (tern remote doctor) first")
         out.append(f"{key} {pins[key]}")
@@ -176,7 +202,7 @@ def copy(src, dst):
     shutil.copyfile(src, dst)
 
 
-def render(repo, name, stage, ssh_settings, tern_known_hosts):
+def render(repo, name, stage, ssh_settings, tern_dir, target_address, mac_line):
     host = repo / "hosts" / "windows" / name
     if not host.is_dir():
         raise RenderError(f"no host directory {host}")
@@ -202,9 +228,9 @@ def render(repo, name, stage, ssh_settings, tern_known_hosts):
     (stage / "ssh" / "config").write_text(render_ssh(settings, read_list(host / "ssh-hosts.txt")))
 
     copy(repo / "home" / "tern" / "settings.json", stage / "tern" / "settings.json")
-    hosts = [resolve_tern_host(spec, settings) for spec in read_list(host / "tern-hosts.txt")]
+    hosts = mac_tern_hosts(tern_dir, target_address, mac_line)
     (stage / "tern-hosts.txt").write_text("\n".join(hosts) + "\n")
-    (stage / "tern-pins.txt").write_text(render_tern_pins(hosts, tern_known_hosts))
+    (stage / "tern-pins.txt").write_text(render_tern_pins(hosts, tern_dir / "known_hosts"))
     (stage / "winget.txt").write_text("\n".join(read_list(host / "winget.txt")) + "\n")
 
     rows = [
@@ -224,12 +250,12 @@ def render(repo, name, stage, ssh_settings, tern_known_hosts):
 
 
 def main(argv):
-    if len(argv) != 6:
-        print("usage: win-render.py REPO NAME STAGE SSH_SETTINGS TERN_KNOWN_HOSTS", file=sys.stderr)
+    if len(argv) != 8:
+        print("usage: win-render.py REPO NAME STAGE SSH_SETTINGS TERN_DIR TARGET_ADDRESS MAC_LINE", file=sys.stderr)
         return 2
-    repo, name, stage, ssh_settings, tern_known_hosts = (Path(a) for a in argv[1:])
+    repo, name, stage, ssh_settings, tern_dir = (Path(a) for a in argv[1:6])
     try:
-        render(repo, str(name), stage, ssh_settings, tern_known_hosts)
+        render(repo, str(name), stage, ssh_settings, tern_dir, argv[6], argv[7])
     except (RenderError, OSError, ValueError) as e:
         print(f"win-sync: {e}", file=sys.stderr)
         return 1

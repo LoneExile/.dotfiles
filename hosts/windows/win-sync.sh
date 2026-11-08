@@ -4,7 +4,8 @@
 # Mac's key). `just win-sync` runs it; README: Windows hosts.
 #
 # The Mac renders a bundle (hosts/windows/win-render.py): omp's config, models and MCP servers (with the host's
-# overrides), the plugin manifests, Tern's settings, host list and host keys, an ~/.ssh/config of the listed
+# overrides), the plugin manifests, Tern's settings, the Mac's own Tern host list (minus ADDRESS) plus the Mac
+# itself, by its endpoint id, with the host keys the Mac pinned, an ~/.ssh/config of the listed
 # hosts, the winget packages, the skills library (as vm-sync picks it: ~/.skills-manager/skills, never the
 # auto-learned managed-skills) and two secrets: ~/.omp/.env (OMP_ENV of the vault) and the host's own SSH key
 # (its entry in the infra vault map WIN_SSH_KEYS; made once, the first time, and kept there, so a reinstall gets
@@ -86,8 +87,13 @@ ssh-keygen -y -f "$stage/ssh/id_ed25519" >"$stage/ssh/id_ed25519.pub" 2>/dev/nul
 darwin=$(hostname | cut -d. -f1)
 nix eval --json "$repo#darwinConfigurations.$darwin.config.home-manager.users.$(id -un).programs.ssh.settings" \
   >"$work/ssh-settings.json" 2>"$work/nix.err" || die "nix eval of the Mac's SSH settings failed: $(tail -n 3 "$work/nix.err")"
-tern_known=${WIN_SYNC_TERN_DIR:-$HOME/Library/Application Support/Tern}/known_hosts
-python3 "$repo/hosts/windows/win-render.py" "$repo" "$name" "$stage" "$work/ssh-settings.json" "$tern_known" || exit 1
+# This Mac's own Tern identity: the Windows host reaches it by endpoint id, through the relay, on any network.
+tern_bin=$(command -v tern || echo /Applications/Tern.app/Contents/MacOS/tern)
+eid=$("$tern_bin" remote host-key --user 2>/dev/null | jq -r '.endpoint_id // empty' 2>/dev/null)
+[[ $eid =~ ^[0-9a-f]{64}$ ]] || die "cannot read this Mac's Tern endpoint id (tern remote host-key --user)"
+mac_line="$(id -un)@$eid"$'\t'"$(hostname -s)"
+tern_dir=${WIN_SYNC_TERN_DIR:-$HOME/Library/Application Support/Tern}
+python3 "$repo/hosts/windows/win-render.py" "$repo" "$name" "$stage" "$work/ssh-settings.json" "$tern_dir" "$addr" "$mac_line" || exit 1
 
 src=${SYNC_SKILLS_SRC:-$HOME/.skills-manager/skills}
 names=$(sync_skill_names "$src") || exit 1

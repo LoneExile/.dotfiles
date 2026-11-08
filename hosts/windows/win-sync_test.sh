@@ -2,13 +2,17 @@
 # Tests for hosts/windows/win-sync.sh and win-render.py: the bundle the Mac sends to a Windows host. ssh, scp,
 # secretspec and nix are stubs (bin/<name> -> stub) that keep their state in $T/st: the vault is a directory of
 # files, scp keeps what it was sent, ssh answers the host key probe and records the PowerShell command. The
-# data is the repo's own (hosts/windows/rex, home/omp, home/tern); the Mac's SSH settings, Tern known_hosts and
-# skills library are fixtures. apply.ps1 itself runs only on Windows (README: Windows hosts).
+# data is the repo's own (hosts/windows/rex, home/omp, home/tern); the Mac's SSH settings, Tern host list, Tern
+# known_hosts, own Tern identity (tern remote host-key) and skills library are fixtures. apply.ps1 itself runs only
+# on Windows (README: Windows hosts).
 # shellcheck disable=SC2088,SC2016 # a literal ~ and ${...} are the text these tests expect
 set -uo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 # shellcheck source=../../home/secretspec/testlib.sh
 . "$ROOT/home/secretspec/testlib.sh" || exit 1
+# Fixture Tern endpoint ids: the Mac's own, and one already in its host list.
+EID=$(printf 'a%.0s' $(seq 64))
+EID2=$(printf 'b%.0s' $(seq 64))
 
 write_stub() {
   cat >"$T/stub" <<'STUB'
@@ -27,6 +31,7 @@ case $name in
       set) cat >"$f" ;;
     esac ;;
   nix) cat "$S/ssh-settings.json" ;;
+  tern) printf '{"endpoint_id":"%s","fingerprint":"SHA256:mac"}\n' "$(cat "$S/eid")" ;;
   ssh)
     while [[ ${1:-} == -o ]]; do shift 2; done
     target=$1
@@ -55,7 +60,8 @@ world() {
   S=$T/st
   mkdir -p "$S/vault" "$T/tern" "$T/skills/alpha" "$T/skills/beta" "$T/skills/notes"
   write_stub
-  for c in ssh scp secretspec nix; do ln -sf "$T/stub" "$T_SHIM/$c"; done
+  for c in ssh scp secretspec nix tern; do ln -sf "$T/stub" "$T_SHIM/$c"; done
+  echo "$EID" >"$S/eid"
   printf 'A_KEY=one\nB_KEY=two\n' >"$S/vault/OMP_ENV"
   echo ok >"$S/probe"
   echo 0 >"$S/remote-rc"
@@ -73,7 +79,8 @@ world() {
   "px_root": {"data": {"header": "Host px_root", "HostName": "203.0.113.179", "IdentityFile": "~/.ssh/id_crypt"}}
 }
 JSON
-  printf '198.51.100.29:8376 SHA256:pinA\n198.51.100.249:8377 SHA256:pinB\n198.51.100.249:8376 SHA256:other\n' >"$T/tern/known_hosts"
+  printf '198.51.100.29:8376 SHA256:pinA\n198.51.100.249:8377 SHA256:pinB\n198.51.100.249:8376 SHA256:other\n203.0.113.40:8376 SHA256:pinC\n' >"$T/tern/known_hosts"
+  printf '# Remote hosts Tern connects to\nubuntu@198.51.100.29\nle@198.51.100.249:8377\thome\nlex@203.0.113.40\nuser@192.0.2.10\nme@%s\tother\n' "$EID2" >"$T/tern/hosts"
   echo '# alpha' >"$T/skills/alpha/SKILL.md"
   echo 'body' >"$T/skills/alpha/notes.md"
   ln -s /etc/hosts "$T/skills/alpha/outside"
@@ -150,11 +157,24 @@ test_ssh_config_has_the_listed_hosts_with_the_hosts_own_key() {
   assert_has "the Mac's defaults stay" "$c" "  StrictHostKeyChecking no"
 }
 
-test_tern_gets_the_listed_hosts_and_the_macs_pins() {
+test_tern_gets_the_macs_host_list_without_the_host_itself_plus_the_mac() {
   world
   sync
-  assert_eq "tern-hosts.txt: the lines, tab kept, comments gone" "$(printf 'ubuntu@198.51.100.29\nle@198.51.100.249:8377\thome')" "$(cat "$T/b/tern-hosts.txt")"
-  assert_eq "one pin per host, the default port 8376 when none" "$(printf '198.51.100.29:8376 SHA256:pinA\n198.51.100.249:8377 SHA256:pinB')" "$(cat "$T/b/tern-pins.txt")"
+  assert_rc "sync" "$rc" 0
+  assert_eq "the Mac's lines, comment and the Windows host left out, then the Mac by endpoint id" \
+    "$(printf 'ubuntu@198.51.100.29\nle@198.51.100.249:8377\thome\nlex@203.0.113.40\nme@%s\tother\n%s@%s\t%s' "$EID2" "$(id -un)" "$EID" "$(hostname -s)")" \
+    "$(cat "$T/b/tern-hosts.txt")"
+  assert_eq "one pin per address line, port 8376 when none; none for an endpoint id" \
+    "$(printf '198.51.100.29:8376 SHA256:pinA\n198.51.100.249:8377 SHA256:pinB\n203.0.113.40:8376 SHA256:pinC')" "$(cat "$T/b/tern-pins.txt")"
+}
+
+test_without_the_macs_tern_endpoint_id_nothing_is_sent() {
+  world
+  echo not-an-id >"$S/eid"
+  sync
+  assert_rc "sync" "$rc" 1
+  assert_has "says why" "$T/err" "cannot read this Mac's Tern endpoint id"
+  assert_lacks "nothing is sent" "$S/calls" "scp"
 }
 
 test_a_tern_host_the_mac_never_pinned_stops_the_sync() {
@@ -228,15 +248,16 @@ render_repo() {
   echo '{}' >"$R/home/tern/settings.json"
   echo '{"drop": ["two"], "replace": {}}' >"$R/hosts/windows/x/mcp-overrides.json"
   echo 'h1' >"$R/hosts/windows/x/ssh-hosts.txt"
-  printf 'me@h1\n' >"$R/hosts/windows/x/tern-hosts.txt"
+  mkdir -p "$T/rt"
+  printf 'me@box\n' >"$T/rt/hosts"
   echo 'Some.Id' >"$R/hosts/windows/x/winget.txt"
-  echo '{"h1": {"data": {"header": "Host h1", "HostName": "box"}}, "plain.example": {"data": {"header": "Host plain.example"}}}' >"$T/ssh.json"
-  echo 'box:8376 SHA256:pin' >"$T/kh"
+  echo '{"h1": {"data": {"header": "Host h1", "HostName": "box"}}}' >"$T/ssh.json"
+  echo 'box:8376 SHA256:pin' >"$T/rt/known_hosts"
   for f in omp/env ssh/id_ed25519 ssh/id_ed25519.pub; do echo x >"$T/stage/$f"; done
 }
 
 render() {
-  python3 "$ROOT/hosts/windows/win-render.py" "$R" x "$T/stage" "$T/ssh.json" "$T/kh" >"$T/out" 2>"$T/err"
+  python3 "$ROOT/hosts/windows/win-render.py" "$R" x "$T/stage" "$T/ssh.json" "$T/rt" 192.0.2.10 "${MAC_LINE:-mac@$EID}" >"$T/out" 2>"$T/err"
   rc=$?
 }
 
@@ -263,18 +284,23 @@ test_the_render_refuses_a_host_alias_the_mac_lacks() {
   assert_has "names it" "$T/err" "nowhere matches 0 Host blocks"
 }
 
-test_a_tern_host_is_an_ssh_alias_resolved_to_its_hostname() {
+test_the_render_refuses_a_tern_line_it_cannot_read() {
   render_repo
-  printf 'me@h1:9000\tbox\nplain.example\n' >"$R/hosts/windows/x/tern-hosts.txt"
-  printf 'box:9000 SHA256:p1\nplain.example:8376 SHA256:p2\n' >"$T/kh"
+  printf 'me@box\nme@bad host!\n' >"$T/rt/hosts"
   render
-  assert_rc "render" "$rc" 0
-  assert_eq "the lines" "$(printf 'me@box:9000\tbox\nplain.example')" "$(cat "$T/stage/tern-hosts.txt")"
-  assert_eq "the pins" "$(printf 'box:9000 SHA256:p1\nplain.example:8376 SHA256:p2')" "$(cat "$T/stage/tern-pins.txt")"
-  printf 'me@nowhere\n' >"$R/hosts/windows/x/tern-hosts.txt"
-  render
-  assert_rc "an alias the Mac lacks" "$rc" 1
-  assert_has "names it" "$T/err" "tern-hosts.txt: nowhere matches 0 Host blocks"
+  assert_rc "render" "$rc" 1
+  assert_has "names it" "$T/err" "not [user@]host[:port]: 'me@bad host!'"
+}
+
+test_the_macs_own_line_must_be_an_endpoint_id() {
+  render_repo
+  MAC_LINE=mac@203.0.113.7 render
+  assert_rc "an address" "$rc" 1
+  assert_has "says why" "$T/err" "the Mac's own Tern line is not <user>@<endpoint id>"
+  MAC_LINE=$(printf 'mac@%s\tmac' "$EID") render
+  assert_rc "an endpoint id" "$rc" 0
+  assert_eq "it ends the list, with no pin" "$(printf 'me@box\nmac@%s\tmac' "$EID")" "$(cat "$T/stage/tern-hosts.txt")"
+  assert_eq "the other line's pin" "box:8376 SHA256:pin" "$(cat "$T/stage/tern-pins.txt")"
 }
 
 test_the_render_needs_the_secret_files_first() {

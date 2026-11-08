@@ -162,8 +162,9 @@ arch-check target_host=hostname:
   exit "$rc"
 
 # Bring a Windows host (hosts/windows/<name>/; README: Windows hosts) to the dotfiles from this Mac, over SSH as
-# <user>@<address>: winget packages, omp (config, models, MCP servers, .env, plugins, skills), Tern (settings,
-# hosts, host keys) and SSH (its own key, from the vault map WIN_SSH_KEYS, made the first time, and a config).
+# <user>@<address>: winget packages, omp (config, models, MCP servers, .env, plugins, skills), Tern (settings, this
+# Mac's host list plus this Mac, host keys) and SSH (its own key, from the vault map WIN_SSH_KEYS, made the first
+# time, and a config).
 # Changes only what differs; the host's SSH host key must already be pinned in ~/.ssh/known_hosts.
 [macos]
 win-sync name target:
@@ -174,11 +175,12 @@ win-sync name target:
 win-check name target:
   bash "{{justfile_directory()}}/hosts/windows/win-sync.sh" {{quote(name)}} {{quote(target)}} --check
 
-# Add a Windows host's own SSH key (vault map WIN_SSH_KEYS) on the hosts of hosts/windows/<name>/ssh-hosts.txt,
-# through this Mac's login there, and to the gh account for github.com (needs the admin:public_key scope).
+# Add a Windows host's own SSH key (vault map WIN_SSH_KEYS) on the hosts of hosts/windows/<name>/ssh-hosts.txt and of
+# this Mac's Tern host list, through this Mac's login there, on this Mac itself, and to the gh account for
+# github.com (needs the admin:public_key scope).
 [macos]
-win-authorize name:
-  bash "{{justfile_directory()}}/hosts/windows/win-authorize.sh" {{quote(name)}}
+win-authorize name target:
+  bash "{{justfile_directory()}}/hosts/windows/win-authorize.sh" {{quote(name)}} {{quote(target)}}
 
 # Update flake inputs to their latest revisions.
 # Unauthenticated GitHub API is 60 req/hr and 403s; pass `gh auth token` when logged in.
