@@ -5,7 +5,7 @@
     "": {
       "name": "omp-plugins",
       "dependencies": {
-        "@loneexile/omp-superpowers": "npm:@loneexile/omp-superpowers@7.0.2-omp.2",
+        "@loneexile/omp-superpowers": "npm:@loneexile/omp-superpowers@7.0.2-omp.3",
         "context-mode": "^1.0.169",
         "omp-cursor-sdk": "npm:omp-cursor-sdk@0.5.0",
         "pi-env-reload": "npm:pi-env-reload@0.2.0",
@@ -123,7 +123,7 @@
 
     "@kurkle/color": ["@kurkle/color@0.3.4", "", {}, "sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w=="],
 
-    "@loneexile/omp-superpowers": ["@loneexile/omp-superpowers@7.0.2-omp.2", "", {}, "sha512-XaaXxFHOPmB9OxJ+YFvDHGZwHR5i8xmzfl+RtfyrOtuRhLluRy3DKQEKlXWAIYhbIyVe7o8ENxtmMQi/ZABEdw=="],
+    "@loneexile/omp-superpowers": ["@loneexile/omp-superpowers@7.0.2-omp.3", "", {}, "sha512-e0iw1xbuH8F678WCuMT+ZN4b08WfCNEf3kranIqdFva7Hbkuy1v6mgrbP7miVd6r9qzS9/e/ZaQPiXYwQw8BZQ=="],
 
     "@mixmark-io/domino": ["@mixmark-io/domino@2.2.0", "", {}, "sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw=="],
 
