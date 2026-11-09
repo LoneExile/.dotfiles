@@ -5,11 +5,6 @@
       "enabledFeatures": null,
       "enabled": true
     },
-    "pi-env-reload": {
-      "version": "0.2.0",
-      "enabledFeatures": null,
-      "enabled": true
-    },
     "pi-harper-grammar": {
       "version": "0.3.1",
       "enabledFeatures": null,
@@ -20,8 +15,8 @@
       "enabledFeatures": null,
       "enabled": true
     },
-    "pi-output-styles": {
-      "version": "0.3.5",
+    "@loneexile/omp-superpowers": {
+      "version": "7.0.2-omp.2",
       "enabledFeatures": null,
       "enabled": true
     },
@@ -30,8 +25,18 @@
       "enabledFeatures": null,
       "enabled": true
     },
-    "@loneexile/omp-superpowers": {
-      "version": "7.0.1-omp.4",
+    "pi-output-styles": {
+      "version": "0.3.5",
+      "enabledFeatures": null,
+      "enabled": true
+    },
+    "pi-refusal-guard": {
+      "version": "0.2.1",
+      "enabledFeatures": null,
+      "enabled": true
+    },
+    "pi-env-reload": {
+      "version": "0.2.0",
       "enabledFeatures": null,
       "enabled": true
     }
