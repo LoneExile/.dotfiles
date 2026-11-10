@@ -2,7 +2,7 @@ symbolPreset: nerd
 theme:
   dark: dark-gruvbox
   light: light
-setupVersion: 2
+setupVersion: 3
 statusLine:
   transparent: true
   preset: custom
@@ -44,7 +44,7 @@ modelRoles:
   task: anthropic/claude-sonnet-5-5:xhigh
   web: xai-oauth/grok-4.7:xhigh
   image: xai/grok-imagine-image
-  default: anthropic/claude-opus-5-5:xhigh
+  default: anthropic/claude-sonnet-5-5:xhigh
 task:
   agentModelOverrides:
     sdd-implementer: anthropic/claude-sonnet-5-5:xhigh
@@ -130,3 +130,5 @@ compaction:
     - soft
 composer:
   shape: borderless
+update:
+  auto: true
