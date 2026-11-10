@@ -1252,7 +1252,8 @@ Option `dotfiles.agent.zsh.enable`, on when the agent is (`home/linux/zsh.nix`).
 #### Shared with the Mac: one source of truth
 
 - `home/zsh/config/aliases.zsh`, `options.zsh` and `keybindings.zsh` are sourced from the store copy that the flake names, byte for byte (`just test-roles` compares each with the repo file, and the Mac's derivation does not change). So editing one changes both machines.
-- The plugins come from nixpkgs (nothing is fetched at shell start): `zsh-syntax-highlighting` 0.8.0, `zsh-autosuggestions` 0.7.1, `zsh-completions` 0.35.0, `zsh-history-substring-search` 1.1.0, `fzf-tab` 1.2.0, and `fzf` 0.67.0 as a user package, which fzf-tab calls (the package only: not the Mac's `programs.fzf` Ctrl-T, Alt-C and `**` bindings).
+- The plugins come from nixpkgs (nothing is fetched at shell start): `zsh-syntax-highlighting` 0.8.0, `zsh-autosuggestions` 0.7.1, `zsh-completions` 0.35.0, `zsh-history-substring-search` 1.1.0, `fzf-tab` 1.2.0, and `fzf` 0.67.0 through `programs.fzf`, which fzf-tab calls too.
+- fzf's own key bindings: **Ctrl-T** (files), **Ctrl-R** (the zsh history, `~/.zhistory`; fzf's widget, not the Mac's Atuin picker) and **Alt-C** (directories). Home Manager loads them at order 910, before the plugins, so fzf-tab still owns Tab.
 - `fzf-tab-source` (Freed-Wu) is in no nixpkgs (25.11 and unstable: measured), so it is pinned in `home/linux/zsh.nix` by commit (`3253ab5`, 2026-07-21) and hash. Bump it with `nix flake prefetch github:Freed-Wu/fzf-tab-source`.
 - The load order is the Mac's `home/zsh/zshrc`: the three files, then the plugins, then `compinit`.
 
@@ -1282,7 +1283,7 @@ Measured.
 #### Left out on purpose
 
 - `home/zsh/zshrc` itself: it is the Mac's (zap installed with `curl` at shell start, `getconf DARWIN_USER_TEMP_DIR`, `~/Library/pnpm`, kubectl, treehouse and aws completions, the todo files).
-- Atuin (a history sync server and a login, the Mac's `Ctrl-R` and its fzf picker), eza (the Mac's `ls` integration), bat and tmux (the Mac's `programs.*` in `home/default.nix`, not in the shared files). None is installed on the VM; their aliases (`t`, `ta`, `v` for nvim) stay defined and say `command not found`. `top` runs btop and `k` runs kubectl, and zoxide's `z` and `sf` (superfile) are there: the tools piece installs them.
+- Atuin (a history sync server and a login; Ctrl-R is fzf's history widget instead), eza (the Mac's `ls` integration), bat and tmux (the Mac's `programs.*` in `home/default.nix`, not in the shared files). None is installed on the VM; their aliases (`t`, `ta`, `v` for nvim) stay defined and say `command not found`. `top` runs btop and `k` runs kubectl, and zoxide's `z` and `sf` (superfile) are there: the tools piece installs them.
 - The Mac's `tmp.zsh` hook is a local file that is not in the repo.
 
 #### Turning the zsh setup off

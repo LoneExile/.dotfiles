@@ -67,6 +67,7 @@ EOF
       -e "s#/nix/store/[a-z0-9]{32}-zsh-completions-[0-9.]+/share/zsh/site-functions#$d/plug/site-functions#" \
       -e "s#eval \"\\$\\(/nix/store/[a-z0-9]{32}-zoxide-[0-9.]+/bin/zoxide init zsh\\)\"#source $d/plug/zoxide.zsh#" \
       -e "s#eval \"\\$\\(/nix/store/[^ ]*/bin/(starship|mise|direnv) [^)]*\\)\"#true#" \
+      -e "s#source <\\(/nix/store/[^ ]*/bin/fzf --zsh\\)#true#" \
       -e "s#/home/lex#$d/home#g" \
       >"$d/zd/.zshrc"
 }

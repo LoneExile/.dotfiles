@@ -43,8 +43,14 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    # fzf-tab calls it.
-    home.packages = [pkgs.fzf];
+    # fzf's key bindings (Ctrl-T files, Ctrl-R the zsh history, Alt-C directories) and the package, which fzf-tab calls
+    # too. Home Manager sources `fzf --zsh` at order 910: after the early exit of a shell without a terminal (500) and
+    # before the plugins below (1000), so fzf-tab, loaded after it, keeps Tab. Ctrl-R is fzf's own history widget, not
+    # the Mac's Atuin picker: there is no Atuin here.
+    programs.fzf = {
+      enable = true;
+      enableZshIntegration = true;
+    };
 
     programs.zsh.initContent = lib.mkMerge [
       (lib.mkOrder 500 ''
