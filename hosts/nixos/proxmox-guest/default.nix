@@ -108,6 +108,19 @@
     firewall.enable = true;
   };
 
+  # networkd.conf only. This is not a .network unit, so nothing is generated under
+  # /etc/systemd/network and the install-time 10-static.network stays. strongSwan on a
+  # guest installs routes and policy rule 220 outside any .network file. networkd
+  # deletes those on reload by default, and a change of this file restarts networkd at
+  # switch. Both are false so it leaves them. It does not keep the virtual IP addresses
+  # strongSwan puts on the NIC: the restart still drops those (measured 2026-11-10).
+  # The module default IPv6PrivacyExtensions stays: this sets two keys, it does not
+  # replace the section.
+  systemd.network.config.networkConfig = {
+    ManageForeignRoutes = false;
+    ManageForeignRoutingPolicyRules = false;
+  };
+
   services = {
     openssh = {
       enable = true;

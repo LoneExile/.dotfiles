@@ -1637,6 +1637,8 @@ NixOS runs no cloud-init (the module is off and the package is not in the system
 
 NixOS leaves the first two alone: the role sets no `hostName` (do not set one: NixOS would replace `/etc/hostname` with a symlink) and defines no networkd unit.
 
+`/etc/systemd/networkd.conf` is the exception. The role sets `ManageForeignRoutes=false` and `ManageForeignRoutingPolicyRules=false` there, and keeps `IPv6PrivacyExtensions=true`. networkd otherwise deletes routes and policy rules that are not in a `.network` file when it reloads, and a change of that file restarts networkd at switch. strongSwan on a guest installs its routes and policy rule 220 that way. Measured 2026-11-10: those two survived the restart, and the virtual IP addresses on the NIC did not. `ipsec down`/`up` puts the addresses back. The same file reaches every guest at its next `vm-deploy`; a guest with no such routes is unchanged.
+
 ### What a change of the entry does
 
 - Changing `ipv4_cidr`, `gateway` or `dns` in `TF_VAR_vms`, or `ipconfig0`, `nameserver` or `sshkeys` on the Proxmox VM, does not change the running VM, also not across a reboot. The drive stays attached and OpenTofu keeps maintaining it for the Debian stage; NixOS never reads it. Measured: a throwaway key set as `sshkeys` and a different unused `ipconfig0` reached the drive and had no effect on the guest.
