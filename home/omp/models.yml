@@ -447,7 +447,7 @@ providers:
         reasoning: true
         thinking: { mode: effort, efforts: [minimal, low, medium, xhigh] }
         input: [text]
-        contextWindow: 200000
+        contextWindow: 262144
         maxTokens: 32768
         cost: { input: 1, output: 1, cacheRead: 1, cacheWrite: 0 }
   # --- Nous Research Inference API (portal.nousresearch.com) — OpenAI Chat
