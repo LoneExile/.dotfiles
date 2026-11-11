@@ -27,6 +27,7 @@ The first part of this README is about the Mac (commands, setup, secrets, shell,
   - [Install and plugin](#install-and-plugin)
   - [omp agent state](#omp-agent-state)
 - [OmniWM](#omniwm)
+- [LinearMouse](#linearmouse)
 - [Tern keymap](#tern-keymap)
 - [Tern plugin: remote-open](#tern-plugin-remote-open)
   - [Pin and bump](#pin-and-bump)
@@ -152,6 +153,7 @@ home/zsh/                 zshrc + aliases / options / keybindings
 secretspec.toml           secret *names* only (no values)
 home/secretspec/          secret-sync engine (materialize.sh + libs, tests), nix wrapper, secretspec provider aliases
 home/omniwm/              OmniWM settings.toml (out-of-store symlink) + adopt.sh
+home/linearmouse/         LinearMouse settings JSON (out-of-store symlink)
 home/herdr/               herdr config.toml + herdr-plus quick-actions
 infra/                    Proxmox VMs: Terragrunt unit, secretspec manifest (names only), leak check, VM scripts
 hosts/nixos/              generic NixOS guest role (proxmox-guest, role clean)
@@ -290,6 +292,14 @@ SOPS is leftover, not live: no `secrets/secrets.yaml`, no `sops.secrets.*` in an
 - OmniWM opens its command palette on ⌃⌥Space. macOS ships the same chord as "Select next source in Input menu", so both fire and OmniWM's Health page warns.
 - `home.activation.omniwmPaletteChord` turns the macOS shortcut off (symbolic hotkey 61) with `defaults write -dict-add`, which leaves every other system shortcut as it is.
 - It then applies the change with `activateSettings -u`, so no logout is needed.
+
+## LinearMouse
+
+- [LinearMouse](https://linearmouse.app) is the `linearmouse` cask. Its settings are `home/linearmouse/linearmouse.json`, linked out of store to `~/.config/linearmouse/linearmouse.json`.
+- The repo copy turns on smooth scrolling (preset `easeInOut`, no rubber-band bounce) for every device LinearMouse counts as a mouse: mouse wheels and the Toucan2 trackpad. The built-in trackpad and the scroll direction (`com.apple.swipescrolldirection` in `hosts/common`) are left alone.
+- The Settings window writes through the link into this working tree, so its changes show up in `git status`; commit them. The file is plain JSON: comments break parsing.
+- LinearMouse reads `~/Library/Application Support/linearmouse/linearmouse.json` first when that file exists, which would hide the repo copy. Delete it if it shows up.
+- First launch after `just switch`: grant Accessibility in System Settings → Privacy & Security, then turn on Start at login in LinearMouse. Neither can be set from nix.
 
 ## Tern keymap
 

@@ -117,6 +117,14 @@ in {
         force = true;
       };
 
+      # LinearMouse (cask in profiles/personal.nix) saves its Settings window
+      # here. It resolves the symlink and writes the target, so the link stays
+      # and the changes land in this working tree.
+      ".config/linearmouse/linearmouse.json" = {
+        source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/linearmouse/linearmouse.json";
+        force = true;
+      };
+
       # Ghostty (installed as a Homebrew cask in profiles/personal.nix) is kept
       # in lockstep with the wezterm config below; see the header of
       # ./ghostty/config for the option-by-option mapping.

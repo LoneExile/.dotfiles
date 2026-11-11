@@ -160,6 +160,7 @@
       "mitmproxy"
       "xykong/tap/flux-markdown"
       "thaw" # menu bar manager
+      "linearmouse" # per-device mouse settings; smooth scrolling in home/linearmouse/linearmouse.json
       # "siyuan"
       # "shottr"
       "squirrel-app"
