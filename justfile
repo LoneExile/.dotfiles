@@ -34,9 +34,10 @@ _sudo:
 # Required once per machine (and before each token expiry) for dotfiles-secrets
 # to sync secrets like the SSH keys materialized on every switch.
 # Uses the OIDC mount default role — `secretspec-human` is OcinCloud-only.
+# If macOS blocks bao from the LAN, the script forwards through /usr/bin/ssh.
 [macos]
 openbao-login:
-  BAO_ADDR=https://openbao.home.0dl.me bao login -method=oidc -path=oidc
+  bash "{{justfile_directory()}}/home/secretspec/openbao-login.sh"
 
 
 # The three recipes below run the dotfiles-secrets wrapper of the active Home
