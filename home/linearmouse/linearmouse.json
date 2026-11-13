@@ -9,12 +9,32 @@
       },
       "scrolling": {
         "smoothed": {
+          "acceleration": 1.2,
+          "bouncing": false,
           "enabled": true,
+          "inertia": 0.65,
           "preset": "easeInOut",
           "response": 0.45,
+          "speed": 1
+        }
+      }
+    },
+    {
+      "if": {
+        "device": {
+          "category": "mouse",
+          "productID": "0x615e",
+          "productName": "Toucan",
+          "vendorID": "0x1d50"
+        }
+      },
+      "scrolling": {
+        "smoothed": {
+          "enabled": true,
+          "preset": "linear",
+          "acceleration": 0,
+          "inertia": 0.3,
           "speed": 1,
-          "acceleration": 1.2,
-          "inertia": 0.65,
           "bouncing": false
         }
       }

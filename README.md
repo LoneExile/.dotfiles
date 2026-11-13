@@ -296,7 +296,8 @@ SOPS is leftover, not live: no `secrets/secrets.yaml`, no `sops.secrets.*` in an
 ## LinearMouse
 
 - [LinearMouse](https://linearmouse.app) is the `linearmouse` cask. Its settings are `home/linearmouse/linearmouse.json`, linked out of store to `~/.config/linearmouse/linearmouse.json`.
-- The repo copy turns on smooth scrolling (preset `easeInOut`, no rubber-band bounce) for every device LinearMouse counts as a mouse: mouse wheels and the Toucan2 trackpad. The built-in trackpad and the scroll direction (`com.apple.swipescrolldirection` in `hosts/common`) are left alone.
+- The repo copy turns on smooth scrolling (preset `easeInOut`, no rubber-band bounce) for every device LinearMouse counts as a mouse. The built-in trackpad and the scroll direction (`com.apple.swipescrolldirection` in `hosts/common`) are left alone.
+- The Toucan2 trackpad (vendor `0x1d50`, product `0x615e`) has its own scheme after that one: preset `linear` with acceleration 0, so scroll speed is proportional to finger speed (any acceleration above 0 runs the input through a steep curve that made slow swipes crawl and quick ones jump), and inertia 0.3 for a short glide. Tune Speed and Inertia in LinearMouse with the Toucan selected.
 - The Settings window writes through the link into this working tree, so its changes show up in `git status`; commit them. The file is plain JSON: comments break parsing.
 - LinearMouse reads `~/Library/Application Support/linearmouse/linearmouse.json` first when that file exists, which would hide the repo copy. Delete it if it shows up.
 - First launch after `just switch`: grant Accessibility in System Settings → Privacy & Security, then turn on Start at login in LinearMouse. Neither can be set from nix.
