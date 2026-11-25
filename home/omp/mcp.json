@@ -90,13 +90,6 @@
       "headers": {
         "Authorization": "Bearer ${TUDUDI_API_KEY}"
       }
-    },
-    "context-mode": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "${HOME}/.omp/plugins/node_modules/context-mode/server.bundle.mjs"
-      ]
     }
   },
   "disabledServers": []

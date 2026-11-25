@@ -140,7 +140,6 @@ test_mcp_servers_get_the_hosts_overrides() {
   assert_eq "a dropped server leaves disabledServers too" "" "$(jq -r --slurpfile o "$ov" '(.disabledServers // [])[] | select(. as $k | $o[0].drop | index($k))' "$m")"
   assert_eq "codegraph is replaced" "npx -y @colbymchenry/codegraph@latest serve --mcp" "$(jq -r '.mcpServers.codegraph | [.command] + .args | join(" ")' "$m")"
   assert_eq "no \${HOME} is left" "0" "$(grep -c '\${HOME}' "$m")"
-  assert_eq "context-mode's path uses USERPROFILE" '${USERPROFILE}/.omp/plugins/node_modules/context-mode/server.bundle.mjs' "$(jq -r '.mcpServers["context-mode"].args[0]' "$m")"
   assert_eq "a server with no override is the Mac's" "$(jq -c '.mcpServers.drawio' "$mac")" "$(jq -c '.mcpServers.drawio' "$m")"
   assert_eq "the servers keep the Mac's order" "$(jq -r --slurpfile o "$ov" '.mcpServers | keys_unsorted[] | select(. as $k | $o[0].drop | index($k) | not)' "$mac" | tr '\n' ' ')" \
     "$(jq -r '.mcpServers | keys_unsorted[]' "$m" | tr '\n' ' ')"
