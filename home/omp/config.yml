@@ -45,13 +45,6 @@ modelRoles:
   web: xai-oauth/grok-4.7:xhigh
   image: xai/grok-imagine-image
   default: anthropic/claude-opus-5-5:xhigh
-task:
-  agentModelOverrides:
-    sdd-implementer: anthropic/claude-sonnet-5-5:xhigh
-    sdd-reviewer: anthropic/claude-sonnet-5-5:xhigh
-    sdd-rereviewer: anthropic/claude-sonnet-5-5:low
-    sdd-escalation-implementer: anthropic/claude-sonnet-5-5:max
-    sdd-final-reviewer: anthropic/claude-sonnet-5-5:max
 providers:
   streamIdleTimeoutSeconds: 300
   anthropic:
@@ -132,3 +125,4 @@ composer:
   shape: borderless
 update:
   auto: true
+extendedContext: true
