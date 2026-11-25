@@ -34,6 +34,7 @@
     unstablePkgs.harbor-cli
     unstablePkgs.aws-vault
     unstablePkgs.awscli2
+    unstablePkgs.ssm-session-manager-plugin # `aws ssm start-session` and SSH-over-SSM to EC2
     unstablePkgs.hcloud
 
     # Editors / terminal
@@ -60,6 +61,9 @@
         hash = "sha256-UJA6KmIhhW4cNuPFxf856JcFPSmqH2ha1XZiLJMGnog=";
       };
     }))
+
+    # Coding agents
+    unstablePkgs.codex
 
     # Remote access / DB
     unstablePkgs.freerdp
