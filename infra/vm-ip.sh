@@ -22,7 +22,14 @@ fail() {
 
 if ! out=$(terragrunt output -json vms 2>"$err"); then
   echo "error: could not read the VM list from the state (store unreachable, lock held, vault login or passphrase wrong?); terragrunt said:" >&2
-  grep -v '^[[:space:]]*$' "$err" | tail -n 5 >&2
+  # OpenTofu closes each error with generic advice, so the last lines miss the cause: show the first
+  # "Error:" line and the 4 after it, else the last 5. Colors are stripped (the capture is a file).
+  clean=$(sed -E $'s/\x1b\\[[0-9;]*m//g' "$err" | grep -v '^[[:space:]]*$')
+  if grep -q 'Error:' <<<"$clean"; then
+    awk '/Error:/ { f = 1 } f && n++ < 5' <<<"$clean" >&2
+  else
+    tail -n 5 <<<"$clean" >&2
+  fi
   exit 1
 fi
 

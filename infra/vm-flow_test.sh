@@ -36,7 +36,7 @@ esac
 EOF
   cat >"$T/bin/terragrunt" <<'EOF'
 #!/bin/sh
-[ "${STUB_STATE_DOWN:-0}" = 0 ] || { echo "state store unreachable" >&2; exit 1; }
+[ "${STUB_STATE_DOWN:-0}" = 0 ] || { printf '%b\n' "${STUB_STATE_ERR:-state store unreachable}" >&2; exit 1; }
 src="$STUB_DIR/TF_VAR_vms.state"; [ -f "$src" ] || src="$STUB_DIR/TF_VAR_vms"
 jq -c 'map_values({ip: (.ipv4_cidr | split("/")[0]), node: .node, vmid: .vmid, role: (.role // "clean")})' "$src"
 EOF
@@ -126,6 +126,18 @@ test_deploy_stops_before_nix_on_a_bad_role_or_vm_or_state() {
   assert_rc "state unreachable" "$(STUB_STATE_DOWN=1 deploy testvm-alpha)" 1
   assert_has "says the state" "$T/err" "could not read the VM list from the state"
   assert_eq "nix not run (state)" "" "$(cat "$T/nix.log")"
+}
+
+test_state_error_shows_the_cause_not_the_trailing_advice() {
+  # The shape of OpenTofu's error, colored: the cause sits above 3 lines of generic advice.
+  shims "$BASE"
+  local tofu='\033[31m╷\033[0m\n\033[31m│\033[0m \033[1m\033[31mError: \033[0mRequired plugins are not installed\n\033[31m│\033[0m\n\033[31m│\033[0m   - bpg/proxmox: there is no package for bpg/proxmox 0.112.0 cached\n\033[31m│\033[0m\n\033[31m│\033[0m OpenTofu uses external plugins to integrate with a variety of different\n\033[31m│\033[0m infrastructure services. You must install the required plugins before\n\033[31m│\033[0m running OpenTofu operations.\n\033[31m╵\033[0m\n  exit status 1'
+  assert_rc "state unreachable" "$(STUB_STATE_DOWN=1 STUB_STATE_ERR="$tofu" deploy testvm-alpha)" 1
+  assert_has "the error line" "$T/err" "Error: Required plugins are not installed"
+  assert_has "the cause" "$T/err" "there is no package for bpg/proxmox 0.112.0 cached"
+  assert_lacks "no color codes" "$T/err" $'\e['
+  assert_rc "no Error line" "$(STUB_STATE_DOWN=1 deploy testvm-alpha)" 1
+  assert_has "the tail otherwise" "$T/err" "state store unreachable"
 }
 
 test_deploy_takes_two_arguments() {
