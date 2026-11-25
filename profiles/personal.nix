@@ -153,6 +153,7 @@
       "logseq"
       "dbeaver-community"
       # "claude"
+      "chatgpt" # ChatGPT desktop; the Codex app merged into it (bundle com.openai.codex, OmniWM rule in home/omniwm)
       "github"
       "wifiman"
       "zoom"
