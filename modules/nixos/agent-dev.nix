@@ -14,7 +14,7 @@
 #   - Tern's remote service reachable on the LAN (UDP 8376), with its relay and iroh off.
 #   - the sync from the Mac (options `dotfiles.agent.sync.*`, run by `just vm-sync` and by vm-deploy):
 #     the captured omp plugins (manifests plus a user service that installs them, and harper-cli),
-#     rsync for the skills the Mac mirrors in, and the zsh side of the Hindsight URL and key (the
+#     rsync for the skills the Mac mirrors in (with ffmpeg and ffprobe, which HyperFrames and grok-tts run), and the zsh side of the Hindsight URL and key (the
 #     file itself is written from the vault); /etc/dotfiles-agent-sync.json tells vm-sync which of the three.
 #   - Mason's language servers for omp (option `dotfiles.agent.mason.enable`): neovim and mason.nvim
 #     from nixpkgs, and a user service that installs the servers of home/omp/mason-lsp.txt into
@@ -103,7 +103,7 @@ in {
 
     sync = {
       plugins = piece "the captured omp plugins (home/omp/plugins), installed by a user service, with harper-cli";
-      skills = piece "the skills that `just vm-sync` mirrors from the Mac into ~/.omp/agent/skills (needs rsync on the VM)";
+      skills = piece "the skills that `just vm-sync` mirrors from the Mac into ~/.omp/agent/skills (needs rsync on the VM), and ffmpeg and ffprobe for the skills that make or check media (HyperFrames, grok-tts)";
       hindsight = piece "the public Hindsight API for omp: zsh reads ~/.config/dotfiles/hindsight.env (written by `just vm-sync` from the vault) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN, which omp prefers over its config file";
     };
   };
@@ -288,8 +288,10 @@ in {
     })
 
     (lib.mkIf cfg.sync.skills {
-      # The Mac's rsync talks to this one.
-      environment.systemPackages = [pkgs.rsync];
+      # The Mac's rsync talks to this one. ffmpeg and ffprobe are for the synced skills that make or
+      # check media: HyperFrames renders and media-use's audio engine, grok-tts's MP3 check. The
+      # headless build (no X, SDL or GPU libraries) still has libx264 for HyperFrames' H.264 renders.
+      environment.systemPackages = [pkgs.rsync pkgs.ffmpeg-headless];
     })
   ]);
 }
