@@ -1478,6 +1478,11 @@ omp reads it at its next start. A reinstall deletes it.
 - Nothing else in `~/.omp/agent/skills` is touched or deleted.
 - `~/.omp/agent/managed-skills` (the auto-learned store, with infra notes) is never read, copied or listed: a source path or a library member that resolves to a `managed-skills` path is refused.
 - No skill is in this repo.
+- The skills piece also puts on the VM what those skills run:
+  - `ffmpeg` and `ffprobe` (nixpkgs' `ffmpeg-headless`, which has libx264 for HyperFrames' H.264 renders), at a low priority, so a host that has its own `ffmpeg` keeps it first on the PATH;
+  - `heygen`, HeyGen's CLI, which HyperFrames' media-use runs for HeyGen's catalog of music, images and icons. Like omp it is a pinned seed (`modules/nixos/agent-dev/heygen.nix`, the Linux release archive, its hash checked against the release's `checksums.txt`) that Home Manager copies once to `~/.local/bin/heygen`, where `heygen update` can replace it. The rules of [A pinned seed, and a copy that is yours](#a-pinned-seed-and-a-copy-that-is-yours) apply;
+  - `HYPERFRAMES_NO_TELEMETRY=1` and `HEYGEN_NO_ANALYTICS=1` in every zsh (`~/.zshenv`). HyperFrames and HeyGen's CLI report usage by default (HyperFrames' counters are linked to the HeyGen account once a key is saved), and HeyGen's CLI ignores `DO_NOT_TRACK`. A process that zsh did not start does not see them, so on a new VM also run `hyperframes telemetry disable` and `heygen config set analytics false` once.
+- HyperFrames does not read `~/.omp/.env`, and omp does not pass that file to the commands it runs. For HeyGen's catalog, save the key into HyperFrames on the VM once (after the two commands above): `node ~/.omp/agent/skills/hyperframes/scripts/plugin-cli.mjs auth login --api-key` asks for it at a hidden prompt, or reads it from a pipe. It lands in `~/.hyperframes/credentials` (mode 600); a new key means running it again.
 
 #### Flip to clean: removing what the sync placed
 

@@ -4,7 +4,8 @@
 # Needs coreutils only (mktemp, install, mv).
 #
 # omp updates itself: `omp update` downloads the release asset and renames it over its own file, and it refuses to run from the Nix
-# store. So the store binary is only the seed (and the fallback, on the system PATH). DEST is the user's after that:
+# store. So the store binary is only the seed (and the fallback, on the system PATH). heygen (`heygen update`) works the same way and
+# is seeded the same way. DEST is the user's after that:
 #   - DEST is missing: the copy is made (mode 755, owned by the user that runs this).
 #   - DEST is a symlink (into the store, or dangling): it is replaced by the copy. A symlink to a directory is left alone.
 #   - DEST is anything else (an updated copy, the copy of an earlier deploy, a file that the user put there): left alone, always.

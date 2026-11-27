@@ -14,6 +14,11 @@
   # Both read this one value, so there is no second pin.
   omp = pkgs.callPackage ./omp.nix {};
 
+  # The one pin of heygen (heygen.nix: version and hash), HeyGen's CLI, which media-use runs for HeyGen's catalog (the skills piece).
+  # As with omp, the system PATH of a VM gets it as the fallback, and Home Manager copies it to ~/.local/bin/heygen, which
+  # `heygen update` can replace. Both read this one value.
+  heygen = pkgs.callPackage ./heygen.nix {};
+
   # nixos-25.11's default pkgs.docker (28.5.2) is marked insecure (unmaintained since November 2025) and refuses to evaluate;
   # docker_29 is in the same nixpkgs. The one package of the rootless daemon and of the CLI that Home Manager runs.
   docker = pkgs.docker_29;

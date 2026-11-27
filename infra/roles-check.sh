@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guards the roles: the clean guest (proxmox-guest) must stay clean, and the agent (proxmox-agent)
-# must stay confined and carry its sync pieces (plugin install, harper, rsync, ffmpeg and the reporting-off lines of the skills, /etc/dotfiles-agent-sync.json,
+# must stay confined and carry its sync pieces (plugin install, harper, rsync, ffmpeg, heygen with its user-owned copy and the reporting-off lines of the skills, /etc/dotfiles-agent-sync.json,
 # the Hindsight zsh side) only while the dotfiles.agent.sync options are on, and keep gh as git's credential helper with no Home Manager hand on ~/.config/gh. The agent carries the Mason language server install
 # (a user service with an exact PATH, neovim on no PATH, nothing of ~/.config/nvim) only while dotfiles.agent.mason.enable is on, whatever the sync options say. Docker is rootless or absent in
 # every role (no rootful daemon, no docker group, no docker socket, podman not posing as docker) and comes, with just, lazygit, lazydocker, tokei, btop, kubectl, k9s, superfile and zoxide as user packages (zoxide's hook after the one compinit, and the alias sf), only while
@@ -25,6 +25,10 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
       omp = builtins.any (p: (p.pname or "") == "omp") cfg.environment.systemPackages;
       # the store paths of the omp packages on the system PATH: exactly one in the agent (the one pin, which is also what Home Manager copies to ~/.local/bin/omp), none in the clean guest
       ompStore = map (p: p.outPath) (builtins.filter (p: (p.pname or "") == "omp") cfg.environment.systemPackages);
+      # the store paths of the heygen packages on the system PATH: exactly one in the agent with the skills piece (the one pin, which is also what Home Manager copies to ~/.local/bin/heygen), none in the clean guest
+      heygenStore = map (p: p.outPath) (builtins.filter (p: (p.pname or "") == "heygen") cfg.environment.systemPackages);
+      # the priorities (meta.priority, 5 when unset) of the ffmpeg-headless packages on the system PATH: above 5, the ffmpeg of a host that has one wins the system path
+      ffmpegHeadlessPriority = map (p: p.meta.priority or 5) (builtins.filter (p: (p.pname or "") == "ffmpeg-headless") cfg.environment.systemPackages);
       homeManager = builtins.hasAttr "home-manager" cfg && cfg.home-manager.users != { };
       rootLogin = cfg.services.openssh.settings.PermitRootLogin;
       passwordAuth = cfg.services.openssh.settings.PasswordAuthentication;
@@ -134,6 +138,8 @@ facts=$(nix eval --json "$repo#nixosConfigurations" --apply '
           activation = u.home.activation ? ompPlugins;
           # the copy of omp that the user owns (~/.local/bin/omp): the activation step that seeds it (its order and its whole script), and the entries that Home Manager puts on the session PATH
           ompSeed = if u.home.activation ? ompBinary then { after = u.home.activation.ompBinary.after; data = u.home.activation.ompBinary.data; } else null;
+          # the copy of heygen that the user owns (~/.local/bin/heygen), seeded the same way by the skills piece
+          heygenSeed = if u.home.activation ? heygenBinary then { after = u.home.activation.heygenBinary.after; data = u.home.activation.heygenBinary.data; } else null;
           sessionPath = u.home.sessionPath;
           helper = u.programs.git.settings.credential."https://github.com".helper or null;
           before = u.home.activation.ompPlugins.before or null;
@@ -271,6 +277,14 @@ check "agent: Home Manager seeds ~/.local/bin/omp with seed_user_binary, from th
 check "agent: the helper that runs on the VM is home/linux/seed-user-binary.sh byte for byte (the file that seed-user-binary_test.sh tests: it never replaces a regular file, and only a missing path or a link gets the copy)" '.agent.userSync.ompSeed.data | contains($helper)' --rawfile helper "$helper"
 check "agent: ~/.local/bin is on the session PATH, and no root-owned rule (tmpfiles) names it: the copy is made by the user's own Home Manager activation" '(.agent.userSync.sessionPath | index("$HOME/.local/bin") != null) and ([.agent.confine.tmpfilesRules[] | select(contains(".local/bin"))] == [])'
 check "agent with the omp option off: no seeding, no omp on the system PATH, and the other pieces stay" '.ompOff | (.omp | not) and (.ompStore == []) and (.userSync.ompSeed == null) and (.userSync.mason != null) and .dockerRootless'
+
+# heygen, for media-use's HeyGen catalog (the skills piece). `heygen update` replaces its own file like `omp update`, so it is seeded the same way: the pinned store
+# package (modules/nixos/agent-dev/heygen.nix) on the system PATH as the fallback, and a user-owned copy in ~/.local/bin that a deploy never replaces.
+check "clean: no heygen package (it comes with the agent's skills piece)" '.guest.heygenStore == []'
+check "agent: the system PATH keeps exactly one heygen package (the pin, the fallback if the user deletes the copy)" '.agent.heygenStore | length == 1'
+check "agent: Home Manager seeds ~/.local/bin/heygen with seed_user_binary (home/linux/seed-user-binary.sh byte for byte), from the heygen package of the system PATH (the one pin: no second hash), after writeBoundary" '.agent as $a | $a.userSync.heygenSeed as $s | ($a.heygenStore | length == 1) and ($s.after == ["writeBoundary"]) and ($s.data | contains("\nseed_user_binary " + $a.heygenStore[0] + "/bin/heygen \"$HOME/.local/bin/heygen\"\n") and contains($helper))' --rawfile helper "$helper"
+check "agent with every sync option off: no heygen on the system PATH and no heygen seeding (the omp seeding stays)" '.agentOff | (.heygenStore == []) and (.userSync.heygenSeed == null) and (.userSync.ompSeed != null)'
+check "agent: the skills piece's ffmpeg-headless has a low priority (meta.priority above 5), so a host's own ffmpeg (nixos-homelab's full build) keeps the system PATH" '.agent.ffmpegHeadlessPriority | (length == 1) and all(. > 5)'
 
 # The Mason piece. The list is the committed file; the unit must carry its hash and every name of it, in order.
 list=$repo/home/omp/mason-lsp.txt

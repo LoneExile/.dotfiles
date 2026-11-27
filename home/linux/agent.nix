@@ -169,12 +169,16 @@ in {
     sync = {
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
       hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
-      skills = lib.mkEnableOption "the usage reporting of HyperFrames (its CLI and media-use) and of HeyGen's CLI turned off in every zsh, for the skills that vm-sync mirrors in";
+      skills = lib.mkEnableOption "the usage reporting of HyperFrames (its CLI and media-use) and of HeyGen's CLI turned off in every zsh, and a user-owned copy of heygen in ~/.local/bin (for media-use's HeyGen catalog), for the skills that vm-sync mirrors in";
       pluginPackages = lib.mkOption {
         type = lib.types.listOf lib.types.package;
         default = [pkgs.bun pkgs.nodejs];
         defaultText = lib.literalExpression "[pkgs.bun pkgs.nodejs]";
         description = "bun and node, on the PATH of the plugin install service (some plugins run node in their install scripts).";
+      };
+      heygenPackage = lib.mkOption {
+        type = lib.types.package;
+        description = "The heygen package (the one pin, modules/nixos/agent-dev/heygen.nix, which the NixOS module also puts on the system PATH): the seed of ~/.local/bin/heygen, copied when that file is missing or a link. Read only while sync.skills is on.";
       };
     };
     mason = {
@@ -506,6 +510,15 @@ in {
       programs.zsh.envExtra = ''
         export HYPERFRAMES_NO_TELEMETRY=1
         export HEYGEN_NO_ANALYTICS=1
+      '';
+
+      # heygen, for media-use's HeyGen catalog (music, images, icons). `heygen update` replaces its own file, which it cannot do in the
+      # Nix store, so like omp the pinned store binary is the seed and the fallback, and the user's heygen is a regular copy in
+      # ~/.local/bin (on every zsh's PATH, home.sessionPath above), made only when that file is missing or a link and never replaced
+      # (seed-user-binary.sh). media-use runs it with the key that HyperFrames saved; it needs no sign-in of its own.
+      home.activation.heygenBinary = lib.hm.dag.entryAfter ["writeBoundary"] ''
+        ${builtins.readFile ./seed-user-binary.sh}
+        seed_user_binary ${cfg.sync.heygenPackage}/bin/heygen "$HOME/.local/bin/heygen"
       '';
     })
 
