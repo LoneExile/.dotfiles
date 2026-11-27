@@ -169,6 +169,7 @@ in {
     sync = {
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
       hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
+      skills = lib.mkEnableOption "the usage reporting of HyperFrames (its CLI and media-use) and of HeyGen's CLI turned off in every zsh, for the skills that vm-sync mirrors in";
       pluginPackages = lib.mkOption {
         type = lib.types.listOf lib.types.package;
         default = [pkgs.bun pkgs.nodejs];
@@ -495,6 +496,18 @@ in {
         start_user_unit ${pkgs.systemd}/bin/systemctl blender-mcp.service
       '';
     }))
+
+    (lib.mkIf cfg.sync.skills {
+      # The skills that vm-sync mirrors in include HyperFrames (its CLI and media-use) and grok-tts, whose tools report usage by
+      # default: HyperFrames' counters to PostHog (anonymous until a HeyGen sign-in, then linked to that account) and HeyGen's CLI
+      # its own analytics. Both are off in every zsh, through .zshenv like the snippets around it (an ssh login, `zsh -c`, the
+      # shell of a Tern session, the shell that omp runs its commands in). HyperFrames and media-use read HYPERFRAMES_NO_TELEMETRY
+      # (the skills then skip their usage beacon and feedback reports); HeyGen's CLI reads only HEYGEN_NO_ANALYTICS, not DO_NOT_TRACK.
+      programs.zsh.envExtra = ''
+        export HYPERFRAMES_NO_TELEMETRY=1
+        export HEYGEN_NO_ANALYTICS=1
+      '';
+    })
 
     (lib.mkIf cfg.sync.hindsight {
       # omp reads HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN from the environment before its config

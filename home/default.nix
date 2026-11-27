@@ -511,6 +511,14 @@ in {
       export PATH="$HOME/.local/share/mise/shims:$PATH"
       export PATH="$HOME/.local/bin:$PATH"
     '';
+    # Usage reporting off for HyperFrames (its CLI and the media-use scripts) and HeyGen's CLI, in
+    # every zsh (.zshenv: also `zsh -c` and the shells that start omp and the agents). HyperFrames
+    # reads HYPERFRAMES_NO_TELEMETRY, and its skills then skip their usage beacon and feedback
+    # reports; HeyGen's CLI reads only HEYGEN_NO_ANALYTICS, not DO_NOT_TRACK.
+    envExtra = ''
+      export HYPERFRAMES_NO_TELEMETRY=1
+      export HEYGEN_NO_ANALYTICS=1
+    '';
   };
 
   programs.tmux = {
