@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guards the roles: the clean guest (proxmox-guest) must stay clean, and the agent (proxmox-agent)
-# must stay confined and carry its sync pieces (plugin install, harper, rsync, /etc/dotfiles-agent-sync.json,
+# must stay confined and carry its sync pieces (plugin install, harper, rsync, ffmpeg and the reporting-off lines of the skills, /etc/dotfiles-agent-sync.json,
 # the Hindsight zsh side) only while the dotfiles.agent.sync options are on, and keep gh as git's credential helper with no Home Manager hand on ~/.config/gh. The agent carries the Mason language server install
 # (a user service with an exact PATH, neovim on no PATH, nothing of ~/.config/nvim) only while dotfiles.agent.mason.enable is on, whatever the sync options say. Docker is rootless or absent in
 # every role (no rootful daemon, no docker group, no docker socket, podman not posing as docker) and comes, with just, lazygit, lazydocker, tokei, btop, kubectl, k9s, superfile and zoxide as user packages (zoxide's hook after the one compinit, and the alias sf), only while
@@ -256,6 +256,11 @@ check "agent: the manifests are placed before the user units reload, and the uni
 check "agent: the plugin install unit starts with the user manager at boot and is retried on failure" '.agent.userSync.wantedBy == ["default.target"] and .agent.userSync.restart == "on-failure"'
 check "agent: zsh reads the hindsight file for every shell, and never ~/.omp/.env" '.agent.userSync.zshenv | (contains("config/dotfiles/hindsight.env") and (contains(".omp/.env") | not) and contains("set -a") and contains("set +a"))'
 check "agent with every sync option off: no harper, no service, no activation, no hindsight in zsh; gh stays the credential helper" '.agentOff | (.syncFile == {"plugins": false, "skills": false, "hindsight": false}) and ([.harper, .userSync.service, .userSync.activation] | any | not) and (.userSync.helper | test("^!/nix/store/[^ ]+/bin/gh auth git-credential$")) and (.userSync.zshenv | contains("hindsight") | not)'
+# The skills piece: ffmpeg for the skills that make or check media, and the usage reporting of HyperFrames (its CLI and media-use) and of HeyGen's CLI turned off. Each variable is a
+# line of ~/.zshenv, which every zsh reads (also the shells of an omp that started before a deploy), and not Home Manager's session file, which runs once per process tree.
+check "clean: no ffmpeg (it comes with the agent's skills piece)" '.guest.confine.systemPackages | any(test("^ffmpeg")) | not'
+check "agent: the skills piece puts ffmpeg on the system PATH and turns usage reporting off in every zsh: HYPERFRAMES_NO_TELEMETRY=1 and HEYGEN_NO_ANALYTICS=1, each a line of ~/.zshenv of its own, neither in the once-per-tree session file of Home Manager" '.agent | (.confine.systemPackages | any(test("^ffmpeg-headless-[0-9]"))) and (.userSync.zshenv | test("(^|\n)export HYPERFRAMES_NO_TELEMETRY=1(\n|$)") and test("(^|\n)export HEYGEN_NO_ANALYTICS=1(\n|$)")) and (.confine.hmSession | has("HYPERFRAMES_NO_TELEMETRY") or has("HEYGEN_NO_ANALYTICS") | not)'
+check "agent with every sync option off: no ffmpeg and neither reporting variable in ~/.zshenv (the SSL_CERT_FILE line stays)" '.agentOff | (.confine.systemPackages | any(test("^ffmpeg")) | not) and (.userSync.zshenv | ([contains("HYPERFRAMES_NO_TELEMETRY"), contains("HEYGEN_NO_ANALYTICS")] | any | not) and contains("SSL_CERT_FILE"))'
 
 # The user's own omp. omp updates itself (`omp update`) and refuses to run from the Nix store, so the pinned store binary is only the seed: Home Manager copies it once to
 # ~/.local/bin/omp (a regular file of the user's, ahead of the Nix profile directories on PATH), and a deploy never replaces that copy. The store package stays as the fallback.
