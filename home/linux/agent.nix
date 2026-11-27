@@ -169,7 +169,7 @@ in {
     sync = {
       plugins = lib.mkEnableOption "the captured omp plugins: manifests in ~/.omp/plugins and a user service that installs them";
       hindsight = lib.mkEnableOption "reading ~/.config/dotfiles/hindsight.env (written by vm-sync) into HINDSIGHT_API_URL and HINDSIGHT_API_TOKEN in every zsh";
-      skills = lib.mkEnableOption "the usage reporting of HyperFrames (its CLI and media-use) and of HeyGen's CLI turned off in every zsh, and a user-owned copy of heygen in ~/.local/bin (for media-use's HeyGen catalog), for the skills that vm-sync mirrors in";
+      skills = lib.mkEnableOption "the usage reporting of HyperFrames (its CLI and media-use) and of HeyGen's CLI turned off in every zsh, HyperFrames pointed at the browser's link while browser.enable is on too, and a user-owned copy of heygen in ~/.local/bin (for media-use's HeyGen catalog), for the skills that vm-sync mirrors in";
       pluginPackages = lib.mkOption {
         type = lib.types.listOf lib.types.package;
         default = [pkgs.bun pkgs.nodejs];
@@ -519,6 +519,16 @@ in {
       home.activation.heygenBinary = lib.hm.dag.entryAfter ["writeBoundary"] ''
         ${builtins.readFile ./seed-user-binary.sh}
         seed_user_binary ${cfg.sync.heygenPackage}/bin/heygen "$HOME/.local/bin/heygen"
+      '';
+    })
+
+    (lib.mkIf (cfg.sync.skills && cfg.browser.enable) {
+      # HyperFrames renders in a browser that it finds through its own download, or google-chrome or chromium in /usr/bin or on the
+      # PATH. On NixOS its download cannot start (nix-ld lacks Chrome's libraries) and the browser piece's chromium is on no PATH,
+      # so it is pointed at that piece's link (modules/nixos/agent-dev.nix), through .zshenv like the lines above. It then renders
+      # with HyperFrames' slower screenshot capture (its faster BeginFrame capture needs chrome-headless-shell).
+      programs.zsh.envExtra = ''
+        export HYPERFRAMES_BROWSER_PATH=/opt/google/chrome/chrome
       '';
     })
 
