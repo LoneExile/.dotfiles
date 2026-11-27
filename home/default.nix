@@ -247,6 +247,35 @@ in {
     fi
   '';
 
+  # HeyGen's command-line tool (https://developers.heygen.com/cli). The
+  # HyperFrames media-use skill shells out to it for HeyGen's music, image and
+  # icon catalog. Installed the way HeyGen documents it: the official installer
+  # checks the release against HeyGen's checksums.txt and puts one binary in
+  # ~/.local/bin, so `heygen update` keeps working. Only a missing binary is
+  # installed (a fresh Mac gets the release pinned here); an existing one is
+  # never replaced or downgraded. A failed download warns and never fails the
+  # switch; the next switch retries.
+  home.activation.heygenCli = let
+    version = "v0.13.0";
+  in
+    lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (
+      lib.hm.dag.entryAfter ["writeBoundary"] ''
+        if [ -x "$HOME/.local/bin/heygen" ]; then
+          echo "heygen present: $("$HOME/.local/bin/heygen" --version 2>/dev/null || echo "version unknown")"
+        else
+          echo "installing heygen ${version} with HeyGen's official installer"
+          heygenTmp="$(/usr/bin/mktemp -d)"
+          if /usr/bin/curl -fsSL https://static.heygen.ai/cli/install.sh -o "$heygenTmp/install.sh"; then
+            PATH="/usr/bin:/bin:/usr/sbin:/sbin" run ${pkgs.bash}/bin/bash "$heygenTmp/install.sh" --version ${version} \
+              || echo "heygen install failed; the next switch retries" >&2
+          else
+            echo "could not download the heygen installer; the next switch retries" >&2
+          fi
+          /bin/rm -rf "$heygenTmp"
+        fi
+      ''
+    );
+
   # Tern's preferences UI rewrites settings.json with an atomic save (temp +
   # rename), so the home.file symlink of old generations never survived — see
   # the note at the home.file block above. Install the repo copy as a real,
